@@ -1,0 +1,68 @@
+﻿using AAXClean.Util;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+namespace AAXClean.Boxes
+{
+    public abstract class Box
+    {
+        public Box Parent { get; }
+        public BoxHeader Header { get; }
+        public List<Box> Children { get; } = new List<Box>();
+        public virtual uint RenderSize => 8 + (uint)Children.Sum(b => b.RenderSize);
+
+        public Box(BoxHeader header, Box parent)
+        {
+            Header = header;
+            Parent = parent;
+        }
+        protected abstract void Render(Stream file);
+        public T GetChild<T>() where T : Box
+        {
+            var children = GetChildren<T>();
+
+            return children.Count() switch
+            {
+                0 => null,
+                1 => children.First(),
+                _ => throw new Exception($"{GetType().Name} has {children.Count()} children of type {typeof(T)}. Call {nameof(GetChildren)} instead."),
+            };
+        }
+
+        public IEnumerable<T> GetChildren<T>() where T : Box
+        {
+            return Children.Where(c => c is T).Cast<T>();
+        }
+
+        protected void LoadChildren(Stream file)
+        {
+            long endPos = Header.FilePosition + Header.TotalBoxSize;
+
+            while (file.Position < endPos)
+            {
+                Box child = BoxFactory.CreateBox(file, this);
+
+                if (child.Header.TotalBoxSize == 0)
+                    break;
+                Children.Add(child);
+                if (child.Header.FilePosition + child.Header.TotalBoxSize != file.Position)
+                    break;
+            }
+        }
+
+        public void Save(Stream file)
+        {
+            file.WriteUInt32BE(RenderSize);
+            file.WriteType(Header.Type);
+
+            Render(file);
+
+            foreach (var child in Children)
+            {
+                child.Save(file);
+            }
+        }
+    }
+}
