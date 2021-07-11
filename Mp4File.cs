@@ -132,10 +132,12 @@ namespace AAXClean
 
             #region Decryption Loop
             var beginProcess = DateTime.Now;
+            var nextUpdate = beginProcess;
             uint framesProcessed = 0;
-            var mdatChunk = Mdat.FirstEntry;
             isCancelled = false;
             var decryptSuccess = true;
+
+            var mdatChunk = Mdat.FirstEntry;
             do
             {
                 switch (mdatChunk)
@@ -146,9 +148,16 @@ namespace AAXClean
                             decryptSuccess = aavd.DecryptSave(key, iv, InputStream, outputStream);
                             framesProcessed += (uint)aavd.NumFrames;
 
-                            TimeSpan position = FrameToTime(framesProcessed);
-                            var speed = position / (DateTime.Now - beginProcess);
-                            DecryptionProgressUpdate?.Invoke(this, new DecryptionProgressEventArgs(position, speed));
+                            //Throttle update so it doesn't bog down UI
+                            if (DateTime.Now > nextUpdate)
+                            {
+                                TimeSpan position = FrameToTime(framesProcessed);
+                                var speed = position / (DateTime.Now - beginProcess);
+                                DecryptionProgressUpdate?.Invoke(this, new DecryptionProgressEventArgs(position, speed));
+
+                                nextUpdate = DateTime.Now.AddMilliseconds(200);
+                            }
+                           
                             break;
                         }
                     case TextChunk text:
