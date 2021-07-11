@@ -4,14 +4,15 @@ namespace AAXClean.Boxes
 {
     internal class AppleTagBox : Box
     {
-        public static AppleTagBox Create(AppleListBox parent, string name, byte[] data)
+        public static void Create(AppleListBox parent, string name, byte[] data, AppleDataBox.FlagType dataType)
         {
-            int size = data.Length + 12 /* empty FullBox size*/ + 8 /* empty Box size*/ ;
+            int size = data.Length + 2 + 8 /* empty Box size*/ ;
             var header = new BoxHeader((uint)size, name);
 
             var tagBox = new AppleTagBox(header, parent);
+            AppleDataBox.Create(tagBox, data, dataType);
+
             parent.Children.Add(tagBox);
-            return tagBox;
         }
         private AppleTagBox(BoxHeader header, Box parent) : base(header, parent) { }
 

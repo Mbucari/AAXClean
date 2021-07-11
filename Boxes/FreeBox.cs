@@ -4,7 +4,16 @@ namespace AAXClean.Boxes
 {
     internal class FreeBox : Box
     {
-        public override uint RenderSize => base.RenderSize + Header.TotalBoxSize - Header.HeaderSize;
+        public override uint RenderSize => base.RenderSize + (uint)Header.TotalBoxSize - Header.HeaderSize;
+
+        internal static FreeBox Create(int size, Box parent)
+        {
+            var header = new BoxHeader((uint)size, "free");
+            var free = new FreeBox(header, parent);
+            return free;
+        }
+
+        private FreeBox(BoxHeader header, Box parent) : base(header, parent) { }
         internal FreeBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
         {
             for (uint i = Header.HeaderSize; i < Header.TotalBoxSize; i++)
@@ -15,5 +24,6 @@ namespace AAXClean.Boxes
             for (uint i = Header.HeaderSize; i < Header.TotalBoxSize; i++)
                 file.WriteByte(0);
         }
+
     }
 }

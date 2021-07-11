@@ -12,8 +12,17 @@ namespace AAXClean.Util
     {
         public static void WriteHeader(this Stream stream, BoxHeader header)
         {
-            stream.WriteUInt32BE(header.TotalBoxSize);
-            stream.WriteType(header.Type);
+            if (header.Version == 1)
+            {
+                stream.WriteUInt32BE(1);
+                stream.WriteType(header.Type);
+                stream.WriteInt64BE(header.TotalBoxSize);
+            }
+            else
+            {
+                stream.WriteUInt32BE((uint)header.TotalBoxSize);
+                stream.WriteType(header.Type);
+            }
         }
         public static void WriteType(this Stream stream, string type)
         {
@@ -104,13 +113,13 @@ namespace AAXClean.Util
         }
         public static ulong ReadUInt64BE(this Stream stream)
         {
-            return (ulong)stream.ReadInt64BE();
+            byte[] qword = stream.ReadQWord();
+
+            return (ulong)qword[0] << 56 | (ulong)qword[1] << 48 | (ulong)qword[2] << 40 | (ulong)qword[3] << 32 | (ulong)qword[4] << 24 | (ulong)qword[5] << 16 | (ulong)qword[6] << 8 | qword[7];
         }
         public static long ReadInt64BE(this Stream stream)
         {
-            byte[] qword = stream.ReadQWord();
-
-            return qword[0] << 56 | qword[1] << 48 | qword[2] << 40 | qword[3] << 32 | qword[4] << 24 | qword[5] << 16 | qword[6] << 8 | qword[7];
+            return (long)stream.ReadUInt64BE();
         }
         public static byte[] ReadWord(this Stream stream)
         {

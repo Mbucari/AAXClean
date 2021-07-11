@@ -3,7 +3,7 @@ using System.IO;
 
 namespace AAXClean.Boxes
 {
-    internal class AppleDataBox : FullBox
+    internal class AppleDataBox : Box
     {
         public enum FlagType : uint
         {
@@ -39,33 +39,37 @@ namespace AAXClean.Boxes
 
         }
 
-        public override uint RenderSize => base.RenderSize + 4 + (uint)Data.Length;
+        public override uint RenderSize => base.RenderSize + 8 + (uint)Data.Length;
         public FlagType DataType { get; }
+        public uint Flags { get; }
         public byte[] Data { get; set; }
 
-        public static AppleDataBox Create(Box parent, byte[] data, FlagType type)
+        public static void Create(Box parent, byte[] data, FlagType type)
         {
-            int size = data.Length + 12 /* empty FullBox size*/;
+            int size = data.Length + 8 /* empty Box size*/;
             var header = new BoxHeader((uint)size, "data");
 
-            return new AppleDataBox(header, parent, data, type);
+            var dataBox = new AppleDataBox(header, parent, data, type);
+
+            parent.Children.Add(dataBox);
         }
-        private AppleDataBox(BoxHeader header, Box parent, byte[] data, FlagType type) : base(new byte[] { 0, 0, 0, 1 }, header, parent)
+        private AppleDataBox(BoxHeader header, Box parent, byte[] data, FlagType type) : base(header, parent)
         {
             DataType = type;
+            Flags = 0;
             Data = data;
         }
-        internal AppleDataBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
+        internal AppleDataBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
         {
             DataType = (FlagType)file.ReadUInt32BE();
-
+            Flags = file.ReadUInt32BE();
             long length = Header.FilePosition + Header.TotalBoxSize - file.Position;
             Data = file.ReadBlock((int)length);
         }
         protected override void Render(Stream file)
         {
-            base.Render(file);
             file.WriteUInt32BE((uint)DataType);
+            file.WriteUInt32BE(Flags);
             file.Write(Data);
         }
     }

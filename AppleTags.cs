@@ -38,9 +38,17 @@ namespace AAXClean
         public string ReleaseDate => GetTagString("rldt");
         public byte[] Cover => GetTag("covr");
 
+        public void AddTag(string name, string data)
+        {
+            AddTag(name, Encoding.UTF8.GetBytes(data), AppleDataBox.FlagType.ContainsText);
+        }      
         public void AddTag(string name, byte[] data)
         {
-            AppleTagBox.Create(iList, name, data);
+            AddTag(name, data, AppleDataBox.FlagType.ContainsData);
+        }
+        private void AddTag(string name, byte[] data, AppleDataBox.FlagType type)
+        {
+            AppleTagBox.Create(iList, name, data, type);
         }
 
         public string GetTagString(string name)
@@ -66,12 +74,14 @@ namespace AAXClean
 
         public void SetCoverArt(byte[] coverArt)
         {
+            if (coverArt is null) return;
+
             var covr = Tags.Where(t => t.Header.Type == "covr").FirstOrDefault();
 
             if (covr is not null)
                 covr.Data.Data = coverArt;
             else
-                AddTag("covr", coverArt);
+                AddTag("covr", coverArt, AppleDataBox.FlagType.ContainsJpegData);
         }
     }
 }

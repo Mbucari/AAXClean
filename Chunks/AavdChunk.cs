@@ -34,6 +34,9 @@ namespace AAXClean.Chunks
             foreach (var fsize in FrameSizes)
             {
                 int blockSize = fsize & 0xffffff0;
+                if (blockSize == 0) 
+                    continue;
+
                 int remSize = fsize - blockSize;
 
                 byte[] encBlocks = infile.ReadBlock(blockSize);

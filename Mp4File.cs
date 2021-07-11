@@ -14,6 +14,12 @@ namespace AAXClean
         Failed,
         NoErrorsDetected
     }
+    public enum DecryptionStatus
+    {
+        NotStarted,
+        Working,
+        Completed
+    }
     public class Mp4File : Box
     {
         public event EventHandler<DecryptionProgressEventArgs> DecryptionProgressUpdate;
@@ -21,6 +27,13 @@ namespace AAXClean
         public AppleTags AppleTags { get; }
         public Stream InputStream { get; }
         public ChapterInfo Chapters { get; private set; }
+        public DecryptionStatus Status { get; private set; } = DecryptionStatus.NotStarted;
+
+        public TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.AudioTrack.Mdia.Mdhd.Duration / TimeScale);
+        public uint MaxBitrate => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate;
+        public uint AverageBitrate => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate;
+        public uint TimeScale => Moov.AudioTrack.Mdia.Mdhd.Timescale;
+        public int AudioChannels => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.ChannelConfiguration;
 
         private FtypBox Ftyp { get; }
         private MoovBox Moov { get; }
@@ -39,8 +52,28 @@ namespace AAXClean
         }
         public Mp4File(Stream file) : this(file, file.Length) { }
 
+        private bool isCancelled = false;
 
-        public void DecryptAaxc(Stream outputStream, byte[] key, byte[] iv, ChapterInfo userChapters = null)
+        public Mp4File DecryptAaxc(FileStream outputStream, string audible_key, string audible_iv, ChapterInfo userChapters = null)
+        {
+            if (string.IsNullOrWhiteSpace(audible_key)|| audible_key.Length != 32)
+                throw new ArgumentException($"{nameof(audible_key)} must be 16 bytes long.");
+            if (string.IsNullOrWhiteSpace(audible_iv) || audible_iv.Length != 32)
+                throw new ArgumentException($"{nameof(audible_iv)} must be 16 bytes long.");
+
+            byte[] key = Enumerable.Range(0, audible_key.Length)
+                     .Where(x => x % 2 == 0)
+                     .Select(x => Convert.ToByte(audible_key.Substring(x, 2), 16))
+                     .ToArray();
+
+            byte[] iv = Enumerable.Range(0, audible_iv.Length)
+                     .Where(x => x % 2 == 0)
+                     .Select(x => Convert.ToByte(audible_iv.Substring(x, 2), 16))
+                     .ToArray();
+
+            return DecryptAaxc(outputStream, key, iv, userChapters);
+        }
+        public Mp4File DecryptAaxc(FileStream outputStream, byte[] key, byte[] iv, ChapterInfo userChapters = null)
         {
             if (!outputStream.CanSeek || !outputStream.CanWrite)
                 throw new IOException($"{nameof(outputStream)} must be writable and seekable.");
@@ -52,6 +85,8 @@ namespace AAXClean
                 throw new ArgumentException($"{nameof(iv)} must be 16 bytes long.");
 
             bool insertChapters = userChapters != null;
+
+            Status = DecryptionStatus.Working;
 
             CalculateAndAddBitrate();
             PatchAaxc();
@@ -74,12 +109,15 @@ namespace AAXClean
 
             //Write ftyp to output file
             Ftyp.Save(outputStream);
-            long moovPos = outputStream.Position;
+            long outputMoovStart = outputStream.Position;
             //Write moov to output file. At this ponit the moov size won't change, but
             //we will need to come back and re-write it after we update chunk offsets.
             Moov.Save(outputStream);
-            long mdatPos = outputStream.Position;
 
+            //Reserve 200KB of space before mdat for future changes.
+            FreeBox.Create(100 * 1024, this).Save(outputStream);
+
+            long outputMdatStart = outputStream.Position;
             //Write an mdat placeholder. We'll come back and overwrite the size at the
             //end when we've calculated it.
             outputStream.WriteUInt32BE(0);
@@ -96,6 +134,7 @@ namespace AAXClean
             var beginProcess = DateTime.Now;
             uint framesProcessed = 0;
             var mdatChunk = Mdat.FirstEntry;
+            isCancelled = false;
             var decryptSuccess = true;
             do
             {
@@ -127,13 +166,13 @@ namespace AAXClean
                         continue;
                 }
 
-            } while (decryptSuccess && (mdatChunk = mdatChunk.GetNext(InputStream)) != null);
+            } while (!isCancelled && decryptSuccess && (mdatChunk = mdatChunk.GetNext(InputStream)) != null);
 
             #endregion
             var decryptionResult = decryptSuccess ? DecryptionResult.NoErrorsDetected : DecryptionResult.Failed;
 
             //Final calculated mdat size
-            long mdatSize = outputStream.Position - mdatPos;
+            long mdatSize = outputStream.Position - outputMdatStart;
 
             //Reset all chunk offsets with their new positions.
             Moov.AudioTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Clear();
@@ -146,27 +185,63 @@ namespace AAXClean
             }
 
             //Re-write the whole moov to commit changes
-            outputStream.Position = moovPos;
+            outputStream.Position = outputMoovStart;
             Moov.Save(outputStream);
-            //Write final mdat size
-            outputStream.Position = mdatPos;
-            outputStream.WriteUInt32BE((uint)mdatSize);
 
+            int freeSize = (int)(outputMdatStart - outputStream.Position);
+            FreeBox.Create(freeSize, this).Save(outputStream);
+
+            //Write final mdat size
+            outputStream.Position = outputMdatStart;
+            outputStream.WriteUInt32BE((uint)mdatSize);
             outputStream.Close();
             InputStream.Close();
 
+            Status = DecryptionStatus.Completed;
             DecryptionComplete?.Invoke(this, decryptionResult);
+
+            return decryptionResult switch
+            {
+                DecryptionResult.NoErrorsDetected => new Mp4File(File.Open(outputStream.Name, FileMode.Open, FileAccess.ReadWrite)),
+                _ => throw new NotImplementedException(),
+            };
+        }
+
+        public void Save()
+        {
+            uint newFtypSize = Ftyp.RenderSize;
+            uint newMoovSize = Moov.RenderSize;
+
+            long mdatStart = Mdat.Header.FilePosition;
+
+            int freeSize = (int)(mdatStart - newFtypSize - newMoovSize);
+
+            if (freeSize >= 8)
+            {
+                InputStream.Position = 0;
+                Ftyp.Save(InputStream);
+                Moov.Save(InputStream);
+                FreeBox.Create(freeSize, this).Save(InputStream);
+            }
+            else
+                throw new Exception("'Not enough space before mdat to write changes.");
+        }
+        public void Close()
+        {
+            InputStream?.Close();
+        }
+        public void Cancel()
+        {
+            isCancelled = true;
         }
 
         private void CalculateAndAddBitrate()
         {
-            uint maxBitrate = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate;
 
             //Calculate the actual average bitrate because aaxc file is wrong.
             long audioBits = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => s) * 8;
-            uint timescale = Moov.AudioTrack.Mdia.Mdhd.Timescale;
-            uint duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
-            uint avgBitrate = (uint)(audioBits * timescale / duration);
+            double duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
+            uint avgBitrate = (uint)(audioBits * TimeScale / duration);
 
             Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
 
@@ -178,7 +253,7 @@ namespace AAXClean
                     children.RemoveAt(i);
             }
             //Add a btrt box to the audio sample description.
-            BtrtBox.Create(0, maxBitrate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
+            BtrtBox.Create(0, MaxBitrate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
         }
         private void PatchAaxc()
         {
@@ -197,15 +272,13 @@ namespace AAXClean
         }
         private void WriteChapters(Stream output, ChapterInfo chapters)
         {
-            uint timescale = Moov.AudioTrack.Mdia.Mdhd.Timescale;
-
             Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Clear();
             Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Clear();
             Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Clear();
 
             foreach (var c in chapters)
             {
-                uint sampleDelta = (uint)((c.EndOffset - c.StartOffset).TotalSeconds * timescale);
+                uint sampleDelta = (uint)((c.EndOffset - c.StartOffset).TotalSeconds * TimeScale);
                 byte[] title = Encoding.UTF8.GetBytes(c.Title);
 
                 Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(1, sampleDelta));
@@ -224,9 +297,9 @@ namespace AAXClean
         //Gets the playback timestamp of an audio frame.
         private TimeSpan FrameToTime(uint sampleNum)
         {
-            long beginDelta = 0;
+            double beginDelta = 0;
 
-            foreach (var entry in Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples)
+            foreach (var entry in Moov.AudioTrack.Mdia.Minf.Stbl.Stts.Samples)
             {
                 if (sampleNum > entry.SampleCount)
                 {
@@ -235,13 +308,12 @@ namespace AAXClean
                 }
                 else
                 {
-                    beginDelta += (entry.SampleCount - sampleNum) * entry.SampleDelta;
+                    beginDelta += sampleNum * entry.SampleDelta;
                     break;
                 }
             }
-            double timeScale = Moov.AudioTrack.Mdia.Mdhd.Timescale;
 
-            return TimeSpan.FromSeconds(beginDelta / timeScale);
+            return TimeSpan.FromSeconds(beginDelta / TimeScale);
         }
         protected override void Render(Stream file)
         {
