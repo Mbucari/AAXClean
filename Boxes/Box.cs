@@ -52,7 +52,7 @@ namespace AAXClean.Boxes
             }
         }
 
-        public void Save(Stream file)
+        internal void Save(Stream file)
         {
             file.WriteUInt32BE(RenderSize);
             file.WriteType(Header.Type);

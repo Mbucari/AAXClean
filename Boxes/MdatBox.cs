@@ -6,14 +6,14 @@ namespace AAXClean.Boxes
 {
     internal class MdatBox : Box
     {
-        public long Position { get; }
-
         public MdatChunk FirstEntry { get; }
-        internal MdatBox(Stream file, BoxHeader header) : base(header, null)
+        internal MdatBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
         {
-            Position = file.Position - header.HeaderSize;
-
             FirstEntry = MdatFactory.CreateEntry(file);
+
+            //Normally we don't want to seek, but if moov is after mdat then we have to.
+            if (Parent.GetChild<MoovBox>() is null)
+                file.Position = header.FilePosition + header.TotalBoxSize;
         }
 
         protected override void Render(Stream file)

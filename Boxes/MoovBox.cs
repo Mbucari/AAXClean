@@ -6,7 +6,7 @@ namespace AAXClean.Boxes
 {
     internal class MoovBox : Box
     {
-        internal MoovBox(Stream file, BoxHeader header) : base(header, null)
+        internal MoovBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
         {
             LoadChildren(file);
         }

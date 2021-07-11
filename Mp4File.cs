@@ -52,7 +52,10 @@ namespace AAXClean
         }
         public Mp4File(Stream file) : this(file, file.Length) { }
 
+        public Mp4File(string fileName, FileAccess access = FileAccess.Read) : this(File.Open(fileName, FileMode.Open, access)) { }
+
         private bool isCancelled = false;
+
 
         public Mp4File DecryptAaxc(FileStream outputStream, string audible_key, string audible_iv, ChapterInfo userChapters = null)
         {
@@ -71,9 +74,10 @@ namespace AAXClean
                      .Select(x => Convert.ToByte(audible_iv.Substring(x, 2), 16))
                      .ToArray();
 
-            return DecryptAaxc(outputStream, key, iv, userChapters);
+            return DecryptAaxc2(outputStream, key, iv, userChapters);
         }
-        public Mp4File DecryptAaxc(FileStream outputStream, byte[] key, byte[] iv, ChapterInfo userChapters = null)
+
+        public Mp4File DecryptAaxc2(FileStream outputStream, byte[] key, byte[] iv, ChapterInfo userChapters = null)
         {
             if (!outputStream.CanSeek || !outputStream.CanWrite)
                 throw new IOException($"{nameof(outputStream)} must be writable and seekable.");
@@ -109,13 +113,7 @@ namespace AAXClean
 
             //Write ftyp to output file
             Ftyp.Save(outputStream);
-            long outputMoovStart = outputStream.Position;
-            //Write moov to output file. At this ponit the moov size won't change, but
-            //we will need to come back and re-write it after we update chunk offsets.
-            Moov.Save(outputStream);
 
-            //Reserve 200KB of space before mdat for future changes.
-            FreeBox.Create(100 * 1024, this).Save(outputStream);
 
             long outputMdatStart = outputStream.Position;
             //Write an mdat placeholder. We'll come back and overwrite the size at the
@@ -123,9 +121,6 @@ namespace AAXClean
             outputStream.WriteUInt32BE(0);
             outputStream.Write(Encoding.ASCII.GetBytes("mdat"));
 
-            //Add chapters to beginning of moov.
-            if (insertChapters)
-                WriteChapters(outputStream, userChapters);
 
             List<uint> audioChunkOffsets = new();
             List<uint> textChunkOffsets = new();
@@ -167,8 +162,6 @@ namespace AAXClean
                             (string title, TimeSpan duration) = text.GetChapter(Moov.TextTrack);
                             Chapters.AddChapter(title, duration);
 
-                            textChunkOffsets.Add((uint)(outputStream.Position + text.ChapterChunkOffset));
-                            text.Save(outputStream);
                             break;
                         }
                     default:
@@ -177,32 +170,29 @@ namespace AAXClean
 
             } while (!isCancelled && decryptSuccess && (mdatChunk = mdatChunk.GetNext(InputStream)) != null);
 
+
             #endregion
             var decryptionResult = decryptSuccess ? DecryptionResult.NoErrorsDetected : DecryptionResult.Failed;
-
-            //Final calculated mdat size
-            long mdatSize = outputStream.Position - outputMdatStart;
 
             //Reset all chunk offsets with their new positions.
             Moov.AudioTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Clear();
             Moov.AudioTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.AddRange(audioChunkOffsets);
 
-            if (!insertChapters)
-            {
-                Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Clear();
-                Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.AddRange(textChunkOffsets);
-            }
+            WriteChapters(outputStream, Chapters);
+
+            long outputMoovStart = outputStream.Position;
+
+            outputStream.Position = outputMdatStart;
+            //Write final mdat size
+            outputStream.WriteUInt32BE((uint)(outputMoovStart - outputMdatStart));
+
+
+            outputStream.Position = outputMoovStart;
 
             //Re-write the whole moov to commit changes
             outputStream.Position = outputMoovStart;
             Moov.Save(outputStream);
 
-            int freeSize = (int)(outputMdatStart - outputStream.Position);
-            FreeBox.Create(freeSize, this).Save(outputStream);
-
-            //Write final mdat size
-            outputStream.Position = outputMdatStart;
-            outputStream.WriteUInt32BE((uint)mdatSize);
             outputStream.Close();
             InputStream.Close();
 
@@ -211,29 +201,25 @@ namespace AAXClean
 
             return decryptionResult switch
             {
-                DecryptionResult.NoErrorsDetected => new Mp4File(File.Open(outputStream.Name, FileMode.Open, FileAccess.ReadWrite)),
-                _ => throw new NotImplementedException(),
+                DecryptionResult.NoErrorsDetected => new Mp4File(outputStream.Name, FileAccess.ReadWrite),
+                _ => null
             };
         }
 
         public void Save()
         {
-            uint newFtypSize = Ftyp.RenderSize;
-            uint newMoovSize = Moov.RenderSize;
+            if (Moov.Header.FilePosition < Mdat.Header.FilePosition)
+                throw new Exception("Does not support editing moov before mdat");
 
-            long mdatStart = Mdat.Header.FilePosition;
+            InputStream.Position = Moov.Header.FilePosition;
+            Moov.Save(InputStream);
 
-            int freeSize = (int)(mdatStart - newFtypSize - newMoovSize);
-
-            if (freeSize >= 8)
+            if (InputStream.Position < InputStream.Length)
             {
-                InputStream.Position = 0;
-                Ftyp.Save(InputStream);
-                Moov.Save(InputStream);
+                int freeSize = (int)Math.Max(8, InputStream.Length - InputStream.Position);
+
                 FreeBox.Create(freeSize, this).Save(InputStream);
             }
-            else
-                throw new Exception("'Not enough space before mdat to write changes.");
         }
         public void Close()
         {
@@ -290,8 +276,8 @@ namespace AAXClean
                 uint sampleDelta = (uint)((c.EndOffset - c.StartOffset).TotalSeconds * TimeScale);
                 byte[] title = Encoding.UTF8.GetBytes(c.Title);
 
-                Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(1, sampleDelta));
-                Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Add((uint)(title.Length + 2 + encd.Length));
+                Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(sampleCount:1, sampleDelta));
+                Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Add((uint)(2 + title.Length + encd.Length));
                 Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add((uint)output.Position);
 
                 output.WriteInt16BE((short)title.Length);

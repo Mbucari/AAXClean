@@ -12,9 +12,9 @@ namespace AAXClean.Boxes
             return header.Type switch
             {
                 "free" or "skip" => new FreeBox(file, header, parent),
-                "ftyp" => new FtypBox(file, header),
-                "mdat" => new MdatBox(file, header),
-                "moov" => new MoovBox(file, header),
+                "ftyp" => new FtypBox(file, header, parent),
+                "mdat" => new MdatBox(file, header, parent),
+                "moov" => new MoovBox(file, header, parent),
                 "trak" => new TrakBox(file, header, parent),
                 "mdia" => new MdiaBox(file, header, parent),
                 "minf" => new MinfBox(file, header, parent),
