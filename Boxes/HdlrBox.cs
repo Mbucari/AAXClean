@@ -11,7 +11,7 @@ namespace AAXClean.Boxes
         public override uint RenderSize => base.RenderSize + 20 + (uint)Encoding.ASCII.GetByteCount(HandlerName) + (uint)(HasNullTerminator ? 1 : 0);
         public uint PreDefined { get; }
         public string HandlerType { get; }
-        byte[] Reserved { get; }
+        private byte[] Reserved { get; }
         public string HandlerName { get; }
         internal HdlrBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
         {

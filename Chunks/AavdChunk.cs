@@ -34,7 +34,7 @@ namespace AAXClean.Chunks
             foreach (var fsize in FrameSizes)
             {
                 int blockSize = fsize & 0xffffff0;
-                if (blockSize == 0) 
+                if (blockSize == 0)
                     continue;
 
                 int remSize = fsize - blockSize;
@@ -61,7 +61,7 @@ namespace AAXClean.Chunks
 
         //Defined at
         //http://man.hubwiz.com/docset/FFmpeg.docset/Contents/Resources/Documents/api/intreadwrite_8h_source.html
-        private ushort AV_RB16(byte[] frame)
+        private static ushort AV_RB16(byte[] frame)
         {
             return (ushort)(frame[0] << 8 | frame[1]);
         }

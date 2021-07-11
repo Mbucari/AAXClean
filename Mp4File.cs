@@ -1,5 +1,5 @@
-﻿using AAXClean.Chunks;
-using AAXClean.Boxes;
+﻿using AAXClean.Boxes;
+using AAXClean.Chunks;
 using AAXClean.Util;
 using System;
 using System.Collections.Generic;
@@ -56,7 +56,7 @@ namespace AAXClean
 
         public Mp4File DecryptAaxc(FileStream outputStream, string audible_key, string audible_iv, ChapterInfo userChapters = null)
         {
-            if (string.IsNullOrWhiteSpace(audible_key)|| audible_key.Length != 32)
+            if (string.IsNullOrWhiteSpace(audible_key) || audible_key.Length != 32)
                 throw new ArgumentException($"{nameof(audible_key)} must be 16 bytes long.");
             if (string.IsNullOrWhiteSpace(audible_iv) || audible_iv.Length != 32)
                 throw new ArgumentException($"{nameof(audible_iv)} must be 16 bytes long.");
@@ -157,7 +157,7 @@ namespace AAXClean
 
                                 nextUpdate = DateTime.Now.AddMilliseconds(200);
                             }
-                           
+
                             break;
                         }
                     case TextChunk text:

@@ -25,7 +25,7 @@ namespace AAXClean.Boxes
         }
     }
 
-    interface IFullBox
+    internal interface IFullBox
     {
         uint RenderSize { get; }
     }

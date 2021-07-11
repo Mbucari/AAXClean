@@ -7,8 +7,8 @@ namespace AAXClean.Boxes
     {
         public override uint RenderSize => base.RenderSize + 20;
 
-        readonly byte[] reserved;
-        readonly byte[] reserved_2;
+        private readonly byte[] reserved;
+        private readonly byte[] reserved_2;
         public ushort ChannelCount { get; }
         public ushort SampleSize { get; }
         public short PreDefined { get; }

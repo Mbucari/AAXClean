@@ -41,7 +41,7 @@ namespace AAXClean
         public void AddTag(string name, string data)
         {
             AddTag(name, Encoding.UTF8.GetBytes(data), AppleDataBox.FlagType.ContainsText);
-        }      
+        }
         public void AddTag(string name, byte[] data)
         {
             AddTag(name, data, AppleDataBox.FlagType.ContainsData);
