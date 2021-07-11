@@ -116,13 +116,14 @@ namespace AAXClean
             Ftyp.Save(outputStream);
 
             //Write an mdat header.
-            uint mdatSize = 8 + audioSize + chaptersSize;
+            uint mdatSize = Mdat.Header.HeaderSize + audioSize + chaptersSize;
             outputStream.WriteUInt32BE(mdatSize);
             outputStream.Write(Encoding.ASCII.GetBytes("mdat"));
 
             List<uint> audioChunkOffsets = new();
 
             #region Decryption Loop
+
             var beginProcess = DateTime.Now;
             var nextUpdate = beginProcess;
             uint framesProcessed = 0;
@@ -275,6 +276,7 @@ namespace AAXClean
                 output.Write(encd);
             }
         }
+
         //This is constant folr UTF-8 text
         //https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/movenc.c
         private readonly byte[] encd = { 0, 0, 0, 0xc, (byte)'e', (byte)'n', (byte)'c', (byte)'d', 0, 0, 1, 0 };
