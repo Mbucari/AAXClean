@@ -9,5 +9,5 @@ FileStream input = File.OpenRead(@"C:\Source File.aax");
 FileStream output = File.OpenRead(@"C:\Decrypted book.m4b");
 Mp4File aaxFile = new Mp4File(input);
 
-Mp4File decryptedFile = input.Decrypt(output, audible_key, audible_iv);
+Mp4File decryptedFile = input.DecryptAaxc(output, audible_key, audible_iv);
 ```
