@@ -1,5 +1,5 @@
 # AAXClean
-Decrypts Audible's aaxc files on the fly, with minimal changes to the source file. All file-level and stream-level metadata is preserved. There is an option for reading/writing file-level metadata tags and adding different chapter information.
+Decrypts Audible's aaxc files on the fly, with minimal changes to the source file. Input stream is not required to be seekable, but output stream is. All file-level and stream-level metadata is preserved. There is an option for reading/writing file-level metadata tags and adding different chapter information.
 
 Usage:
 ```C#
