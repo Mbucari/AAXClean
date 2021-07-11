@@ -10,6 +10,7 @@ namespace AAXClean
         private readonly List<Chapter> _chapterList = new();
         public IEnumerable<Chapter> Chapters => _chapterList.AsEnumerable();
         public int Count => _chapterList.Count;
+        public int RenderSize => _chapterList.Sum(c => c.RenderSize);
         public ChapterInfo() { }
 
         public void AddChapter(Chapter chapter)
@@ -41,6 +42,8 @@ namespace AAXClean
         public string Title { get; }
         public TimeSpan StartOffset { get; }
         public TimeSpan EndOffset { get; }
+
+        public int RenderSize => 2 + Title.Length + 12;
         public Chapter(string title, TimeSpan start, TimeSpan duration)
         {
             if (string.IsNullOrEmpty(title))
@@ -67,6 +70,5 @@ namespace AAXClean
             : this(title, (long)(startTimeSec * 1000), (long)((endTimeSec - startTimeSec) * 1000))
         {
         }
-
     }
 }

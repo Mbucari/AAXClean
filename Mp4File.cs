@@ -74,10 +74,10 @@ namespace AAXClean
                      .Select(x => Convert.ToByte(audible_iv.Substring(x, 2), 16))
                      .ToArray();
 
-            return DecryptAaxc2(outputStream, key, iv, userChapters);
+            return DecryptAaxc(outputStream, key, iv, userChapters);
         }
 
-        public Mp4File DecryptAaxc2(FileStream outputStream, byte[] key, byte[] iv, ChapterInfo userChapters = null)
+        public Mp4File DecryptAaxc(FileStream outputStream, byte[] key, byte[] iv, ChapterInfo userChapters = null)
         {
             if (!outputStream.CanSeek || !outputStream.CanWrite)
                 throw new IOException($"{nameof(outputStream)} must be writable and seekable.");
@@ -91,9 +91,6 @@ namespace AAXClean
             bool insertChapters = userChapters != null;
 
             Status = DecryptionStatus.Working;
-
-            CalculateAndAddBitrate();
-            PatchAaxc();
 
             if (insertChapters)
             {
@@ -111,19 +108,19 @@ namespace AAXClean
                 Chapters = new ChapterInfo();
             }
 
+            PatchAaxc();
+            uint audioSize = CalculateAndAddBitrate();
+            uint chaptersSize = (uint)Chapters.RenderSize;
+
             //Write ftyp to output file
             Ftyp.Save(outputStream);
 
-
-            long outputMdatStart = outputStream.Position;
-            //Write an mdat placeholder. We'll come back and overwrite the size at the
-            //end when we've calculated it.
-            outputStream.WriteUInt32BE(0);
+            //Write an mdat header.
+            uint mdatSize = 8 + audioSize + chaptersSize;
+            outputStream.WriteUInt32BE(mdatSize);
             outputStream.Write(Encoding.ASCII.GetBytes("mdat"));
 
-
             List<uint> audioChunkOffsets = new();
-            List<uint> textChunkOffsets = new();
 
             #region Decryption Loop
             var beginProcess = DateTime.Now;
@@ -170,33 +167,24 @@ namespace AAXClean
 
             } while (!isCancelled && decryptSuccess && (mdatChunk = mdatChunk.GetNext(InputStream)) != null);
 
-
             #endregion
-            var decryptionResult = decryptSuccess ? DecryptionResult.NoErrorsDetected : DecryptionResult.Failed;
 
             //Reset all chunk offsets with their new positions.
             Moov.AudioTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Clear();
             Moov.AudioTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.AddRange(audioChunkOffsets);
 
+            //Write chapters to end of mdat and update moov
             WriteChapters(outputStream, Chapters);
 
-            long outputMoovStart = outputStream.Position;
-
-            outputStream.Position = outputMdatStart;
-            //Write final mdat size
-            outputStream.WriteUInt32BE((uint)(outputMoovStart - outputMdatStart));
-
-
-            outputStream.Position = outputMoovStart;
-
-            //Re-write the whole moov to commit changes
-            outputStream.Position = outputMoovStart;
+            //write moov to end of file
             Moov.Save(outputStream);
 
             outputStream.Close();
             InputStream.Close();
 
+            //Update status and events
             Status = DecryptionStatus.Completed;
+            var decryptionResult = decryptSuccess ? DecryptionResult.NoErrorsDetected : DecryptionResult.Failed;
             DecryptionComplete?.Invoke(this, decryptionResult);
 
             return decryptionResult switch
@@ -230,7 +218,8 @@ namespace AAXClean
             isCancelled = true;
         }
 
-        private void CalculateAndAddBitrate()
+        /// <returns>Number of audio bytes</returns>
+        private uint CalculateAndAddBitrate()
         {
 
             //Calculate the actual average bitrate because aaxc file is wrong.
@@ -249,6 +238,7 @@ namespace AAXClean
             }
             //Add a btrt box to the audio sample description.
             BtrtBox.Create(0, MaxBitrate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
+            return (uint)(audioBits / 8);
         }
         private void PatchAaxc()
         {
