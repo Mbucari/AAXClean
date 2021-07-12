@@ -154,8 +154,8 @@ namespace AAXClean
 
         public Mp4File DecryptAaxc(FileStream outputStream, byte[] key, byte[] iv, ChapterInfo userChapters = null)
         {
-            if (!outputStream.CanSeek || !outputStream.CanWrite)
-                throw new IOException($"{nameof(outputStream)} must be writable and seekable.");
+            if (!outputStream.CanWrite)
+                throw new IOException($"{nameof(outputStream)} must be writable.");
             if (FileType != FileType.Aax && FileType != FileType.Aaxc)
                 throw new ArgumentException($"This instance of {nameof(Mp4File)} is not an Aax or Aaxc file.");
             if (key is null || key.Length != 16)
@@ -167,9 +167,14 @@ namespace AAXClean
 
             Status = DecryptionStatus.Working;
 
+            PatchAaxc();
+            uint audioSize = CalculateAndAddBitrate();
+            uint chaptersSize;
             if (insertChapters)
             {
                 Chapters = userChapters;
+                chaptersSize = (uint)Chapters.RenderSize;
+
                 //Aaxc files repeat the chapter titles in a metadata track, but they
                 //aren't necessary for media players and they will contradict the new
                 //chapter titles, so we remove them.
@@ -181,16 +186,16 @@ namespace AAXClean
             else
             {
                 Chapters = new ChapterInfo();
+                chaptersSize = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => s);
             }
 
-            PatchAaxc();
-            CalculateAndAddBitrate();
 
             //Write ftyp to output file
             Ftyp.Save(outputStream);
 
-            //Write an mdat header with placeholder size.
-            outputStream.WriteUInt32BE(0);
+            //Calculate mdat size and write mdat header.
+            uint mdatSize = Mdat.Header.HeaderSize + audioSize + chaptersSize;
+            outputStream.WriteUInt32BE(mdatSize);
             outputStream.WriteType("mdat");
 
             List<uint> audioChunkOffsets = new();
@@ -250,12 +255,6 @@ namespace AAXClean
 
             //Write chapters to end of mdat and update moov
             WriteChapters(outputStream, Chapters);
-
-            //write final mdat size
-            uint mdatSize = (uint)(outputStream.Position - Ftyp.RenderSize);
-            outputStream.Position = Ftyp.RenderSize;
-            outputStream.WriteUInt32BE(mdatSize);
-            outputStream.Position = Ftyp.RenderSize + mdatSize;
 
             //write moov to end of file
             Moov.Save(outputStream);
