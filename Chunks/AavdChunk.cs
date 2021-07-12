@@ -33,27 +33,16 @@ namespace AAXClean.Chunks
         {
             foreach (var fsize in FrameSizes)
             {
-                int blockSize = fsize & 0xffffff0;
-                if (blockSize == 0)
-                    continue;
+                byte[] encBlocks = infile.ReadBlock(fsize);
 
-                int remSize = fsize - blockSize;
-
-                byte[] encBlocks = infile.ReadBlock(blockSize);
-
-                using var xform = CreateTransform(key, iv);
-                using var cStream = new CryptoStream(new MemoryStream(encBlocks), xform, CryptoStreamMode.Read);
-
-                var decFrame = cStream.ReadBlock(blockSize);
+                Crypto.DecryptInPlace(key, iv, encBlocks);
 
                 //aac bitstream error detection
                 //https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/movenc.c  in ff_mov_write_packet
-                if ((AV_RB16(decFrame) & 0xfff0) == 0xfff0)
+                if ((AV_RB16(encBlocks) & 0xfff0) == 0xfff0)
                     return false;
 
-                outfile.Write(decFrame);
-
-                outfile.Write(infile.ReadBlock(remSize));
+                outfile.Write(encBlocks);
             }
 
             return true;
@@ -64,15 +53,6 @@ namespace AAXClean.Chunks
         private static ushort AV_RB16(byte[] frame)
         {
             return (ushort)(frame[0] << 8 | frame[1]);
-        }
-
-        private static ICryptoTransform CreateTransform(byte[] key, byte[] iv)
-        {
-            var aes = Aes.Create();
-            aes.Mode = CipherMode.CBC;
-            aes.Padding = PaddingMode.None;
-
-            return aes.CreateDecryptor(key, iv);
         }
 
         public override MdatChunk GetNext(Stream file)

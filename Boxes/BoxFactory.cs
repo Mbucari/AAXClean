@@ -24,6 +24,7 @@ namespace AAXClean.Boxes
                 "stsd" => new StsdBox(file, header, parent),
                 "esds" => new EsdsBox(file, header, parent),
                 "btrt" => new BtrtBox(file, header, parent),
+                "adrm" => new AdrmBox(file, header, parent),
                 "stts" => new SttsBox(file, header, parent),
                 "stsc" => new StscBox(file, header, parent),
                 "stsz" => new StszBox(file, header, parent),

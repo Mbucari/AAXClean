@@ -20,6 +20,12 @@ namespace AAXClean
         Working,
         Completed
     }
+    public enum FileType
+    {
+        Aax,
+        Aaxc,
+        Mpeg4
+    }
     public class Mp4File : Box
     {
         public event EventHandler<DecryptionProgressEventArgs> DecryptionProgressUpdate;
@@ -28,7 +34,7 @@ namespace AAXClean
         public Stream InputStream { get; }
         public ChapterInfo Chapters { get; private set; }
         public DecryptionStatus Status { get; private set; } = DecryptionStatus.NotStarted;
-
+        public FileType FileType { get; }
         public TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.AudioTrack.Mdia.Mdhd.Duration / TimeScale);
         public uint MaxBitrate => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate;
         public uint AverageBitrate => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate;
@@ -47,6 +53,13 @@ namespace AAXClean
             Moov = GetChild<MoovBox>();
             Mdat = GetChild<MdatBox>();
 
+            FileType = Ftyp.MajorBrand switch
+            {
+                "aax " => FileType.Aax,
+                "aaxc" => FileType.Aaxc,
+                _ => FileType.Mpeg4
+            };
+
             if (Moov.iLst is not null)
                 AppleTags = new AppleTags(Moov.iLst);
         }
@@ -56,6 +69,74 @@ namespace AAXClean
 
         private bool isCancelled = false;
 
+        public Mp4File DecryptAax(FileStream outputStream, string activationBytes)
+        {
+            if (string.IsNullOrWhiteSpace(activationBytes) || activationBytes.Length != 8)
+                throw new ArgumentException($"{nameof(activationBytes)} must be 4 bytes long.");
+
+            byte[] actBytes = ByteUtil.BytesFromHexString(activationBytes);
+
+            return DecryptAax(outputStream, actBytes);
+        }
+        public Mp4File DecryptAax(FileStream outputStream, byte[] activationBytes)
+        {
+            if (activationBytes is null || activationBytes.Length != 4)
+                throw new ArgumentException($"{nameof(activationBytes)} must be 4 bytes long.");
+            if (FileType != FileType.Aax)
+                throw new Exception($"This instance of {nameof(Mp4File)} is not an {FileType.Aax} file.");
+
+            var adrm = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.GetChild<AdrmBox>();
+
+            if (adrm is null)
+                return null;
+
+            //Adrm key derrivation from 
+            //https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/mov.c in mov_read_adrm
+
+            var intermediate_key = Crypto.Sha1(
+               (audible_fixed_key, 0, audible_fixed_key.Length),
+               (activationBytes, 0, activationBytes.Length));
+
+            var intermediate_iv = Crypto.Sha1(
+                (audible_fixed_key, 0, audible_fixed_key.Length),
+                (intermediate_key, 0, intermediate_key.Length),
+                (activationBytes, 0, activationBytes.Length));
+
+            var calculatedChecksum = Crypto.Sha1(
+                (intermediate_key, 0, 16),
+                (intermediate_iv, 0, 16));
+
+            if (!ByteUtil.BytesEqual(calculatedChecksum, adrm.Checksum))
+                return null;
+
+            var drmBlob = ByteUtil.CloneBytes(adrm.DrmBlob);
+
+            Crypto.DecryptInPlace(
+                ByteUtil.CloneBytes(intermediate_key, 0, 16),
+                ByteUtil.CloneBytes(intermediate_iv, 0, 16), 
+                drmBlob);
+
+            if (!ByteUtil.BytesEqual(drmBlob, 0, activationBytes, 0, 4, true))
+                return null;
+
+            byte[] file_key = ByteUtil.CloneBytes(drmBlob, 8, 16);
+
+            var file_iv = Crypto.Sha1(
+                (drmBlob, 26, 16),
+                (file_key, 0, 16),
+                (audible_fixed_key, 0, 16));
+
+            Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children.Remove(adrm);
+
+            return DecryptAaxc(
+                outputStream,
+                file_key, 
+                ByteUtil.CloneBytes(file_iv, 0, 16));
+        }
+
+        //Constant key
+        //https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/mov.c
+        private static readonly byte[] audible_fixed_key = { 0x77, 0x21, 0x4d, 0x4b, 0x19, 0x6a, 0x87, 0xcd, 0x52, 0x00, 0x45, 0xfd, 0x20, 0xa5, 0x1d, 0x67 };
 
         public Mp4File DecryptAaxc(FileStream outputStream, string audible_key, string audible_iv, ChapterInfo userChapters = null)
         {
@@ -64,15 +145,9 @@ namespace AAXClean
             if (string.IsNullOrWhiteSpace(audible_iv) || audible_iv.Length != 32)
                 throw new ArgumentException($"{nameof(audible_iv)} must be 16 bytes long.");
 
-            byte[] key = Enumerable.Range(0, audible_key.Length)
-                     .Where(x => x % 2 == 0)
-                     .Select(x => Convert.ToByte(audible_key.Substring(x, 2), 16))
-                     .ToArray();
+            byte[] key = ByteUtil.BytesFromHexString(audible_key);
 
-            byte[] iv = Enumerable.Range(0, audible_iv.Length)
-                     .Where(x => x % 2 == 0)
-                     .Select(x => Convert.ToByte(audible_iv.Substring(x, 2), 16))
-                     .ToArray();
+            byte[] iv = ByteUtil.BytesFromHexString(audible_iv);
 
             return DecryptAaxc(outputStream, key, iv, userChapters);
         }
@@ -81,8 +156,8 @@ namespace AAXClean
         {
             if (!outputStream.CanSeek || !outputStream.CanWrite)
                 throw new IOException($"{nameof(outputStream)} must be writable and seekable.");
-            if (Ftyp.MajorBrand != "aaxc")
-                throw new ArgumentException($"This instance of {nameof(Mp4File)} is not an Aaxc file.");
+            if (FileType != FileType.Aax && FileType != FileType.Aaxc)
+                throw new ArgumentException($"This instance of {nameof(Mp4File)} is not an Aax or Aaxc file.");
             if (key is null || key.Length != 16)
                 throw new ArgumentException($"{nameof(key)} must be 16 bytes long.");
             if (iv is null || iv.Length != 16)
@@ -116,7 +191,7 @@ namespace AAXClean
 
             //Write an mdat header with placeholder size.
             outputStream.WriteUInt32BE(0);
-            outputStream.Write(Encoding.ASCII.GetBytes("mdat"));
+            outputStream.WriteType("mdat");
 
             List<uint> audioChunkOffsets = new();
 
@@ -227,7 +302,6 @@ namespace AAXClean
         /// <returns>Number of audio bytes</returns>
         private uint CalculateAndAddBitrate()
         {
-
             //Calculate the actual average bitrate because aaxc file is wrong.
             long audioBits = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => s) * 8;
             double duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
@@ -246,6 +320,7 @@ namespace AAXClean
             BtrtBox.Create(0, MaxBitrate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
             return (uint)(audioBits / 8);
         }
+
         private void PatchAaxc()
         {
             Ftyp.MajorBrand = "isom";
@@ -272,7 +347,7 @@ namespace AAXClean
                 uint sampleDelta = (uint)((c.EndOffset - c.StartOffset).TotalSeconds * TimeScale);
                 byte[] title = Encoding.UTF8.GetBytes(c.Title);
 
-                Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(sampleCount:1, sampleDelta));
+                Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(sampleCount: 1, sampleDelta));
                 Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Add((uint)(2 + title.Length + encd.Length));
                 Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add((uint)output.Position);
 
@@ -284,7 +359,7 @@ namespace AAXClean
 
         //This is constant folr UTF-8 text
         //https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/movenc.c
-        private readonly byte[] encd = { 0, 0, 0, 0xc, (byte)'e', (byte)'n', (byte)'c', (byte)'d', 0, 0, 1, 0 };
+        private static readonly byte[] encd = { 0, 0, 0, 0xc, (byte)'e', (byte)'n', (byte)'c', (byte)'d', 0, 0, 1, 0 };
 
         //Gets the playback timestamp of an audio frame.
         private TimeSpan FrameToTime(uint sampleNum)
