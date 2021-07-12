@@ -109,15 +109,13 @@ namespace AAXClean
             }
 
             PatchAaxc();
-            uint audioSize = CalculateAndAddBitrate();
-            uint chaptersSize = (uint)Chapters.RenderSize;
+            CalculateAndAddBitrate();
 
             //Write ftyp to output file
             Ftyp.Save(outputStream);
 
-            //Write an mdat header.
-            uint mdatSize = Mdat.Header.HeaderSize + audioSize + chaptersSize;
-            outputStream.WriteUInt32BE(mdatSize);
+            //Write an mdat header with placeholder size.
+            outputStream.WriteUInt32BE(0);
             outputStream.Write(Encoding.ASCII.GetBytes("mdat"));
 
             List<uint> audioChunkOffsets = new();
@@ -127,8 +125,8 @@ namespace AAXClean
             var beginProcess = DateTime.Now;
             var nextUpdate = beginProcess;
             uint framesProcessed = 0;
-            isCancelled = false;
             var decryptSuccess = true;
+            isCancelled = false;
 
             var mdatChunk = Mdat.FirstEntry;
             do
@@ -157,6 +155,7 @@ namespace AAXClean
                         {
                             if (insertChapters) continue;
 
+                            //read chapter info into Chapters for writing at the end of mdat
                             (string title, TimeSpan duration) = text.GetChapter(Moov.TextTrack);
                             Chapters.AddChapter(title, duration);
 
@@ -176,6 +175,12 @@ namespace AAXClean
 
             //Write chapters to end of mdat and update moov
             WriteChapters(outputStream, Chapters);
+
+            //write final mdat size
+            uint mdatSize = (uint)(outputStream.Position - Ftyp.Header.TotalBoxSize);
+            outputStream.Position = Ftyp.Header.TotalBoxSize;
+            outputStream.WriteUInt32BE(mdatSize);
+            outputStream.Position = Ftyp.Header.TotalBoxSize + mdatSize;
 
             //write moov to end of file
             Moov.Save(outputStream);
