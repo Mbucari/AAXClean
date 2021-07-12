@@ -177,10 +177,10 @@ namespace AAXClean
             WriteChapters(outputStream, Chapters);
 
             //write final mdat size
-            uint mdatSize = (uint)(outputStream.Position - Ftyp.Header.TotalBoxSize);
-            outputStream.Position = Ftyp.Header.TotalBoxSize;
+            uint mdatSize = (uint)(outputStream.Position - Ftyp.RenderSize);
+            outputStream.Position = Ftyp.RenderSize;
             outputStream.WriteUInt32BE(mdatSize);
-            outputStream.Position = Ftyp.Header.TotalBoxSize + mdatSize;
+            outputStream.Position = Ftyp.RenderSize + mdatSize;
 
             //write moov to end of file
             Moov.Save(outputStream);
