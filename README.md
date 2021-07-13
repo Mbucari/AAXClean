@@ -6,7 +6,7 @@ Aax Usage:
 string activation_bytes = "0a1b2c3d";
 FileStream input = File.OpenRead(@"C:\Source File.aax");
 FileStream output = File.OpenWrite(@"C:\Decrypted book.m4b");
-Mp4File aaxFile = new Mp4File(input);
+AaxFile aaxFile = new AaxFile(input);
 
 Mp4File decryptedFile = input.DecryptAax(output, activation_bytes);
 ```
@@ -17,7 +17,7 @@ string audible_key = "0a0b0c0d0e0f1a1b1c1d1e1f2a2b2c2d";
 string audible_iv = "2e2f3a3b3c3d3e3f4a4b4c4d4e4f5a5b";
 FileStream input = File.OpenRead(@"C:\Source File.aax");
 FileStream output = File.OpenWrite(@"C:\Decrypted book.m4b");
-Mp4File aaxcFile = new Mp4File(input);
+AaxFile aaxcFile = new AaxFile(input);
 
 Mp4File decryptedFile = input.DecryptAaxc(output, audible_key, audible_iv);
 ```
