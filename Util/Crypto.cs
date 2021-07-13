@@ -8,9 +8,13 @@ using System.Threading.Tasks;
 
 namespace AAXClean.Util
 {
-    class Crypto
+    internal class Crypto
     {
         internal static void DecryptInPlace(byte[] key, byte[] iv, byte[] encryptedBlocks)
+        {
+            DecryptInPlace(key, iv, encryptedBlocks, encryptedBlocks.Length);
+        }
+        internal static void DecryptInPlace(byte[] key, byte[] iv, byte[] encryptedBlocks, int length)
         {
             using var aes = Aes.Create();
             aes.Mode = CipherMode.CBC;
@@ -20,7 +24,7 @@ namespace AAXClean.Util
 
             using var cStream = new CryptoStream(new MemoryStream(encryptedBlocks), cbcDecryptor, CryptoStreamMode.Read);
 
-            cStream.Read(encryptedBlocks, 0, encryptedBlocks.Length & 0x7ffffff0);
+            cStream.Read(encryptedBlocks, 0, length & 0x7ffffff0);
         }
 
         internal static byte[] Sha1(params (byte[] bytes, int start, int length)[] blocks)

@@ -162,18 +162,16 @@ namespace AAXClean
                 throw new ArgumentException($"{nameof(key)} must be 16 bytes long.");
             if (iv is null || iv.Length != 16)
                 throw new ArgumentException($"{nameof(iv)} must be 16 bytes long.");
-
-            bool insertChapters = userChapters != null;
-
+            
             Status = DecryptionStatus.Working;
 
             PatchAaxc();
             uint audioSize = CalculateAndAddBitrate();
             uint chaptersSize;
-            if (insertChapters)
+
+            if (userChapters is not null)
             {
-                Chapters = userChapters;
-                chaptersSize = (uint)Chapters.RenderSize;
+                chaptersSize = (uint)userChapters.RenderSize;
 
                 //Aaxc files repeat the chapter titles in a metadata track, but they
                 //aren't necessary for media players and they will contradict the new
@@ -185,10 +183,8 @@ namespace AAXClean
             }
             else
             {
-                Chapters = new ChapterInfo();
                 chaptersSize = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => s);
             }
-
 
             //Write ftyp to output file
             Ftyp.Save(outputStream);
@@ -198,63 +194,44 @@ namespace AAXClean
             outputStream.WriteUInt32BE(mdatSize);
             outputStream.WriteType("mdat");
 
-            List<uint> audioChunkOffsets = new();
+
+            var audioHandler = new AavdChunkHandler(TimeScale, Moov.AudioTrack, key, iv, outputStream);
+            var chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack);
+
+            var chunkReader = new TrakChunkReader(
+                InputStream,
+                audioHandler,
+                chapterHandler);
+
 
             #region Decryption Loop
 
             var beginProcess = DateTime.Now;
             var nextUpdate = beginProcess;
-            uint framesProcessed = 0;
-            var decryptSuccess = true;
+
             isCancelled = false;
 
-            var mdatChunk = Mdat.FirstEntry;
-            do
+            while (!isCancelled && chunkReader.NextChunk())
             {
-                switch (mdatChunk)
+                //Throttle update so it doesn't bog down UI
+                if (DateTime.Now > nextUpdate)
                 {
-                    case AavdChunk aavd:
-                        {
-                            audioChunkOffsets.Add((uint)outputStream.Position);
-                            decryptSuccess = aavd.DecryptSave(key, iv, InputStream, outputStream);
-                            framesProcessed += (uint)aavd.NumFrames;
+                    TimeSpan position = audioHandler.ProcessPosition;
+                    var speed = position / (DateTime.Now - beginProcess);
+                    DecryptionProgressUpdate?.Invoke(this, new DecryptionProgressEventArgs(position, speed));
 
-                            //Throttle update so it doesn't bog down UI
-                            if (DateTime.Now > nextUpdate)
-                            {
-                                TimeSpan position = FrameToTime(framesProcessed);
-                                var speed = position / (DateTime.Now - beginProcess);
-                                DecryptionProgressUpdate?.Invoke(this, new DecryptionProgressEventArgs(position, speed));
-
-                                nextUpdate = DateTime.Now.AddMilliseconds(200);
-                            }
-
-                            break;
-                        }
-                    case TextChunk text:
-                        {
-                            if (insertChapters) continue;
-
-                            //read chapter info into Chapters for writing at the end of mdat
-                            (string title, TimeSpan duration) = text.GetChapter(Moov.TextTrack);
-                            Chapters.AddChapter(title, duration);
-
-                            break;
-                        }
-                    default:
-                        continue;
+                    nextUpdate = DateTime.Now.AddMilliseconds(200);
                 }
-
-            } while (!isCancelled && decryptSuccess && (mdatChunk = mdatChunk.GetNext(InputStream)) != null);
+            }
 
             #endregion
 
-            //Reset all chunk offsets with their new positions.
+            //Reset all audio chunk offsets with their new positions.
             Moov.AudioTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Clear();
-            Moov.AudioTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.AddRange(audioChunkOffsets);
+            Moov.AudioTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.AddRange(audioHandler.ChunkOffsets);
 
             //Write chapters to end of mdat and update moov
-            WriteChapters(outputStream, Chapters);
+            WriteChapters(outputStream, userChapters ?? chapterHandler.Chapters);
 
             //write moov to end of file
             Moov.Save(outputStream);
@@ -264,7 +241,7 @@ namespace AAXClean
 
             //Update status and events
             Status = DecryptionStatus.Completed;
-            var decryptionResult = decryptSuccess ? DecryptionResult.NoErrorsDetected : DecryptionResult.Failed;
+            var decryptionResult = audioHandler.Success ? DecryptionResult.NoErrorsDetected : DecryptionResult.Failed;
             DecryptionComplete?.Invoke(this, decryptionResult);
 
             return decryptionResult switch
@@ -347,40 +324,20 @@ namespace AAXClean
                 byte[] title = Encoding.UTF8.GetBytes(c.Title);
 
                 Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(sampleCount: 1, sampleDelta));
-                Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Add((uint)(2 + title.Length + encd.Length));
+                Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Add(2 + title.Length + encd.Length);
                 Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add((uint)output.Position);
 
                 output.WriteInt16BE((short)title.Length);
                 output.Write(title);
                 output.Write(encd);
             }
+            Chapters = chapters;
         }
 
         //This is constant folr UTF-8 text
         //https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/movenc.c
         private static readonly byte[] encd = { 0, 0, 0, 0xc, (byte)'e', (byte)'n', (byte)'c', (byte)'d', 0, 0, 1, 0 };
 
-        //Gets the playback timestamp of an audio frame.
-        private TimeSpan FrameToTime(uint sampleNum)
-        {
-            double beginDelta = 0;
-
-            foreach (var entry in Moov.AudioTrack.Mdia.Minf.Stbl.Stts.Samples)
-            {
-                if (sampleNum > entry.SampleCount)
-                {
-                    beginDelta += entry.SampleCount * entry.SampleDelta;
-                    sampleNum -= entry.SampleCount;
-                }
-                else
-                {
-                    beginDelta += sampleNum * entry.SampleDelta;
-                    break;
-                }
-            }
-
-            return TimeSpan.FromSeconds(beginDelta / TimeScale);
-        }
         protected override void Render(Stream file)
         {
             throw new NotImplementedException();

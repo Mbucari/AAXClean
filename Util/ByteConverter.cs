@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.Util
 {
-    class ByteUtil
+    internal class ByteUtil
     {
         public static byte[] BytesFromHexString(string hexString)
         {

@@ -9,7 +9,7 @@ namespace AAXClean.Boxes
         public override uint RenderSize => base.RenderSize + 8 + (uint)SampleSizes.Count * 4;
         public uint SampleSize { get; }
         public uint SampleCount { get; }
-        public List<uint> SampleSizes { get; } = new List<uint>();
+        public List<int> SampleSizes { get; } = new List<int>();
         internal StszBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
         {
             SampleSize = file.ReadUInt32BE();
@@ -19,7 +19,7 @@ namespace AAXClean.Boxes
 
             for (int i = 0; i < SampleCount; i++)
             {
-                uint sampleSize = file.ReadUInt32BE();
+                int sampleSize = file.ReadInt32BE();
                 SampleSizes.Add(sampleSize);
             }
         }
@@ -30,7 +30,7 @@ namespace AAXClean.Boxes
             file.WriteUInt32BE((uint)SampleSizes.Count);
             foreach (var sampleSize in SampleSizes)
             {
-                file.WriteUInt32BE(sampleSize);
+                file.WriteInt32BE(sampleSize);
             }
         }
     }

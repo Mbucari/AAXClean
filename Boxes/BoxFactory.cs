@@ -36,23 +36,5 @@ namespace AAXClean.Boxes
                 _ => new UnknownBox(file, header, parent),
             };
         }
-    }
-    internal class MdatFactory
-    {
-        internal static MdatChunk CreateEntry(Stream file)
-        {
-            var header = new BoxHeader(file);
-
-            switch (header.Type)
-            {
-                case "aavd":
-                    return new AavdChunk(file, header);
-                case "text":
-                    return new TextChunk(file, header);
-                default:
-                    break;
-            }
-            return default;
-        }
-    }
+    }   
 }
