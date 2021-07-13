@@ -198,10 +198,7 @@ namespace AAXClean
             var audioHandler = new AavdChunkHandler(TimeScale, Moov.AudioTrack, key, iv, outputStream);
             var chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack);
 
-            var chunkReader = new TrakChunkReader(
-                InputStream,
-                audioHandler,
-                chapterHandler);
+            var chunkReader = new TrakChunkReader(InputStream, audioHandler, chapterHandler);
 
 
             #region Decryption Loop
