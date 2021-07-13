@@ -259,6 +259,7 @@ namespace AAXClean
                 FreeBox.Create(freeSize, this).Save(InputStream);
             }
         }
+
         public void Close()
         {
             InputStream?.Close();
@@ -311,6 +312,9 @@ namespace AAXClean
         {
             if (_disposed)
                 return;
+
+            if (disposing)
+                Close();
 
             _disposed = true;
             base.Dispose(disposing);
