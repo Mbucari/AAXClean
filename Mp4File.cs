@@ -166,10 +166,12 @@ namespace AAXClean
             Status = DecryptionStatus.Working;
 
             PatchAaxc();
-            CalculateAndAddBitrate();
+            uint audioSize = CalculateAndAddBitrate();
+            uint chaptersSize;
 
             if (userChapters is not null)
             {
+                chaptersSize = (uint)userChapters.RenderSize;
                 //Aaxc files repeat the chapter titles in a metadata track, but they
                 //aren't necessary for media players and they will contradict the new
                 //chapter titles, so we remove them.
@@ -178,12 +180,17 @@ namespace AAXClean
                 if (textUdta is not null)
                     Moov.TextTrack.Children.Remove(textUdta);
             }
+            else
+            {
+                chaptersSize = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => s);
+            }
 
             //Write ftyp to output file
             Ftyp.Save(outputStream);
 
             //Calculate mdat size and write mdat header.
-            outputStream.WriteUInt32BE(0);
+            uint mdatSize = Mdat.Header.HeaderSize + audioSize + chaptersSize;
+            outputStream.WriteUInt32BE(mdatSize);
             outputStream.WriteType("mdat");
 
 
@@ -215,16 +222,12 @@ namespace AAXClean
 
             #endregion
 
+            Chapters = userChapters ?? chapterHandler.Chapters;
             //Write chapters to end of mdat and update moov
-            WriteChapters(outputStream, userChapters ?? chapterHandler.Chapters);
+            Chapters.WriteChapters(Moov.TextTrack, TimeScale, outputStream);
 
-            long moovStart = outputStream.Position;
             //write moov to end of file
             Moov.Save(outputStream);
-
-            //write mdat size
-            outputStream.Position = Ftyp.RenderSize;
-            outputStream.WriteUInt32BE((uint)(moovStart - Ftyp.RenderSize));
 
             outputStream.Close();
             InputStream.Close();
@@ -302,31 +305,6 @@ namespace AAXClean
             //Must change the audio type from aavd to mp4a
             Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Header.Type = "mp4a";
         }
-        private void WriteChapters(Stream output, ChapterInfo chapters)
-        {
-            Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Clear();
-            Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Clear();
-            Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Clear();
-
-            foreach (var c in chapters)
-            {
-                uint sampleDelta = (uint)((c.EndOffset - c.StartOffset).TotalSeconds * TimeScale);
-                byte[] title = Encoding.UTF8.GetBytes(c.Title);
-
-                Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(sampleCount: 1, sampleDelta));
-                Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Add(2 + title.Length + encd.Length);
-                Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add((uint)output.Position);
-
-                output.WriteInt16BE((short)title.Length);
-                output.Write(title);
-                output.Write(encd);
-            }
-            Chapters = chapters;
-        }
-
-        //This is constant folr UTF-8 text
-        //https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/movenc.c
-        private static readonly byte[] encd = { 0, 0, 0, 0xc, (byte)'e', (byte)'n', (byte)'c', (byte)'d', 0, 0, 1, 0 };
 
         protected override void Render(Stream file)
         {

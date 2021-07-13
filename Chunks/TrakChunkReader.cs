@@ -14,6 +14,11 @@ namespace AAXClean.Chunks
         private Stream InputStream { get; }
         private Queue<(uint, ChunkTable)> ChunkQueue { get; }
 
+        /// <summary>
+        /// Reads track all chuncks sequentially
+        /// </summary>
+        /// <param name="file">input mp4 stream from which to read chunks</param>
+        /// <param name="handlers">Codec handlers</param>
         public TrakChunkReader(Stream file, params IChunkHandler[] handlers)
         {
             InputStream = file;
@@ -33,7 +38,10 @@ namespace AAXClean.Chunks
 
             ChunkQueue = new Queue<(uint, ChunkTable)>(chunkList);
         }
-
+        /// <summary>
+        /// Reads the next available chunk.
+        /// </summary>
+        /// <returns></returns>
         public bool NextChunk()
         {
             if (ChunkQueue.Count == 0) return false;

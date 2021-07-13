@@ -60,7 +60,7 @@ namespace AAXClean
                 OutputStream.Write(encBlocks);
             }
             lastFrameProcessed = frameIndex;
-            return Success;
+            return true;
         }
 
         //Defined at

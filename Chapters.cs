@@ -1,7 +1,11 @@
-﻿using System;
+﻿using AAXClean.Boxes;
+using AAXClean.Util;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace AAXClean
 {
@@ -13,18 +17,29 @@ namespace AAXClean
         public int RenderSize => _chapterList.Sum(c => c.RenderSize);
         public ChapterInfo() { }
 
-        public void AddChapter(Chapter chapter)
-        {
-            if (chapter == null)
-                throw new ArgumentNullException(nameof(chapter));
-
-            _chapterList.Add(chapter);
-        }
         public void AddChapter(string title, TimeSpan duration)
         {
             TimeSpan starttime = _chapterList.Count == 0 ? TimeSpan.FromSeconds(0) : _chapterList[^1].EndOffset;
 
             _chapterList.Add(new Chapter(title, starttime, duration));
+        }
+
+        internal void WriteChapters(TrakBox textTrak, double timeScale, Stream output)
+        {
+            textTrak.Mdia.Minf.Stbl.Stts.Samples.Clear();
+            textTrak.Mdia.Minf.Stbl.Stsz.SampleSizes.Clear();
+            textTrak.Mdia.Minf.Stbl.Stco.ChunkOffsets.Clear();
+
+            foreach (var c in this)
+            {
+                uint sampleDelta = (uint)(c.Duration.TotalSeconds * timeScale);
+
+                textTrak.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(sampleCount: 1, sampleDelta));
+                textTrak.Mdia.Minf.Stbl.Stsz.SampleSizes.Add(c.RenderSize);
+                textTrak.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add((uint)output.Position);
+
+                c.WriteChapter(output);
+            }
         }
 
         public IEnumerator<Chapter> GetEnumerator()
@@ -41,9 +56,10 @@ namespace AAXClean
     {
         public string Title { get; }
         public TimeSpan StartOffset { get; }
-        public TimeSpan EndOffset { get; }
+        public TimeSpan Duration { get; }
+        public TimeSpan EndOffset => StartOffset + Duration;
 
-        public int RenderSize => 2 + Title.Length + 12;
+        internal int RenderSize => 2 + Encoding.UTF8.GetByteCount(Title) + encd.Length;
         public Chapter(string title, TimeSpan start, TimeSpan duration)
         {
             if (string.IsNullOrEmpty(title))
@@ -51,24 +67,20 @@ namespace AAXClean
 
             Title = title;
             StartOffset = start;
-            EndOffset = start + duration;
+            Duration = duration;
         }
-        public Chapter(string title, long startOffsetMs, long lengthMs)
-        {
-            if (string.IsNullOrEmpty(title))
-                throw new ArgumentNullException(nameof(title));
 
-            if (startOffsetMs < 0)
-                throw new ArgumentNullException(nameof(startOffsetMs));
-            // do not validate lengthMs for '> 0'. It is valid to set sections this way. eg: 11-22-63 [B005UR3VFO] by Stephen King
-
-            Title = title;
-            StartOffset = TimeSpan.FromMilliseconds(startOffsetMs);
-            EndOffset = StartOffset + TimeSpan.FromMilliseconds(lengthMs);
-        }
-        public Chapter(string title, double startTimeSec, double endTimeSec)
-            : this(title, (long)(startTimeSec * 1000), (long)((endTimeSec - startTimeSec) * 1000))
+        internal void WriteChapter(Stream output)
         {
+            byte[] title = Encoding.UTF8.GetBytes(Title);
+
+            output.WriteInt16BE((short)title.Length);
+            output.Write(title);
+            output.Write(encd);
         }
+
+        //This is constant folr UTF-8 text
+        //https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/movenc.c
+        private static readonly byte[] encd = { 0, 0, 0, 0xc, (byte)'e', (byte)'n', (byte)'c', (byte)'d', 0, 0, 1, 0 };
     }
 }
