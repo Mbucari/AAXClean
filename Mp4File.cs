@@ -234,7 +234,7 @@ namespace AAXClean
 
             //Update status and events
             Status = DecryptionStatus.Completed;
-            var decryptionResult = audioHandler.Success ? DecryptionResult.NoErrorsDetected : DecryptionResult.Failed;
+            var decryptionResult = audioHandler.Success && !isCancelled ? DecryptionResult.NoErrorsDetected : DecryptionResult.Failed;
             DecryptionComplete?.Invoke(this, decryptionResult);
 
             return decryptionResult switch
@@ -306,9 +306,17 @@ namespace AAXClean
             Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Header.Type = "mp4a";
         }
 
-        protected override void Render(Stream file)
+        private bool _disposed = false;
+        protected override void Dispose(bool disposing)
         {
-            throw new NotImplementedException();
+            if (_disposed)
+                return;
+
+            _disposed = true;
+            base.Dispose(disposing);
+            GC.Collect();
         }
+
+        protected override void Render(Stream file) => throw new NotImplementedException();
     }
 }

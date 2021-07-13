@@ -10,7 +10,6 @@ namespace AAXClean.Boxes
     {
         public override uint RenderSize => base.RenderSize + ES_Descriptor.RenderSize;
 
-
         public ES_Descriptor ES_Descriptor { get; }
         internal EsdsBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
         {

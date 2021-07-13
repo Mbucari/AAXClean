@@ -33,5 +33,21 @@ namespace AAXClean.Boxes
                 file.WriteInt32BE(sampleSize);
             }
         }
+
+        private bool _disposed = false;
+        protected override void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                SampleSizes.Clear();
+            }
+
+            _disposed = true;
+
+            base.Dispose(disposing);
+        }
     }
 }

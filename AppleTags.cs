@@ -1,4 +1,5 @@
 ﻿using AAXClean.Boxes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -82,6 +83,6 @@ namespace AAXClean
                 covr.Data.Data = coverArt;
             else
                 AddTag("covr", coverArt, AppleDataBox.FlagType.ContainsJpegData);
-        }
+        }       
     }
 }

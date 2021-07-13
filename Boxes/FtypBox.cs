@@ -29,5 +29,21 @@ namespace AAXClean.Boxes
             foreach (var brand in CompatibleBrands)
                 file.WriteType(brand);
         }
+
+        private bool _disposed = false;
+        protected override void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                CompatibleBrands.Clear();
+            }
+
+            _disposed = true;
+
+            base.Dispose(disposing);
+        }
     }
 }

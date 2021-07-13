@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace AAXClean.Boxes
 {
-    public abstract class Box
+    public abstract class Box : IDisposable
     {
         public Box Parent { get; }
         public BoxHeader Header { get; }
@@ -63,6 +63,24 @@ namespace AAXClean.Boxes
             {
                 child.Save(file);
             }
+        }
+
+        private bool _disposed = false;        
+        public void Dispose() => Dispose(true);
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                foreach (var child in Children)
+                    child.Dispose();
+
+                Children.Clear();
+            }
+
+            _disposed = true;
         }
     }
 }

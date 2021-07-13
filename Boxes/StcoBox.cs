@@ -1,4 +1,5 @@
 ﻿using AAXClean.Util;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -27,6 +28,21 @@ namespace AAXClean.Boxes
             {
                 file.WriteUInt32BE(chunkOffset);
             }
+        }
+        private bool _disposed = false;
+        protected override void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                ChunkOffsets.Clear();
+            }
+
+            _disposed = true;
+
+            base.Dispose(disposing);
         }
     }
 }

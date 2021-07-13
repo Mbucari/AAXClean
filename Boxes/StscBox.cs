@@ -29,6 +29,21 @@ namespace AAXClean.Boxes
                 file.WriteUInt32BE(sample.SampleDescriptionIndex);
             }
         }
+        private bool _disposed = false;
+        protected override void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                Samples.Clear();
+            }
+
+            _disposed = true;
+
+            base.Dispose(disposing);
+        }
 
         public class ChunkEntry
         {
