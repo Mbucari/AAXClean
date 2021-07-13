@@ -279,7 +279,7 @@ namespace AAXClean
         private uint CalculateAndAddBitrate()
         {
             //Calculate the actual average bitrate because aaxc file is wrong.
-            long audioBits = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => s) * 8;
+            long audioBits = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => (long)s) * 8;
             double duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
             uint avgBitrate = (uint)(audioBits * TimeScale / duration);
 
