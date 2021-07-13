@@ -128,6 +128,10 @@ namespace AAXClean
 
             Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children.Remove(adrm);
 
+            var aabd = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children.FirstOrDefault(b => b.Header.Type == "aabd");
+            if (aabd is not null)
+                Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children.Remove(aabd);
+
             return DecryptAaxc(
                 outputStream,
                 file_key, 
