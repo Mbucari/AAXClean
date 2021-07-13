@@ -8,7 +8,7 @@ FileStream input = File.OpenRead(@"C:\Source File.aax");
 FileStream output = File.OpenWrite(@"C:\Decrypted book.m4b");
 AaxFile aaxFile = new AaxFile(input);
 
-Mp4File decryptedFile = input.DecryptAax(output, activation_bytes);
+Mp4File decryptedFile = aaxcFile.DecryptAax(output, activation_bytes);
 ```
 
 Aaxc Usage:
@@ -19,5 +19,5 @@ FileStream input = File.OpenRead(@"C:\Source File.aax");
 FileStream output = File.OpenWrite(@"C:\Decrypted book.m4b");
 AaxFile aaxcFile = new AaxFile(input);
 
-Mp4File decryptedFile = input.DecryptAaxc(output, audible_key, audible_iv);
+Mp4File decryptedFile = aaxcFile.DecryptAaxc(output, audible_key, audible_iv);
 ```
