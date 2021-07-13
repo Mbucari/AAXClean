@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+
+### manually ignored files
+
+# Windows shortcuts
+*.lnk
