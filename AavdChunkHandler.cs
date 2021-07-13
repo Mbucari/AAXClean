@@ -15,7 +15,6 @@ namespace AAXClean
         public byte[] Key { get; }
         public byte[] IV { get; }
         public Stream OutputStream { get; }
-        public List<uint> ChunkOffsets { get; } = new();
         public bool Success { get; private set; } = true;
         public TimeSpan ProcessPosition => FrameToTime(lastFrameProcessed);
         public TrakBox Track { get; }
@@ -23,15 +22,22 @@ namespace AAXClean
         private uint lastFrameProcessed { get; set; }
         private double TimeScale { get; }
         private SttsBox.SampleEntry[] Samples { get; }
+        private List<uint> ChunkOffsets { get; }
 
         public AavdChunkHandler(uint timeScale, TrakBox trak, byte[] key, byte[] iv, Stream outputStream)
         {
             TimeScale = timeScale;
             Track = trak;
             Samples = Track.Mdia.Minf.Stbl.Stts.Samples.ToArray();
+            ChunkOffsets = Track.Mdia.Minf.Stbl.Stco.ChunkOffsets;
             Key = key;
             IV = iv;
             OutputStream = outputStream;
+        }
+
+        public void Init()
+        {
+            ChunkOffsets.Clear();
         }
 
         public bool ChunkAvailable(Stream file, uint chunkIndex, uint frameIndex, int chunkSize, int[] frameSizes)

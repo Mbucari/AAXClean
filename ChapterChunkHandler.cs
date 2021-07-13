@@ -23,6 +23,12 @@ namespace AAXClean
             Track = trak;
             Samples = Track.Mdia.Minf.Stbl.Stts.Samples.ToArray();
         }
+
+        public void Init()
+        {
+            return;
+        }
+
         public bool ChunkAvailable(Stream file, uint chunkIndex, uint frameIndex, int chunkSize, int[] frameSizes)
         {
             if (chunkIndex < 0 || chunkIndex >= Samples.Length)

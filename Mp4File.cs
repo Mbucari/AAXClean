@@ -223,10 +223,6 @@ namespace AAXClean
 
             #endregion
 
-            //Reset all audio chunk offsets with their new positions.
-            Moov.AudioTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Clear();
-            Moov.AudioTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.AddRange(audioHandler.ChunkOffsets);
-
             //Write chapters to end of mdat and update moov
             WriteChapters(outputStream, userChapters ?? chapterHandler.Chapters);
 

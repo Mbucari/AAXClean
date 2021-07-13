@@ -25,6 +25,8 @@ namespace AAXClean.Chunks
                 var chunkTable = new ChunkTable(handler.Track.Mdia.Minf.Stbl, handler);
 
                 chunkList.AddRange(handler.Track.Mdia.Minf.Stbl.Stco.ChunkOffsets.Select(co => (co, chunkTable)));
+
+                handler.Init();
             }
 
             chunkList.Sort((o1, o2) => o1.chunkOffset.CompareTo(o2.chunkOffset));
