@@ -166,13 +166,10 @@ namespace AAXClean
             Status = DecryptionStatus.Working;
 
             PatchAaxc();
-            uint audioSize = CalculateAndAddBitrate();
-            uint chaptersSize;
+            CalculateAndAddBitrate();
 
             if (userChapters is not null)
             {
-                chaptersSize = (uint)userChapters.RenderSize;
-
                 //Aaxc files repeat the chapter titles in a metadata track, but they
                 //aren't necessary for media players and they will contradict the new
                 //chapter titles, so we remove them.
@@ -181,17 +178,12 @@ namespace AAXClean
                 if (textUdta is not null)
                     Moov.TextTrack.Children.Remove(textUdta);
             }
-            else
-            {
-                chaptersSize = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => s);
-            }
 
             //Write ftyp to output file
             Ftyp.Save(outputStream);
 
             //Calculate mdat size and write mdat header.
-            uint mdatSize = Mdat.Header.HeaderSize + audioSize + chaptersSize;
-            outputStream.WriteUInt32BE(mdatSize);
+            outputStream.WriteUInt32BE(0);
             outputStream.WriteType("mdat");
 
 
@@ -226,8 +218,13 @@ namespace AAXClean
             //Write chapters to end of mdat and update moov
             WriteChapters(outputStream, userChapters ?? chapterHandler.Chapters);
 
+            long moovStart = outputStream.Position;
             //write moov to end of file
             Moov.Save(outputStream);
+
+            //write mdat size
+            outputStream.Position = Ftyp.RenderSize;
+            outputStream.WriteUInt32BE((uint)(moovStart - Ftyp.RenderSize));
 
             outputStream.Close();
             InputStream.Close();
