@@ -11,6 +11,16 @@ namespace AAXClean.Boxes
         public string MajorBrand { get; set; }
         public int MajorVersion { get; set; }
         public List<string> CompatibleBrands { get; } = new List<string>();
+
+
+        internal static FtypBox Create(int size, Box parent)
+        {
+            var header = new BoxHeader((uint)size, "ftyp");
+            var ftyp = new FtypBox(header, parent);
+            return ftyp;
+        }
+
+        private FtypBox(BoxHeader header, Box parent) : base(header, parent) { }
         internal FtypBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
         {
             long endPos = header.FilePosition + header.TotalBoxSize;

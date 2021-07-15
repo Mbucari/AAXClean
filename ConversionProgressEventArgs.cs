@@ -2,9 +2,9 @@
 
 namespace AAXClean
 {
-    public class DecryptionProgressEventArgs : EventArgs
+    public class ConversionProgressEventArgs : EventArgs
     {
-        internal DecryptionProgressEventArgs(TimeSpan position, double speed)
+        internal ConversionProgressEventArgs(TimeSpan position, double speed)
         {
             ProcessPosition = position;
             ProcessSpeed = speed;

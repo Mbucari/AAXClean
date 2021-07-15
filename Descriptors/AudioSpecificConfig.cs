@@ -9,7 +9,7 @@ namespace AAXClean.Descriptors
     internal class AudioSpecificConfig : BaseDescriptor
     {
         public override uint RenderSize => base.RenderSize + (uint)Blob.Length;
-        private byte[] Blob { get; }
+        public byte[] Blob { get; }
 
         public AudioSpecificConfig(Stream file) : base(0x5, file)
         {

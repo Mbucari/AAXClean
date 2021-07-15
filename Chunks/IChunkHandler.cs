@@ -5,8 +5,8 @@ namespace AAXClean.Chunks
 {
     internal interface IChunkHandler
     {
+        bool InputStreamSeekable { get; }
         TrakBox Track { get; }
-        void Init();
-        bool ChunkAvailable(Stream file, uint chunkIndex, uint frameIndex, int chunkSize, int[] frameSizes);
+        bool ChunkAvailable(Stream file, uint chunkIndex, uint frameIndex, int totalChunkSize, int[] frameSizes);
     }
 }

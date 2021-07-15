@@ -30,8 +30,6 @@ namespace AAXClean.Chunks
                 var chunkTable = new ChunkTable(handler.Track.Mdia.Minf.Stbl, handler);
 
                 chunkList.AddRange(handler.Track.Mdia.Minf.Stbl.Stco.ChunkOffsets.Select(co => (co, chunkTable)));
-
-                handler.Init();
             }
 
             chunkList.Sort((o1, o2) => o1.chunkOffset.CompareTo(o2.chunkOffset));
@@ -51,18 +49,28 @@ namespace AAXClean.Chunks
             if (InputStream.Position < chunkOffset)
             {
                 //Unknown Track or data type. Read passed it to next known chunk.
-                InputStream.ReadBlock((int)(chunkOffset - InputStream.Position));
+                if (table.Handler.InputStreamSeekable)
+                    InputStream.Position = chunkOffset;
+                else
+                    InputStream.ReadBlock((int)(chunkOffset - InputStream.Position));
+            }
+            else if (InputStream.Position > chunkOffset)
+            {
+                if (table.Handler.InputStreamSeekable)
+                    InputStream.Position = chunkOffset;
+                else
+                    throw new Exception($"Input stream position 0x{InputStream.Position:X8} is past the chunk offset 0x{chunkOffset:X8} and is not seekable.");
             }
 
             (int totalChunkSize, uint frameIndex, int[] frameSizes) = table.GetNextChunk();
 
-            return table.Handler.ChunkAvailable(InputStream, table.NextChunk - 1, frameIndex, totalChunkSize, frameSizes);
+            return table.Handler.ChunkAvailable(InputStream, table.NextChunkIndex - 1, frameIndex, totalChunkSize, frameSizes);
         }
 
         private class ChunkTable
         {
             public IChunkHandler Handler { get; }
-            public uint NextChunk { get; set; } = 0;
+            public uint NextChunkIndex { get; set; } = 0;
             private int[] SampleSizes { get; }
             private StscBox.ChunkEntry[] ChunkEntries { get; }
             public ChunkTable(StblBox stbl, IChunkHandler handler)
@@ -76,7 +84,7 @@ namespace AAXClean.Chunks
 
             public (int totalChunkSize, uint frameIndex, int[] frameSizes) GetNextChunk()
             {
-                (uint firstFrame, uint numFrames) = NumSamplesInChunk(NextChunk++);
+                (uint firstFrame, uint numFrames) = NumSamplesInChunk(NextChunkIndex++);
 
                 int[] frameSizes = new int[numFrames];
                 int totalChunkSize = 0;

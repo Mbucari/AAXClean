@@ -1,35 +1,30 @@
 ﻿using AAXClean.Boxes;
-using AAXClean.Chunks;
 using AAXClean.Util;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace AAXClean
+namespace AAXClean.Chunks
 {
     internal class ChapterChunkHandler : IChunkHandler
     {
+        public bool InputStreamSeekable { get; }
         public ChapterInfo Chapters { get; } = new();
         public double TimeScale { get; }
         public TrakBox Track { get; }
 
         private SttsBox.SampleEntry[] Samples { get; }
-        public ChapterChunkHandler(uint timeScale, TrakBox trak)
+
+        public ChapterChunkHandler(uint timeScale, TrakBox trak, bool seekable = false)
         {
             TimeScale = timeScale;
             Track = trak;
             Samples = Track.Mdia.Minf.Stbl.Stts.Samples.ToArray();
+            InputStreamSeekable = seekable;
         }
 
-        public void Init()
-        {
-            return;
-        }
-
-        public bool ChunkAvailable(Stream file, uint chunkIndex, uint frameIndex, int chunkSize, int[] frameSizes)
+        public bool ChunkAvailable(Stream file, uint chunkIndex, uint frameIndex, int totalChunkSize, int[] frameSizes)
         {
             if (chunkIndex < 0 || chunkIndex >= Samples.Length)
                 return false;
