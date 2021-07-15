@@ -15,7 +15,7 @@ namespace AAXClean.Chunks
         public ISampleFilter SampleFilter { get; set; }
         public TrakBox Track { get; }
         public bool InputStreamSeekable { get; }
-        public TimeSpan ProcessPosition => FrameToTime(lastFrameProcessed, Samples);
+        public TimeSpan ProcessPosition => FrameToTime(lastFrameProcessed);
 
         private uint lastFrameProcessed { get; set; }
         private SttsBox.SampleEntry[] Samples { get; }
@@ -29,6 +29,7 @@ namespace AAXClean.Chunks
         }
 
         public abstract bool PreprocessSample(byte[] audioSample);
+
         public bool ChunkAvailable(Stream file, uint chunkIndex, uint frameIndex, int totalChunkSize, int[] frameSizes)
         {
             for (uint fIndex = 0; fIndex < frameSizes.Length; fIndex++)
@@ -51,11 +52,11 @@ namespace AAXClean.Chunks
         /// <summary>
         /// Gets the playback timestamp of an audio frame.
         /// </summary>
-        protected TimeSpan FrameToTime(uint sampleNum, SttsBox.SampleEntry[] samples)
+        private TimeSpan FrameToTime(uint sampleNum)
         {
             double beginDelta = 0;
 
-            foreach (var entry in samples)
+            foreach (var entry in Samples)
             {
                 if (sampleNum > entry.SampleCount)
                 {
