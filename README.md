@@ -16,7 +16,7 @@ Aaxc Usage:
 var audible_key = "0a0b0c0d0e0f1a1b1c1d1e1f2a2b2c2d";
 var audible_iv = "2e2f3a3b3c3d3e3f4a4b4c4d4e4f5a5b";
 var input = File.OpenRead(@"C:\Source File.aax");
-var output = File.OpenWrite(@"C:\Decrypted book.m4b");
+var output = File.OpenWrite(@"C:\Decrypted book.mp3");
 var aaxcFile = new AaxFile(input);
 
 var conversionResult = aaxcFile.DecryptAaxc(output, audible_key, audible_iv, OutputFormat.Mp3);
