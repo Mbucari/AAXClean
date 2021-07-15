@@ -84,16 +84,6 @@ namespace AAXClean
             }
         }
 
-        public (uint audioSize, uint avgBitrate) CalculateAudioSizeAndBitrate()
-        {
-            //Calculate the actual average bitrate because aaxc file is wrong.
-            long audioBits = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => (long)s) * 8;
-            double duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
-            uint avgBitrate = (uint)(audioBits * TimeScale / duration);
-
-            return ((uint)(audioBits / 8), avgBitrate);
-        }
-
         public ConversionResult ConvertToMp3(Stream outputStream)
         {
             var audioHandler = new Mp4aChunkHandler(TimeScale, Moov.AudioTrack, seekable: true);
@@ -213,6 +203,16 @@ namespace AAXClean
                     nextUpdate = DateTime.Now.AddMilliseconds(200);
                 }
             }
+        }
+
+        protected (uint audioSize, uint avgBitrate) CalculateAudioSizeAndBitrate()
+        {
+            //Calculate the actual average bitrate because aaxc file is wrong.
+            long audioBits = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => (long)s) * 8;
+            double duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
+            uint avgBitrate = (uint)(audioBits * TimeScale / duration);
+
+            return ((uint)(audioBits / 8), avgBitrate);
         }
 
         public void Cancel()
