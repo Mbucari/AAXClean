@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace AAXClean.Chunks
 {
-    internal class AavdChunkHandler : AudioChunkHandler
+    internal class AavdChunkHandler : Mp4AudioChunkHandler
     {
         public byte[] Key { get; }
         public byte[] IV { get; }
@@ -17,21 +17,13 @@ namespace AAXClean.Chunks
             Key = key;
             IV = iv;
         }
-
-        public override bool PreprocessSample(byte[] audioSample)
+        public override byte[] ReadBlock(Stream file, int size)
         {
-            Crypto.DecryptInPlace(Key, IV, audioSample);
+            byte[] encData =  base.ReadBlock(file, size);
 
-            return (AV_RB16(audioSample) & 0xfff0) != 0xfff0;
+            Crypto.DecryptInPlace(Key, IV, encData);
+
+            return encData;
         }
-
-        //Defined at
-        //http://man.hubwiz.com/docset/FFmpeg.docset/Contents/Resources/Documents/api/intreadwrite_8h_source.html
-        private static ushort AV_RB16(byte[] frame)
-        {
-            return (ushort)(frame[0] << 8 | frame[1]);
-        }
-
-      
     }
 }

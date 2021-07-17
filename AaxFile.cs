@@ -144,12 +144,14 @@ namespace AAXClean
             return audioHandler.Success && !isCancelled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
         }
 
-        private ChapterInfo AaxToMp3(AudioChunkHandler audioHandler, Stream outputStream, ChapterInfo userChapters)
+        
+
+        private ChapterInfo AaxToMp3(Mp4AudioChunkHandler audioHandler, Stream outputStream, ChapterInfo userChapters)
         {
             return Mp4aToMp3(audioHandler, outputStream, userChapters);
         }
 
-        private ChapterInfo AaxcToMp4(AudioChunkHandler audioHandler, Stream outputStream, ChapterInfo userChapters)
+        private ChapterInfo AaxcToMp4(Mp4AudioChunkHandler audioHandler, Stream outputStream, ChapterInfo userChapters)
         {
             (uint _, uint avgBitrate) = CalculateAudioSizeAndBitrate();
 

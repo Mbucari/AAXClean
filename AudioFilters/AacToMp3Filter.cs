@@ -11,29 +11,23 @@ namespace AAXClean.AudioFilters
 {
     internal class AacToMp3Filter : ISampleFilter
     {
-        private const int BITS_PER_SAMPLE = 16;
+        
         private const int MAX_BUFFER_SZ = 1024 * 1024;
-        private FaadHandle FaadHandle;
+        private AacDecoder decoder;
         private BlockingCollection<byte[]> waveSampleQueue;
         private LameMP3FileWriter lameMp3Encoder;
         private Task encoderLoopTask;
 
         public AacToMp3Filter(Stream mp3Output, byte[] audioSpecificConfig, ushort sampleSize, int avgKbps, AppleTags appleTags = null)
         {
-            if (BITS_PER_SAMPLE != sampleSize)
+            if (sampleSize != AacDecoder.BITS_PER_SAMPLE)
                 throw new ArgumentException($"{nameof(AacToMp3Filter)} only supports 16-bit aac streams.");
 
-            FaadHandle = libFaad2.NeAACDecOpen();
+            decoder = new Aac2Decoder(audioSpecificConfig);
 
-            SetAACDecConfig();
+            var waveFormat = new WaveFormat(decoder.SampleRate, sampleSize, decoder.Channels);
 
-            if (libFaad2.NeAACDecInit2(FaadHandle, audioSpecificConfig, audioSpecificConfig.Length, out int sr, out int ch) != 0)
-                throw new Exception($"Error initializing {nameof(libFaad2)}");
-
-
-            var waveFormat = new WaveFormat(sr, BITS_PER_SAMPLE, ch);
-
-            var lameConfig = new NAudio.Lame.LameConfig
+            var lameConfig = new LameConfig
             {
                 ABRRateKbps = avgKbps,
                 VBR = VBRMode.ABR,
@@ -48,6 +42,7 @@ namespace AAXClean.AudioFilters
 
             encoderLoopTask = new Task(EncoderLoop);
             encoderLoopTask.Start();
+
         }
 
         private static ID3TagData PopulateTags(AppleTags appleTags)
@@ -86,34 +81,10 @@ namespace AAXClean.AudioFilters
 
         public void FilterSample(uint chunkIndex, uint frameIndex, byte[] aacSample)
         {
-            var pDecodeBuff = libFaad2.NeAACDecDecode(FaadHandle, out libFaad2.NeAACDecFrameInfo info, aacSample, aacSample.Length);
 
-            if (info.error != 0)
-            {
-                var error = libFaad2.NeAACDecGetErrorMessage(info.error);
-                var message = Marshal.PtrToStringAnsi(error);
-
-                throw new Exception($"{nameof(libFaad2.NeAACDecDecode)} failed with Error #{info.error}: {message}.");
-            }
-            else if (info.samples > 0)
-            {
-                byte[] waveSample = new byte[info.samples * BITS_PER_SAMPLE / 8];
-                Marshal.Copy(pDecodeBuff, waveSample, 0, waveSample.Length);
-                
-                waveSampleQueue.Add(waveSample);
-            }
+            waveSampleQueue.Add(decoder.DecodeBytes(aacSample));
         }
 
-        private bool SetAACDecConfig()
-        {
-            IntPtr pdecoderConfig = libFaad2.NeAACDecGetCurrentConfiguration(FaadHandle);
-
-            var decoderConfig = Marshal.PtrToStructure<libFaad2.NeAACDecConfiguration>(pdecoderConfig);
-            decoderConfig.outputFormat = libFaad2.OutputFormat.FAAD_FMT_16BIT;
-            Marshal.StructureToPtr(decoderConfig, pdecoderConfig, true);
-
-            return libFaad2.NeAACDecSetConfiguration(FaadHandle, pdecoderConfig) == 0;
-        }
         public void Close()
         {
             waveSampleQueue.CompleteAdding();
@@ -130,7 +101,7 @@ namespace AAXClean.AudioFilters
             if (disposing)
             {
                 Close();
-                FaadHandle?.Dispose();
+                decoder?.Dispose();
             }
 
             _disposed = true;

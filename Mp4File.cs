@@ -86,7 +86,7 @@ namespace AAXClean
 
         public ConversionResult ConvertToMp3(Stream outputStream)
         {
-            var audioHandler = new Mp4aChunkHandler(TimeScale, Moov.AudioTrack, seekable: true);
+            var audioHandler = new Mp4AudioChunkHandler(TimeScale, Moov.AudioTrack, seekable: true);
 
             var chapters = Mp4aToMp3(audioHandler, outputStream);
 
@@ -97,7 +97,7 @@ namespace AAXClean
 
         public ConversionResult ConvertToMp4a(Stream outputStream)
         {
-            var audioHandler = new Mp4aChunkHandler(TimeScale, Moov.AudioTrack, seekable: true);
+            var audioHandler = new Mp4AudioChunkHandler(TimeScale, Moov.AudioTrack, seekable: true);
 
             var chapters = Mp4aToMp4a(audioHandler, outputStream, Ftyp, Moov);
 
@@ -106,7 +106,7 @@ namespace AAXClean
             return audioHandler.Success && !isCancelled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
         }
 
-        internal ChapterInfo Mp4aToMp3(AudioChunkHandler audioHandler, Stream outputStream, ChapterInfo userChapters = null)
+        internal ChapterInfo Mp4aToMp3(Mp4AudioChunkHandler audioHandler, Stream outputStream, ChapterInfo userChapters = null)
         {
             (_, uint avgBitrate) = CalculateAudioSizeAndBitrate();
 
@@ -128,7 +128,7 @@ namespace AAXClean
             return userChapters ?? chapterHandler.Chapters;
         }
 
-        internal ChapterInfo Mp4aToMp4a(AudioChunkHandler audioHandler, Stream outputStream, FtypBox ftyp, MoovBox moov, ChapterInfo userChapters = null)
+        internal ChapterInfo Mp4aToMp4a(Mp4AudioChunkHandler audioHandler, Stream outputStream, FtypBox ftyp, MoovBox moov, ChapterInfo userChapters = null)
         {
             (uint audioSize, _) = CalculateAudioSizeAndBitrate();
 
@@ -178,7 +178,29 @@ namespace AAXClean
             return chapters;
         }
 
-        private void ProcessAudio(AudioChunkHandler audioHandler, params IChunkHandler[] chunkHandlers)
+        public void DetectSilence(string audible_key, string audible_iv)
+        {
+            byte[] key = ByteUtil.BytesFromHexString(audible_key);
+
+            byte[] iv = ByteUtil.BytesFromHexString(audible_iv);
+
+
+            var audioHandler = new AavdChunkHandler(TimeScale, Moov.AudioTrack, key, iv);
+            SilenceDetect sil = new SilenceDetect(
+                -30,
+                2,
+                audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.Blob,
+                audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleSize);
+            audioHandler.SampleFilter = sil;
+
+
+            ProcessAudio(audioHandler);
+
+            sil.Close();
+            var silences = sil.Silences;
+        }
+
+        private void ProcessAudio(Mp4AudioChunkHandler audioHandler, params IChunkHandler[] chunkHandlers)
         {
             var handlers = new List<IChunkHandler>();
             handlers.Add(audioHandler);

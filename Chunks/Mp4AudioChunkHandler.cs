@@ -8,7 +8,7 @@ using System.Text;
 
 namespace AAXClean.Chunks
 {
-    internal abstract class AudioChunkHandler : IChunkHandler
+    internal class Mp4AudioChunkHandler : IChunkHandler
     {
         public bool Success { get; private set; } = true;
         public double TimeScale { get; }
@@ -20,7 +20,7 @@ namespace AAXClean.Chunks
         private uint lastFrameProcessed { get; set; }
         private SttsBox.SampleEntry[] Samples { get; }
 
-        public AudioChunkHandler(uint timeScale, TrakBox trak, bool seekable)
+        public Mp4AudioChunkHandler(uint timeScale, TrakBox trak, bool seekable)
         {
             TimeScale = timeScale;
             Track = trak;
@@ -28,23 +28,25 @@ namespace AAXClean.Chunks
             InputStreamSeekable = seekable;
         }
 
-        public abstract bool PreprocessSample(byte[] audioSample);
+        public virtual byte[] ReadBlock(Stream file, int size)
+        {
+            return file.ReadBlock(size);
+        }
 
         public bool ChunkAvailable(Stream file, uint chunkIndex, uint frameIndex, int totalChunkSize, int[] frameSizes)
         {
             for (uint fIndex = 0; fIndex < frameSizes.Length; fIndex++)
             {
-                byte[] encBlocks = file.ReadBlock(frameSizes[fIndex]);
+                byte[] andioFrame = ReadBlock(file, frameSizes[fIndex]);
 
-                lastFrameProcessed = frameIndex + fIndex;
-
-                if (PreprocessSample(encBlocks))
-                    SampleFilter?.FilterSample(chunkIndex, lastFrameProcessed, encBlocks);
-                else
+                if ((AV_RB16(andioFrame) & 0xfff0) == 0xfff0)
                 {
                     Success = false;
                     return Success;
                 }
+
+                lastFrameProcessed = frameIndex + fIndex;
+                SampleFilter?.FilterSample(chunkIndex, lastFrameProcessed, andioFrame);
             }
             return true;
         }
@@ -71,6 +73,12 @@ namespace AAXClean.Chunks
             }
 
             return TimeSpan.FromSeconds(beginDelta / TimeScale);
+        }
+        //Defined at
+        //http://man.hubwiz.com/docset/FFmpeg.docset/Contents/Resources/Documents/api/intreadwrite_8h_source.html
+        private static ushort AV_RB16(byte[] frame)
+        {
+            return (ushort)(frame[0] << 8 | frame[1]);
         }
     }
 }
