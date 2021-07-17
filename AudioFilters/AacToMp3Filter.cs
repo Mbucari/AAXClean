@@ -30,6 +30,7 @@ namespace AAXClean.AudioFilters
             var lameConfig = new LameConfig
             {
                 ABRRateKbps = avgKbps,
+                Mode = MPEGMode.Mono,
                 VBR = VBRMode.ABR,
             };
 

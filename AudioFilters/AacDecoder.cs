@@ -9,8 +9,6 @@ namespace AAXClean.AudioFilters
 {
     abstract class AacDecoder :IDisposable
     {
-        protected SafeHandle Handle { get; set; }
-
         internal const int BITS_PER_SAMPLE = 16;
 
         protected const int AAC_FRAME_SIZE = 1024 * BITS_PER_SAMPLE / 8;
@@ -26,20 +24,8 @@ namespace AAXClean.AudioFilters
 
         }
         public abstract byte[] DecodeBytes(byte[] aacFrame);
+        public abstract short[] DecodeShort(byte[] aacFrame);
 
-        private bool _disposed = false;
-        public void Dispose() => Dispose(true);
-        protected virtual void Dispose(bool disposing)
-        {
-            if (_disposed)
-                return;
-
-            if (disposing)
-            {
-                Handle?.Dispose();
-            }
-
-            _disposed = true;
-        }
+        public abstract void Dispose();       
     }
 }

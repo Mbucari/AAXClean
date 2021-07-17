@@ -42,9 +42,13 @@ namespace AAXClean
         public int AudioChannels => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.ChannelConfiguration;
 
         protected bool isCancelled = false;
+
+        internal virtual Mp4AudioChunkHandler AudioChunkHandler => new Mp4AudioChunkHandler(TimeScale, Moov.AudioTrack, InputStreamCanSeek);
         internal FtypBox Ftyp { get; }
         internal MoovBox Moov { get; }
         internal MdatBox Mdat { get; }
+
+        public bool InputStreamCanSeek { get; protected set; }
 
         public Mp4File(Stream file, long fileSize) : base(new BoxHeader((uint)fileSize, "MPEG"), null)
         {
@@ -64,9 +68,15 @@ namespace AAXClean
             if (Moov.iLst is not null)
                 AppleTags = new AppleTags(Moov.iLst);
         }
-        public Mp4File(Stream file) : this(file, file.Length) { }
+        public Mp4File(Stream file) : this(file, file.Length) 
+        {
+            InputStreamCanSeek = file.CanSeek;
+        }
 
-        public Mp4File(string fileName, FileAccess access = FileAccess.Read) : this(File.Open(fileName, FileMode.Open, access)) { }
+        public Mp4File(string fileName, FileAccess access = FileAccess.Read) : this(File.Open(fileName, FileMode.Open, access)) 
+        {
+            InputStreamCanSeek = true;
+        }
 
         public void Save()
         {
@@ -86,7 +96,7 @@ namespace AAXClean
 
         public ConversionResult ConvertToMp3(Stream outputStream)
         {
-            var audioHandler = new Mp4AudioChunkHandler(TimeScale, Moov.AudioTrack, seekable: true);
+            var audioHandler = AudioChunkHandler;
 
             var chapters = Mp4aToMp3(audioHandler, outputStream);
 
@@ -97,7 +107,7 @@ namespace AAXClean
 
         public ConversionResult ConvertToMp4a(Stream outputStream)
         {
-            var audioHandler = new Mp4AudioChunkHandler(TimeScale, Moov.AudioTrack, seekable: true);
+            var audioHandler = AudioChunkHandler;
 
             var chapters = Mp4aToMp4a(audioHandler, outputStream, Ftyp, Moov);
 
@@ -128,7 +138,7 @@ namespace AAXClean
             return userChapters ?? chapterHandler.Chapters;
         }
 
-        internal ChapterInfo Mp4aToMp4a(Mp4AudioChunkHandler audioHandler, Stream outputStream, FtypBox ftyp, MoovBox moov, ChapterInfo userChapters = null)
+        internal virtual ChapterInfo Mp4aToMp4a(Mp4AudioChunkHandler audioHandler, Stream outputStream, FtypBox ftyp, MoovBox moov, ChapterInfo userChapters = null)
         {
             (uint audioSize, _) = CalculateAudioSizeAndBitrate();
 
@@ -178,26 +188,27 @@ namespace AAXClean
             return chapters;
         }
 
-        public void DetectSilence(string audible_key, string audible_iv)
+        public IEnumerable<(TimeSpan start,TimeSpan end)> DetectSilence(double decibels, TimeSpan minDuration)
         {
-            byte[] key = ByteUtil.BytesFromHexString(audible_key);
+            if (decibels >= 0 || decibels < -90)
+                throw new ArgumentException($"{nameof(decibels)} must fall in [-90,0)");
+            if (minDuration.TotalSeconds * TimeScale < 2)
+                throw new ArgumentException($"{nameof(minDuration)} must be no shorter than 2 audio samples.");
 
-            byte[] iv = ByteUtil.BytesFromHexString(audible_iv);
+            var audioHandler = AudioChunkHandler;
 
-
-            var audioHandler = new AavdChunkHandler(TimeScale, Moov.AudioTrack, key, iv);
             SilenceDetect sil = new SilenceDetect(
-                -30,
-                2,
+                decibels,
+                minDuration,
                 audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.Blob,
                 audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleSize);
             audioHandler.SampleFilter = sil;
 
-
             ProcessAudio(audioHandler);
 
             sil.Close();
-            var silences = sil.Silences;
+
+            return sil.Silences;
         }
 
         private void ProcessAudio(Mp4AudioChunkHandler audioHandler, params IChunkHandler[] chunkHandlers)

@@ -18,31 +18,44 @@ namespace AAXClean
     }
     public class AaxFile : Mp4File
     {
-        public ConversionStatus Status { get; private set; } = ConversionStatus.NotStarted;
+        public byte[] Key { get; private set; } 
+        public byte[] IV { get; private set; }
+
+        internal override Mp4AudioChunkHandler AudioChunkHandler => new AavdChunkHandler(TimeScale, Moov.AudioTrack,Key, IV, InputStreamCanSeek);
 
         public AaxFile(Stream file, long fileSize) : base(file, fileSize) 
         {
             if (FileType != FileType.Aax && FileType != FileType.Aaxc)
                 throw new ArgumentException($"This instance of {nameof(Mp4File)} is not an Aax or Aaxc file.");
-        }
-        public AaxFile(Stream file) : this(file, file.Length) { }
-        public AaxFile(string fileName, FileAccess access = FileAccess.Read) : this(File.Open(fileName, FileMode.Open, access)) { }
 
-        public ConversionResult DecryptAax(FileStream outputStream, string activationBytes, OutputFormat format, ChapterInfo userChapters = null)
+            InputStreamCanSeek = file.CanSeek;
+        }
+        public AaxFile(Stream file) : this(file, file.Length) 
+        {
+            InputStreamCanSeek = file.CanSeek;
+        }
+        public AaxFile(string fileName, FileAccess access = FileAccess.Read) : this(File.Open(fileName, FileMode.Open, access)) 
+        {
+            InputStreamCanSeek = true;
+        }
+
+        #region Aax(c) Keys
+        
+        public void SetDecryptionKey(string activationBytes)
         {
             if (string.IsNullOrWhiteSpace(activationBytes) || activationBytes.Length != 8)
                 throw new ArgumentException($"{nameof(activationBytes)} must be 4 bytes long.");
 
             byte[] actBytes = ByteUtil.BytesFromHexString(activationBytes);
 
-            return DecryptAax(outputStream, actBytes, format, userChapters);
+            SetDecryptionKey(actBytes);
         }
-        public ConversionResult DecryptAax(FileStream outputStream, byte[] activationBytes, OutputFormat format, ChapterInfo userChapters = null)
+        public void SetDecryptionKey(byte[] activationBytes)
         {
             if (activationBytes is null || activationBytes.Length != 4)
                 throw new ArgumentException($"{nameof(activationBytes)} must be 4 bytes long.");
             if (FileType != FileType.Aax)
-                throw new Exception($"This instance of {nameof(AaxFile)} is not an {FileType.Aax} file.");
+                throw new ArgumentException($"This instance of {nameof(AaxFile)} is not an {FileType.Aax} file.");
 
             var adrm = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.GetChild<AdrmBox>();
 
@@ -66,7 +79,7 @@ namespace AAXClean
                 (intermediate_iv, 0, 16));
 
             if (!ByteUtil.BytesEqual(calculatedChecksum, adrm.Checksum))
-                return ConversionResult.Failed;
+                throw new Exception("Calculated checksum doesn't match AAX file checksum.");
 
             var drmBlob = ByteUtil.CloneBytes(adrm.DrmBlob);
 
@@ -76,7 +89,7 @@ namespace AAXClean
                 drmBlob);
 
             if (!ByteUtil.BytesEqual(drmBlob, 0, activationBytes, 0, 4, true))
-                return ConversionResult.Failed;
+                throw new Exception("Supplied key doesn't match calculated key.");
 
             byte[] file_key = ByteUtil.CloneBytes(drmBlob, 8, 16);
 
@@ -91,19 +104,14 @@ namespace AAXClean
             if (aabd is not null)
                 Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children.Remove(aabd);
 
-            return DecryptAaxc(
-                outputStream,
-                file_key,
-                ByteUtil.CloneBytes(file_iv, 0, 16),
-                format,
-                userChapters);
+            SetDecryptionKey(file_key, ByteUtil.CloneBytes(file_iv, 0, 16));
         }
 
         //Constant key
         //https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/mov.c
         private static readonly byte[] audible_fixed_key = { 0x77, 0x21, 0x4d, 0x4b, 0x19, 0x6a, 0x87, 0xcd, 0x52, 0x00, 0x45, 0xfd, 0x20, 0xa5, 0x1d, 0x67 };
 
-        public ConversionResult DecryptAaxc(FileStream outputStream, string audible_key, string audible_iv, OutputFormat format, ChapterInfo userChapters = null)
+        public void SetDecryptionKey(string audible_key, string audible_iv)
         {
             if (string.IsNullOrWhiteSpace(audible_key) || audible_key.Length != 32)
                 throw new ArgumentException($"{nameof(audible_key)} must be 16 bytes long.");
@@ -114,48 +122,27 @@ namespace AAXClean
 
             byte[] iv = ByteUtil.BytesFromHexString(audible_iv);
 
-            return DecryptAaxc(outputStream, key, iv, format, userChapters);
+            SetDecryptionKey(key, iv);
         }
 
-        public ConversionResult DecryptAaxc(FileStream outputStream, byte[] key, byte[] iv, OutputFormat format, ChapterInfo userChapters = null)
+        public void SetDecryptionKey(byte[] key, byte[] iv)
         {
-            if (!outputStream.CanWrite)
-                throw new IOException($"{nameof(outputStream)} must be writable.");
             if (key is null || key.Length != 16)
                 throw new ArgumentException($"{nameof(key)} must be 16 bytes long.");
             if (iv is null || iv.Length != 16)
                 throw new ArgumentException($"{nameof(iv)} must be 16 bytes long.");
 
-            Status = ConversionStatus.Working;
-
-            var audioHandler = new AavdChunkHandler(TimeScale, Moov.AudioTrack, key, iv);
-
-            Chapters = format switch
-            {
-                OutputFormat.Mp4a => AaxcToMp4(audioHandler, outputStream, userChapters),
-                OutputFormat.Mp3 => AaxToMp3(audioHandler, outputStream, userChapters),
-                _ => throw new NotImplementedException($"Unrecognized {nameof(OutputFormat)}"),
-            };
-            
-            InputStream.Close();
-
-            Status = ConversionStatus.Completed;
-
-            return audioHandler.Success && !isCancelled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
+            Key = key;
+            IV = iv;
         }
 
+        #endregion
         
-
-        private ChapterInfo AaxToMp3(Mp4AudioChunkHandler audioHandler, Stream outputStream, ChapterInfo userChapters)
-        {
-            return Mp4aToMp3(audioHandler, outputStream, userChapters);
-        }
-
-        private ChapterInfo AaxcToMp4(Mp4AudioChunkHandler audioHandler, Stream outputStream, ChapterInfo userChapters)
+        internal override ChapterInfo Mp4aToMp4a(Mp4AudioChunkHandler audioHandler, Stream outputStream, FtypBox ftyp, MoovBox moov, ChapterInfo userChapters = null)
         {
             (uint _, uint avgBitrate) = CalculateAudioSizeAndBitrate();
 
-            var ftyp = FtypBox.Create(32, null);
+            ftyp = FtypBox.Create(32, null);
             ftyp.MajorBrand = "isom";
             ftyp.MajorVersion = 0x200;
             ftyp.CompatibleBrands.Clear();
@@ -165,13 +152,13 @@ namespace AAXClean
             ftyp.CompatibleBrands.Add("M4B ");
 
             //This is the flag that, if set, prevents cover art from loading on android.
-            Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.DependsOnCoreCoder = 0;
+            moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.DependsOnCoreCoder = 0;
             //Must change the audio type from aavd to mp4a
-            Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Header.Type = "mp4a";
-            Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
+            moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Header.Type = "mp4a";
+            moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
 
             //Remove extra Free boxes
-            List<Box> children = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children;
+            List<Box> children = moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children;
             for (int i = children.Count - 1; i >= 0; i--)
             {
                 if (children[i] is FreeBox)
@@ -179,9 +166,9 @@ namespace AAXClean
             }
 
             //Add a btrt box to the audio sample description.
-            BtrtBox.Create(0, MaxBitrate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
+            BtrtBox.Create(0, MaxBitrate, avgBitrate, moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
 
-            return Mp4aToMp4a(audioHandler, outputStream, ftyp, Moov, userChapters);
+            return base.Mp4aToMp4a(audioHandler, outputStream, ftyp, moov, userChapters);
         }
     }
 }

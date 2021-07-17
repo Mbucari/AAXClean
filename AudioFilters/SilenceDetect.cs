@@ -22,9 +22,7 @@ namespace AAXClean.AudioFilters
 
         private short maxAmplitude;
         private long numSamples;
-        private int sampleRate;
-        private int channels;
-        public SilenceDetect(double db, double seconds, byte[] audioSpecificConfig, ushort sampleSize)
+        public SilenceDetect(double db, TimeSpan minDuration, byte[] audioSpecificConfig, ushort sampleSize)
         {
             if (BITS_PER_SAMPLE != sampleSize)
                 throw new ArgumentException($"{nameof(AacToMp3Filter)} only supports 16-bit aac streams.");
@@ -34,9 +32,9 @@ namespace AAXClean.AudioFilters
             Silences = new List<(TimeSpan, TimeSpan)>();
 
             maxAmplitude = (short)(Math.Pow(10, db / 20) * 0x7fff);
-            numSamples = (long)Math.Round(sampleRate * seconds);
+            numSamples = (long)Math.Round(decoder.SampleRate * minDuration.TotalSeconds);
 
-            waveSampleQueue = new BlockingCollection<(uint, short[])>();
+            waveSampleQueue = new BlockingCollection<(uint, short[])>(200);
             encoderLoopTask = new Task(EncoderLoop);
             encoderLoopTask.Start();
         }
@@ -51,14 +49,14 @@ namespace AAXClean.AudioFilters
                 {
                     (uint frameIndex, short[] waveFrame) = waveSampleQueue.Take();
 
-                    for (int i = 0; i < waveFrame.Length; i += channels)
+                    for (int i = 0; i < waveFrame.Length; i += decoder.Channels)
                     {
-                        if (waveFrame[i] > maxAmplitude || (channels == 2 && waveFrame[i + 1] > maxAmplitude))
+                        if (waveFrame[i] > maxAmplitude || (decoder.Channels == 2 && waveFrame[i + 1] > maxAmplitude))
                         {
                             if (numConsecutive > numSamples)
                             {
-                                var start = TimeSpan.FromSeconds((double)lastStart / sampleRate);
-                                var end = TimeSpan.FromSeconds((double)(lastStart + numConsecutive) / sampleRate);
+                                var start = TimeSpan.FromSeconds((double)lastStart / decoder.SampleRate);
+                                var end = TimeSpan.FromSeconds((double)(lastStart + numConsecutive) / decoder.SampleRate);
 
                                 var duration = (end - start).TotalSeconds;
                                 Silences.Add((start, end));
@@ -79,15 +77,12 @@ namespace AAXClean.AudioFilters
             }
             catch (InvalidOperationException)
             {
-                Dispose(true);
             }
         }
         public void FilterSample(uint chunkIndex, uint frameIndex, byte[] aacSample)
         {
-            var waveFrame = decoder.DecodeBytes(aacSample);
-            short[] waveFrameShort = new short[waveFrame.Length / 2];
-            Buffer.BlockCopy(waveFrame, 0, waveFrameShort, 0, waveFrame.Length);
-            waveSampleQueue.Add((frameIndex,waveFrameShort));
+            var waveFrame = decoder.DecodeShort(aacSample);
+            waveSampleQueue.Add((frameIndex, waveFrame));
         }
       
         public void Close()

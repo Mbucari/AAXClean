@@ -9,6 +9,8 @@ namespace AAXClean.AudioFilters
 {
     class FaadAacDecoder : AacDecoder
     {
+
+        private FaadHandle Handle;
         public FaadAacDecoder(byte[] asc) : base(asc)
         {
             Handle = libFaad2.NeAACDecOpen();
@@ -39,6 +41,10 @@ namespace AAXClean.AudioFilters
 
             return Array.Empty<byte>();
         }
+        public override short[] DecodeShort(byte[] aacFrame)
+        {
+            throw new NotImplementedException();
+        }
 
         private bool SetAACDecConfig()
         {
@@ -50,6 +56,13 @@ namespace AAXClean.AudioFilters
 
             return libFaad2.NeAACDecSetConfiguration(Handle, pdecoderConfig) == 0;
         }
+
+        public override void Dispose()
+        {
+            Handle?.Close();
+            Handle?.Dispose();
+        }
+
         private class FaadHandle : SafeHandle
         {
             public FaadHandle() : base(IntPtr.Zero, true) { }
@@ -153,22 +166,22 @@ namespace AAXClean.AudioFilters
             public static extern FaadHandle NeAACDecOpen();
 
             [DllImport(libPath)]
-            public static extern void NeAACDecClose(SafeHandle hpDecoder);
+            public static extern void NeAACDecClose(FaadHandle hpDecoder);
 
             [DllImport(libPath)]
-            public static extern byte NeAACDecInit2(SafeHandle hpDecoder, byte[] pBuffer, int SizeOfDecoderSpecificInfo, out int samplerate, out int channels);
+            public static extern byte NeAACDecInit2(FaadHandle hpDecoder, byte[] pBuffer, int SizeOfDecoderSpecificInfo, out int samplerate, out int channels);
 
             [DllImport(libPath)]
-            public static extern IntPtr NeAACDecGetCurrentConfiguration(SafeHandle hpDecoder);
+            public static extern IntPtr NeAACDecGetCurrentConfiguration(FaadHandle hpDecoder);
 
             [DllImport(libPath)]
-            public static extern byte NeAACDecSetConfiguration(SafeHandle hpDecoder, IntPtr config);
+            public static extern byte NeAACDecSetConfiguration(FaadHandle hpDecoder, IntPtr config);
 
             [DllImport(libPath)]
             public static extern byte NeAACDecAudioSpecificConfig(byte[] pBuffer, int buffer_size, out mp4AudioSpecificConfig mp4ASC);
 
             [DllImport(libPath)]
-            public static extern IntPtr NeAACDecDecode(SafeHandle hpDecoder, out NeAACDecFrameInfo hInfo, byte[] buffer, int buffer_size);
+            public static extern IntPtr NeAACDecDecode(FaadHandle hpDecoder, out NeAACDecFrameInfo hInfo, byte[] buffer, int buffer_size);
 
 
             [DllImport(libPath, CharSet = CharSet.Auto)]

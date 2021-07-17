@@ -11,6 +11,8 @@ namespace AAXClean.AudioFilters
 {
     class Aac2Decoder : AacDecoder
     {
+        private DecoderHandle Handle;
+        private int decSz => AAC_FRAME_SIZE * Channels;
         public Aac2Decoder(byte[] asc) : base(asc)
         {
             var ascUnmanaged =  Marshal.AllocHGlobal(asc.Length);
@@ -20,9 +22,32 @@ namespace AAXClean.AudioFilters
             Marshal.Copy(asc, 0, ascUnmanaged, asc.Length);
             var err = aacDecoder_ConfigRaw(Handle, ref ascUnmanaged, new int[] { asc.Length });
             Marshal.FreeHGlobal(ascUnmanaged);
-
         }
         public override byte[] DecodeBytes(byte[] aacFrame)
+        {
+            IntPtr unmanagedBuff = DecodeUnmanaged(aacFrame);
+
+            byte[] buffer = new byte[decSz];
+
+            Marshal.Copy(unmanagedBuff, buffer, 0, buffer.Length);
+            Marshal.FreeHGlobal(unmanagedBuff);
+
+            return buffer;
+        }
+
+        public override short[] DecodeShort(byte[] aacFrame)
+        {
+            IntPtr unmanagedBuff = DecodeUnmanaged(aacFrame);
+
+            short[] buffer = new short[decSz / 2];
+
+            Marshal.Copy(unmanagedBuff, buffer, 0, buffer.Length);
+            Marshal.FreeHGlobal(unmanagedBuff);
+
+            return buffer;
+        }
+
+        private IntPtr DecodeUnmanaged(byte[] aacFrame)
         {
             int inputSize = aacFrame.Length;
             int bytesValid = inputSize;
@@ -33,17 +58,21 @@ namespace AAXClean.AudioFilters
                 throw new Exception($"Error filling decoder buffer. Code {error:X}");
             }
 
-            int decSz = AAC_FRAME_SIZE * Channels;
+            IntPtr unmanagedBuff = Marshal.AllocHGlobal(decSz);
 
-            byte[] buffer = new byte[decSz];
-            error = aacDecoder_DecodeFrame(Handle, buffer, decSz / 2, DecoderFlags.NONE);
+            error = aacDecoder_DecodeFrame(Handle, unmanagedBuff, decSz / 2, DecoderFlags.NONE);
 
             if (error != 0)
             {
-                throw new Exception($"Error decoding AAC frame. Code {error:X}"); 
+                throw new Exception($"Error decoding AAC frame. Code {error:X}");
             }
 
-            return buffer;
+            return unmanagedBuff;
+        }
+        public override void Dispose()
+        {
+            Handle?.Close();
+            Handle?.Dispose();
         }
 
         private class DecoderHandle : SafeHandle
@@ -59,19 +88,19 @@ namespace AAXClean.AudioFilters
         private const string libName = "aac2.dll";
 
         [DllImport(libName)]
-        private static extern SafeHandle aacDecoder_Open(TRANSPORT_TYPE tt, int nrOfLayers);
+        private static extern DecoderHandle aacDecoder_Open(TRANSPORT_TYPE tt, int nrOfLayers);
 
         [DllImport(libName)]
-        private static extern int aacDecoder_Close(SafeHandle self);
+        private static extern int aacDecoder_Close(DecoderHandle self);
 
         [DllImport(libName)]
-        private static extern int aacDecoder_ConfigRaw(SafeHandle self, ref IntPtr ASC, int[] ASCSize);
+        private static extern int aacDecoder_ConfigRaw(DecoderHandle self, ref IntPtr ASC, int[] ASCSize);
 
         [DllImport(libName)]
-        private static extern int aacDecoder_Fill(SafeHandle self, ref byte[] buffer, ref int bufferSize, ref int bytesValid);
+        private static extern int aacDecoder_Fill(DecoderHandle self, ref byte[] buffer, ref int bufferSize, ref int bytesValid);
 
         [DllImport(libName)]
-        private static extern int aacDecoder_DecodeFrame(SafeHandle self, [In,Out] byte[] buffer, int bufferSize, DecoderFlags bytesValid);
+        private static extern int aacDecoder_DecodeFrame(DecoderHandle self, IntPtr buffer, int bufferSize, DecoderFlags bytesValid);
 
         private enum TRANSPORT_TYPE : int
         {

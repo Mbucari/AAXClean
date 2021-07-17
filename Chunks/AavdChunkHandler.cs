@@ -14,6 +14,11 @@ namespace AAXClean.Chunks
 
         public AavdChunkHandler(uint timeScale, TrakBox trak, byte[] key, byte[] iv, bool seekable = false) :base(timeScale, trak, seekable)
         {
+            if (key is null || key.Length != 16)
+                throw new ArgumentException($"{nameof(key)} must be 16 bytes long.");
+            if (iv is null || iv.Length != 16)
+                throw new ArgumentException($"{nameof(iv)} must be 16 bytes long.");
+
             Key = key;
             IV = iv;
         }

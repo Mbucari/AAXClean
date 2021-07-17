@@ -20,12 +20,12 @@ namespace AAXClean.Chunks
         private uint lastFrameProcessed { get; set; }
         private SttsBox.SampleEntry[] Samples { get; }
 
-        public Mp4AudioChunkHandler(uint timeScale, TrakBox trak, bool seekable)
+        public Mp4AudioChunkHandler(uint timeScale, TrakBox trak, bool inputCanSeek)
         {
             TimeScale = timeScale;
             Track = trak;
             Samples = Track.Mdia.Minf.Stbl.Stts.Samples.ToArray();
-            InputStreamSeekable = seekable;
+            InputStreamSeekable = inputCanSeek;
         }
 
         public virtual byte[] ReadBlock(Stream file, int size)
