@@ -94,38 +94,24 @@ namespace AAXClean
             }
         }
 
-        public ConversionResult ConvertToMp3(Stream outputStream)
+        public ConversionResult ConvertToMp3(Stream outputStream, NAudio.Lame.LameConfig lameConfig = null, ChapterInfo userChapters = null)
         {
             var audioHandler = AudioChunkHandler;
 
-            var chapters = Mp4aToMp3(audioHandler, outputStream);
+            lameConfig ??= new NAudio.Lame.LameConfig
+            {
+                ABRRateKbps = (int)(CalculateAudioSizeAndBitrate().avgBitrate / 1024),
+                Mode = NAudio.Lame.MPEGMode.JointStereo,
+                VBR = NAudio.Lame.VBRMode.ABR,
+            };
 
-            Chapters = chapters;
-
-            return audioHandler.Success && !isCancelled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
-        }
-
-        public ConversionResult ConvertToMp4a(Stream outputStream)
-        {
-            var audioHandler = AudioChunkHandler;
-
-            var chapters = Mp4aToMp4a(audioHandler, outputStream, Ftyp, Moov);
-
-            Chapters = chapters;
-
-            return audioHandler.Success && !isCancelled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
-        }
-
-        internal ChapterInfo Mp4aToMp3(Mp4AudioChunkHandler audioHandler, Stream outputStream, ChapterInfo userChapters = null)
-        {
-            (_, uint avgBitrate) = CalculateAudioSizeAndBitrate();
+            lameConfig.ID3 ??= AacToMp3Filter.GetDefaultMp3Tags(AppleTags);
 
             var aacToMp3Filter = new AacToMp3Filter(
                 outputStream,
                 audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.Blob,
                 audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleSize,
-                (int)(avgBitrate / 1024),
-                AppleTags);
+                lameConfig);
 
             audioHandler.SampleFilter = aacToMp3Filter;
             var chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack);
@@ -135,7 +121,34 @@ namespace AAXClean
             aacToMp3Filter.Close();
             outputStream.Close();
 
-            return userChapters ?? chapterHandler.Chapters;
+            Chapters = userChapters ?? chapterHandler.Chapters; 
+
+            return audioHandler.Success && !isCancelled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
+        }
+
+        public ConversionResult ConvertToMp4a(Stream outputStream, ChapterInfo userChapters = null)
+        {
+            var audioHandler = AudioChunkHandler;
+
+            var chapters = Mp4aToMp4a(audioHandler, outputStream, Ftyp, Moov, userChapters);
+
+            Chapters = chapters;
+
+            return audioHandler.Success && !isCancelled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
+        }
+
+        public ChapterInfo GetChapterInfo()
+        {
+            var chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack, seekable: true);
+            var chunkReader = new TrakChunkReader(InputStream, chapterHandler);
+
+            var beginProcess = DateTime.Now;
+            var nextUpdate = beginProcess;
+
+            isCancelled = false;
+
+            while (!isCancelled && chunkReader.NextChunk()) ;
+            return chapterHandler.Chapters; 
         }
 
         internal virtual ChapterInfo Mp4aToMp4a(Mp4AudioChunkHandler audioHandler, Stream outputStream, FtypBox ftyp, MoovBox moov, ChapterInfo userChapters = null)

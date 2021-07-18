@@ -17,24 +17,17 @@ namespace AAXClean.AudioFilters
         private BlockingCollection<byte[]> waveSampleQueue;
         private LameMP3FileWriter lameMp3Encoder;
         private Task encoderLoopTask;
+        private WaveFormat waveFormat;
 
-        public AacToMp3Filter(Stream mp3Output, byte[] audioSpecificConfig, ushort sampleSize, int avgKbps, AppleTags appleTags = null)
+        public AacToMp3Filter(Stream mp3Output, byte[] audioSpecificConfig, ushort sampleSize, LameConfig lameConfig)
         {
             if (sampleSize != AacDecoder.BITS_PER_SAMPLE)
                 throw new ArgumentException($"{nameof(AacToMp3Filter)} only supports 16-bit aac streams.");
 
             decoder = new Aac2Decoder(audioSpecificConfig);
 
-            var waveFormat = new WaveFormat(decoder.SampleRate, sampleSize, decoder.Channels);
+            waveFormat = new WaveFormat(decoder.SampleRate, sampleSize, decoder.Channels);
 
-            var lameConfig = new LameConfig
-            {
-                ABRRateKbps = avgKbps,
-                Mode = MPEGMode.Mono,
-                VBR = VBRMode.ABR,
-            };
-
-            lameConfig.ID3 = PopulateTags(appleTags);
             lameMp3Encoder = new LameMP3FileWriter(mp3Output, waveFormat, lameConfig);
 
             int waveSampleSize = 1024 /* Decoded AAC frame size*/ * waveFormat.BlockAlign;
@@ -43,10 +36,9 @@ namespace AAXClean.AudioFilters
 
             encoderLoopTask = new Task(EncoderLoop);
             encoderLoopTask.Start();
-
         }
 
-        private static ID3TagData PopulateTags(AppleTags appleTags)
+        public static ID3TagData GetDefaultMp3Tags(AppleTags appleTags)
         {
             if (appleTags is null) return new();
 
