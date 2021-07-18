@@ -15,12 +15,6 @@ namespace AAXClean
         Failed,
         NoErrorsDetected
     }
-    public enum ConversionStatus
-    {
-        NotStarted,
-        Working,
-        Completed
-    }
     public enum FileType
     {
         Aax,
