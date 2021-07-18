@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    class FaadAacDecoder : AacDecoder
+    sealed internal class FaadAacDecoder : AacDecoder
     {
 
         private FaadHandle Handle;
@@ -21,9 +21,32 @@ namespace AAXClean.AudioFilters
                 throw new Exception($"Error initializing {nameof(libFaad2)}");
         }
 
-        public override byte[] DecodeBytes(byte[] aacSample)
+        public override byte[] DecodeBytes(byte[] aacFrame)
         {
-            var pDecodeBuff = libFaad2.NeAACDecDecode(Handle, out libFaad2.NeAACDecFrameInfo info, aacSample, aacSample.Length);
+            IntPtr unmanagedBuff = DecodeUnmanaged(aacFrame);
+
+            if (unmanagedBuff == IntPtr.Zero) return Array.Empty<byte>();
+
+            byte[] waveSample = new byte[AAC_FRAME_SIZE * Channels];
+            Marshal.Copy(unmanagedBuff, waveSample, 0, waveSample.Length);
+            return waveSample;
+
+        }
+
+        public override short[] DecodeShort(byte[] aacFrame)
+        {
+            IntPtr unmanagedBuff = DecodeUnmanaged(aacFrame);
+
+            if (unmanagedBuff == IntPtr.Zero) return Array.Empty<short>();
+
+            short[] waveSample = new short[AAC_FRAME_SIZE * Channels / 2];
+            Marshal.Copy(unmanagedBuff, waveSample, 0, waveSample.Length);
+            return waveSample;
+        }
+
+        protected override IntPtr DecodeUnmanaged(byte[] aacFrame)
+        {
+            var pDecodeBuff = libFaad2.NeAACDecDecode(Handle, out libFaad2.NeAACDecFrameInfo info, aacFrame, aacFrame.Length);
 
             if (info.error != 0)
             {
@@ -32,18 +55,8 @@ namespace AAXClean.AudioFilters
 
                 throw new Exception($"{nameof(libFaad2.NeAACDecDecode)} failed with Error #{info.error}: {message}.");
             }
-            else if (info.samples > 0)
-            {
-                byte[] waveSample = new byte[AAC_FRAME_SIZE * Channels];
-                Marshal.Copy(pDecodeBuff, waveSample, 0, waveSample.Length);
-                return waveSample;
-            }
 
-            return Array.Empty<byte>();
-        }
-        public override short[] DecodeShort(byte[] aacFrame)
-        {
-            throw new NotImplementedException();
+            return info.samples == 0 ? IntPtr.Zero : pDecodeBuff;
         }
 
         private bool SetAACDecConfig()

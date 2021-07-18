@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    class Aac2Decoder : AacDecoder
+    sealed internal class Aac2Decoder : AacDecoder
     {
         private DecoderHandle Handle;
         private int decSz => AAC_FRAME_SIZE * Channels;
@@ -47,7 +47,7 @@ namespace AAXClean.AudioFilters
             return buffer;
         }
 
-        private IntPtr DecodeUnmanaged(byte[] aacFrame)
+        protected override IntPtr DecodeUnmanaged(byte[] aacFrame)
         {
             int inputSize = aacFrame.Length;
             int bytesValid = inputSize;

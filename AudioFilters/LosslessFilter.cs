@@ -1,4 +1,5 @@
 ﻿using AAXClean.Boxes;
+using AAXClean.Chunks;
 using AAXClean.Util;
 using System;
 using System.Collections.Generic;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    sealed class LosslessFilter : ISampleFilter
+    sealed class LosslessFilter : IFrameeFilter
     {
         public List<uint> ChunkOffsets { get; }
         public Stream OutputStream { get; }
@@ -20,7 +21,7 @@ namespace AAXClean.AudioFilters
         }
 
         private long lastChunk = -1;
-        public void FilterSample(uint chunkIndex, uint frameIndex, byte[] audioSample)
+        public bool FilterFrame(uint chunkIndex, uint frameIndex, byte[] audioSample)
         {
             if (chunkIndex > lastChunk)
             {
@@ -28,6 +29,7 @@ namespace AAXClean.AudioFilters
                 lastChunk = chunkIndex;
             }
             OutputStream.Write(audioSample);
+            return true;
         }
 
         public void Close()

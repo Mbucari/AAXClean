@@ -12,7 +12,7 @@ namespace AAXClean.Chunks
     {
         public bool Success { get; private set; } = true;
         public double TimeScale { get; }
-        public ISampleFilter SampleFilter { get; set; }
+        public IFrameeFilter FrameFilter { get; set; }
         public TrakBox Track { get; }
         public bool InputStreamSeekable { get; }
         public TimeSpan ProcessPosition => FrameToTime(lastFrameProcessed);
@@ -46,7 +46,8 @@ namespace AAXClean.Chunks
                 }
 
                 lastFrameProcessed = frameIndex + fIndex;
-                SampleFilter?.FilterSample(chunkIndex, lastFrameProcessed, andioFrame);
+                if (FrameFilter?.FilterFrame(chunkIndex, lastFrameProcessed, andioFrame) == false)
+                    return false;
             }
             return true;
         }
@@ -54,20 +55,20 @@ namespace AAXClean.Chunks
         /// <summary>
         /// Gets the playback timestamp of an audio frame.
         /// </summary>
-        private TimeSpan FrameToTime(uint sampleNum)
+        internal TimeSpan FrameToTime(uint frameIndxe)
         {
             double beginDelta = 0;
 
             foreach (var entry in Samples)
             {
-                if (sampleNum > entry.SampleCount)
+                if (frameIndxe > entry.FrameCount)
                 {
-                    beginDelta += entry.SampleCount * entry.SampleDelta;
-                    sampleNum -= entry.SampleCount;
+                    beginDelta += entry.FrameCount * entry.FrameDelta;
+                    frameIndxe -= entry.FrameCount;
                 }
                 else
                 {
-                    beginDelta += sampleNum * entry.SampleDelta;
+                    beginDelta += frameIndxe * entry.FrameDelta;
                     break;
                 }
             }

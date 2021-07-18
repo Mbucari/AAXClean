@@ -9,30 +9,32 @@ using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    internal class AacToMp3Filter : ISampleFilter
+    internal class AacToMp3Filter : IFrameeFilter
     {
         
         private const int MAX_BUFFER_SZ = 1024 * 1024;
         private AacDecoder decoder;
-        private BlockingCollection<byte[]> waveSampleQueue;
+        private BlockingCollection<byte[]> waveFrameQueue;
         private LameMP3FileWriter lameMp3Encoder;
         private Task encoderLoopTask;
         private WaveFormat waveFormat;
+        private Stream OutputStream;
 
         public AacToMp3Filter(Stream mp3Output, byte[] audioSpecificConfig, ushort sampleSize, LameConfig lameConfig)
         {
             if (sampleSize != AacDecoder.BITS_PER_SAMPLE)
                 throw new ArgumentException($"{nameof(AacToMp3Filter)} only supports 16-bit aac streams.");
 
+            OutputStream = mp3Output;
             decoder = new Aac2Decoder(audioSpecificConfig);
 
             waveFormat = new WaveFormat(decoder.SampleRate, sampleSize, decoder.Channels);
 
-            lameMp3Encoder = new LameMP3FileWriter(mp3Output, waveFormat, lameConfig);
+            lameMp3Encoder = new LameMP3FileWriter(OutputStream, waveFormat, lameConfig);
 
-            int waveSampleSize = 1024 /* Decoded AAC frame size*/ * waveFormat.BlockAlign;
-            int maxCachedSamples = MAX_BUFFER_SZ / waveSampleSize;
-            waveSampleQueue = new BlockingCollection<byte[]>(maxCachedSamples);
+            int waveFrameSize = 1024 /* Decoded AAC frame size*/ * waveFormat.BlockAlign;
+            int maxCachedFrames = MAX_BUFFER_SZ / waveFrameSize;
+            waveFrameQueue = new BlockingCollection<byte[]>(maxCachedFrames);
 
             encoderLoopTask = new Task(EncoderLoop);
             encoderLoopTask.Start();
@@ -61,7 +63,7 @@ namespace AAXClean.AudioFilters
             {
                 while (true)
                 {
-                    byte[] waveFrame = waveSampleQueue.Take();
+                    byte[] waveFrame = waveFrameQueue.Take();
 
                     lameMp3Encoder.Write(waveFrame);
                 }
@@ -72,16 +74,18 @@ namespace AAXClean.AudioFilters
             }
         }
 
-        public void FilterSample(uint chunkIndex, uint frameIndex, byte[] aacSample)
+        public bool FilterFrame(uint chunkIndex, uint frameIndex, byte[] aacFrame)
         {
-
-            waveSampleQueue.Add(decoder.DecodeBytes(aacSample));
+            waveFrameQueue.Add(decoder.DecodeBytes(aacFrame));
+            return true;
         }
 
         public void Close()
         {
-            waveSampleQueue.CompleteAdding();
+            waveFrameQueue.CompleteAdding();
             encoderLoopTask.Wait();
+            lameMp3Encoder.Close();
+            OutputStream.Close();
         }
 
         private bool _disposed = false;

@@ -1,4 +1,5 @@
-﻿using NAudio.Wave;
+﻿using AAXClean.Chunks;
+using NAudio.Wave;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -9,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    class SilenceDetect : ISampleFilter
+    class SilenceDetect : IFrameeFilter
     {
 
         public List<(TimeSpan, TimeSpan)> Silences { get; }
@@ -79,10 +80,11 @@ namespace AAXClean.AudioFilters
             {
             }
         }
-        public void FilterSample(uint chunkIndex, uint frameIndex, byte[] aacSample)
+        public bool FilterFrame(uint chunkIndex, uint frameIndex, byte[] aacSample)
         {
             var waveFrame = decoder.DecodeShort(aacSample);
             waveSampleQueue.Add((frameIndex, waveFrame));
+            return true;
         }
       
         public void Close()

@@ -24,8 +24,8 @@ namespace AAXClean.Boxes
             file.WriteUInt32BE((uint)Samples.Count);
             foreach (var sample in Samples)
             {
-                file.WriteUInt32BE(sample.SampleCount);
-                file.WriteUInt32BE(sample.SampleDelta);
+                file.WriteUInt32BE(sample.FrameCount);
+                file.WriteUInt32BE(sample.FrameDelta);
             }
         }
 
@@ -49,16 +49,16 @@ namespace AAXClean.Boxes
         {
             public SampleEntry(Stream file)
             {
-                SampleCount = file.ReadUInt32BE();
-                SampleDelta = file.ReadUInt32BE();
+                FrameCount = file.ReadUInt32BE();
+                FrameDelta = file.ReadUInt32BE();
             }
             public SampleEntry(uint sampleCount, uint sampleDelta)
             {
-                SampleCount = sampleCount;
-                SampleDelta = sampleDelta;
+                FrameCount = sampleCount;
+                FrameDelta = sampleDelta;
             }
-            public uint SampleCount { get; }
-            public uint SampleDelta { get; }
+            public uint FrameCount { get; }
+            public uint FrameDelta { get; }
         }
     }
 

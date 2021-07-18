@@ -29,7 +29,7 @@ namespace AAXClean.Chunks
             if (chunkIndex < 0 || chunkIndex >= Samples.Length)
                 return false;
 
-            var duration = Samples[chunkIndex].SampleDelta / TimeScale;
+            var duration = Samples[chunkIndex].FrameDelta / TimeScale;
 
             short size = file.ReadInt16BE();
             byte[] titleBytes = file.ReadBlock(size);

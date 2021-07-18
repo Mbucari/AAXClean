@@ -107,13 +107,13 @@ namespace AAXClean
 
             lameConfig.ID3 ??= AacToMp3Filter.GetDefaultMp3Tags(AppleTags);
 
-            var aacToMp3Filter = new AacToMp3Filter(
+            using var aacToMp3Filter = new AacToMp3Filter(
                 outputStream,
                 audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.Blob,
                 audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleSize,
                 lameConfig);
 
-            audioHandler.SampleFilter = aacToMp3Filter;
+            audioHandler.FrameFilter = aacToMp3Filter;
             var chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack);
 
             ProcessAudio(audioHandler, chapterHandler);
@@ -124,6 +124,32 @@ namespace AAXClean
             Chapters = userChapters ?? chapterHandler.Chapters; 
 
             return audioHandler.Success && !isCancelled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
+        }
+
+        public void ConvertToMultiMp3(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback, NAudio.Lame.LameConfig lameConfig = null)
+        {
+            var audioHandler = AudioChunkHandler;
+
+            lameConfig ??= new NAudio.Lame.LameConfig
+            {
+                ABRRateKbps = (int)(CalculateAudioSizeAndBitrate().avgBitrate / 1024),
+                Mode = NAudio.Lame.MPEGMode.JointStereo,
+                VBR = NAudio.Lame.VBRMode.ABR,
+            };
+
+            lameConfig.ID3 ??= AacToMp3Filter.GetDefaultMp3Tags(AppleTags);
+
+            using var audioFilter = new AacToMp3MultipartFilter(
+                userChapters, 
+                newFileCallback, 
+                audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.Blob,
+                audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleSize,
+                lameConfig);
+
+            audioHandler.FrameFilter = audioFilter;
+
+            ProcessAudio(audioHandler);
+            audioFilter.Close();
         }
 
         public ConversionResult ConvertToMp4a(Stream outputStream, ChapterInfo userChapters = null)
@@ -142,9 +168,6 @@ namespace AAXClean
             var chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack, seekable: true);
             var chunkReader = new TrakChunkReader(InputStream, chapterHandler);
 
-            var beginProcess = DateTime.Now;
-            var nextUpdate = beginProcess;
-
             isCancelled = false;
 
             while (!isCancelled && chunkReader.NextChunk()) ;
@@ -156,7 +179,7 @@ namespace AAXClean
             (uint audioSize, _) = CalculateAudioSizeAndBitrate();
 
             var losslessFilter = new LosslessFilter(outputStream);
-            audioHandler.SampleFilter = losslessFilter;
+            audioHandler.FrameFilter = losslessFilter;
             var chapterHandler = new ChapterChunkHandler(TimeScale, moov.TextTrack);
 
             uint chaptersSize;
@@ -215,7 +238,7 @@ namespace AAXClean
                 minDuration,
                 audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.Blob,
                 audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleSize);
-            audioHandler.SampleFilter = sil;
+            audioHandler.FrameFilter = sil;
 
             ProcessAudio(audioHandler);
 
