@@ -7,9 +7,23 @@ namespace AAXClean.Boxes
     internal class StszBox : FullBox
     {
         public override uint RenderSize => base.RenderSize + 8 + (uint)SampleSizes.Count * 4;
-        public uint SampleSize { get; }
-        public uint SampleCount { get; }
-        public List<int> SampleSizes { get; } = new List<int>();
+        internal uint SampleSize { get; }
+        internal uint SampleCount { get; set; }
+        internal List<int> SampleSizes { get; } = new List<int>();
+        internal static StszBox CreateBlank(Box parent)
+        {
+            int size = 8 + 12 /* empty Box size*/;
+            var header = new BoxHeader((uint)size, "stsz");
+
+            var stszBox = new StszBox(new byte[] { 0, 0, 0, 0 }, header, parent);
+
+            parent.Children.Add(stszBox);
+            return stszBox;
+        }
+        private StszBox(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent)
+        {
+
+        }
         internal StszBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
         {
             SampleSize = file.ReadUInt32BE();

@@ -9,7 +9,7 @@ namespace AAXClean.Boxes
         public ulong CreationTime { get; }
         public ulong ModificationTime { get; }
         public uint Timescale { get; }
-        public ulong Duration { get; }
+        public ulong Duration { get; set; }
         private byte[] Blob { get; }
         internal MdhdBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
         {

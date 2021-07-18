@@ -23,12 +23,44 @@ namespace AAXClean
 
         internal override Mp4AudioChunkHandler AudioChunkHandler => new AavdChunkHandler(TimeScale, Moov.AudioTrack,Key, IV, InputStreamCanSeek);
 
+        private FtypBox mp4aFtyp;
+
         public AaxFile(Stream file, long fileSize) : base(file, fileSize) 
         {
             if (FileType != FileType.Aax && FileType != FileType.Aaxc)
                 throw new ArgumentException($"This instance of {nameof(Mp4File)} is not an Aax or Aaxc file.");
 
             InputStreamCanSeek = file.CanSeek;
+
+
+            Ftyp = FtypBox.Create(32, null);
+            Ftyp.MajorBrand = "isom";
+            Ftyp.MajorVersion = 0x200;
+            Ftyp.CompatibleBrands.Clear();
+            Ftyp.CompatibleBrands.Add("iso2");
+            Ftyp.CompatibleBrands.Add("mp41");
+            Ftyp.CompatibleBrands.Add("M4A ");
+            Ftyp.CompatibleBrands.Add("M4B ");
+
+
+            (uint _, uint avgBitrate) = CalculateAudioSizeAndBitrate();
+
+            //This is the flag that, if set, prevents cover art from loading on android.
+            Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.DependsOnCoreCoder = 0;
+            //Must change the audio type from aavd to mp4a
+            Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Header.Type = "mp4a";
+            Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
+
+            //Remove extra Free boxes
+            List<Box> children = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children;
+            for (int i = children.Count - 1; i >= 0; i--)
+            {
+                if (children[i] is FreeBox)
+                    children.RemoveAt(i);
+            }
+
+            //Add a btrt box to the audio sample description.
+            BtrtBox.Create(0, MaxBitrate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
         }
         public AaxFile(Stream file) : this(file, file.Length) 
         {
@@ -136,39 +168,6 @@ namespace AAXClean
             IV = iv;
         }
 
-        #endregion
-        
-        internal override ChapterInfo Mp4aToMp4a(Mp4AudioChunkHandler audioHandler, Stream outputStream, FtypBox ftyp, MoovBox moov, ChapterInfo userChapters = null)
-        {
-            (uint _, uint avgBitrate) = CalculateAudioSizeAndBitrate();
-
-            ftyp = FtypBox.Create(32, null);
-            ftyp.MajorBrand = "isom";
-            ftyp.MajorVersion = 0x200;
-            ftyp.CompatibleBrands.Clear();
-            ftyp.CompatibleBrands.Add("iso2");
-            ftyp.CompatibleBrands.Add("mp41");
-            ftyp.CompatibleBrands.Add("M4A ");
-            ftyp.CompatibleBrands.Add("M4B ");
-
-            //This is the flag that, if set, prevents cover art from loading on android.
-            moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.DependsOnCoreCoder = 0;
-            //Must change the audio type from aavd to mp4a
-            moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Header.Type = "mp4a";
-            moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
-
-            //Remove extra Free boxes
-            List<Box> children = moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children;
-            for (int i = children.Count - 1; i >= 0; i--)
-            {
-                if (children[i] is FreeBox)
-                    children.RemoveAt(i);
-            }
-
-            //Add a btrt box to the audio sample description.
-            BtrtBox.Create(0, MaxBitrate, avgBitrate, moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
-
-            return base.Mp4aToMp4a(audioHandler, outputStream, ftyp, moov, userChapters);
-        }
-    }
+        #endregion      
+     }
 }

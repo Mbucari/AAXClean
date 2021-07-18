@@ -9,6 +9,7 @@ namespace AAXClean.Boxes
             LoadChildren(file);
         }
 
+        public TkhdBox Tkhd => GetChild<TkhdBox>();
         public MdiaBox Mdia => GetChild<MdiaBox>();
         protected override void Render(Stream file)
         {

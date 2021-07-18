@@ -8,8 +8,23 @@ namespace AAXClean.Boxes
     internal class StcoBox : FullBox
     {
         public override uint RenderSize => base.RenderSize + 4 + (uint)ChunkOffsets.Count * 4;
-        public uint EntryCount { get; }
-        public List<uint> ChunkOffsets { get; } = new List<uint>();
+        internal uint EntryCount { get; set; }
+        internal List<uint> ChunkOffsets { get; } = new List<uint>();
+
+        internal static StcoBox CreateBlank(Box parent)
+        {
+            int size = 4 + 12 /* empty Box size*/;
+            var header = new BoxHeader((uint)size, "stco");
+
+            var stcoBox = new StcoBox(new byte[] { 0, 0, 0, 0 }, header, parent);
+
+            parent.Children.Add(stcoBox);
+            return stcoBox;
+        }
+        private StcoBox(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent)
+        {
+
+        }
         internal StcoBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
         {
             EntryCount = file.ReadUInt32BE();

@@ -27,7 +27,7 @@ namespace AAXClean.AudioFilters
         public AacToMp3MultipartFilter(ChapterInfo splitChapters, Action<NewSplitCallback> newFileCallback, byte[] audioSpecificConfig, ushort sampleSize, LameConfig lameConfig)
         {
             if (splitChapters.Count == 0)
-                throw new Exception($"{nameof(splitChapters)} mist contain at least one chapter.");
+                throw new Exception($"{nameof(splitChapters)} must contain at least one chapter.");
 
             ASC = audioSpecificConfig;
             SampleSize = sampleSize;

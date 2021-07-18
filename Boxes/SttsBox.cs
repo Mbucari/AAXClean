@@ -7,8 +7,23 @@ namespace AAXClean.Boxes
     internal class SttsBox : FullBox
     {
         public override uint RenderSize => base.RenderSize + 4 + (uint)Samples.Count * 2 * 4;
-        public uint EntryCount { get; }
-        public List<SampleEntry> Samples { get; } = new List<SampleEntry>();
+        internal uint EntryCount { get; set; }
+        internal List<SampleEntry> Samples { get; } = new List<SampleEntry>();
+
+        internal static SttsBox CreateBlank(Box parent)
+        {
+            int size = 4 + 12 /* empty Box size*/;
+            var header = new BoxHeader((uint)size, "stts");
+
+            var sttsBox = new SttsBox(new byte[] { 0, 0, 0, 0 }, header, parent);
+
+            parent.Children.Add(sttsBox);
+            return sttsBox;
+        }
+        private SttsBox(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent)
+        {
+
+        }
         internal SttsBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
         {
             EntryCount = file.ReadUInt32BE();

@@ -44,7 +44,7 @@ namespace AAXClean
         protected bool isCancelled = false;
 
         internal virtual Mp4AudioChunkHandler AudioChunkHandler => new Mp4AudioChunkHandler(TimeScale, Moov.AudioTrack, InputStreamCanSeek);
-        internal FtypBox Ftyp { get; }
+        internal FtypBox Ftyp { get; set; }
         internal MoovBox Moov { get; }
         internal MdatBox Mdat { get; }
 
@@ -163,6 +163,23 @@ namespace AAXClean
             return audioHandler.Success && !isCancelled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
         }
 
+        public void ConvertToMultiMp4a(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback)
+        {
+            var audioHandler = AudioChunkHandler;
+
+            using var audioFilter = new LosslessMultipartFilter(
+                userChapters,
+                newFileCallback,
+                Ftyp,
+                Moov);
+
+            audioHandler.FrameFilter = audioFilter;
+
+            ProcessAudio(audioHandler);
+            audioFilter.Close();
+        }
+
+
         public ChapterInfo GetChapterInfo()
         {
             var chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack, seekable: true);
@@ -174,7 +191,7 @@ namespace AAXClean
             return chapterHandler.Chapters; 
         }
 
-        internal virtual ChapterInfo Mp4aToMp4a(Mp4AudioChunkHandler audioHandler, Stream outputStream, FtypBox ftyp, MoovBox moov, ChapterInfo userChapters = null)
+        internal ChapterInfo Mp4aToMp4a(Mp4AudioChunkHandler audioHandler, Stream outputStream, FtypBox ftyp, MoovBox moov, ChapterInfo userChapters = null)
         {
             (uint audioSize, _) = CalculateAudioSizeAndBitrate();
 
