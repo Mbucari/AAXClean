@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    class Mp4aWriter
+    sealed class Mp4aWriter : IDisposable
     {
         Stream OutputFile;
         MoovBox Moov;
@@ -21,9 +21,8 @@ namespace AAXClean.AudioFilters
 
         private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
 
-
-        long lastSamplesPerChunk = -1;
-        long samplesPerChunk = 0;
+        private long lastSamplesPerChunk = -1;
+        private uint samplesPerChunk = 0;
         private uint currentChunk = 0;
         public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov)
         {
@@ -39,8 +38,10 @@ namespace AAXClean.AudioFilters
             OutputFile.WriteUInt32BE(0);
             OutputFile.WriteType("mdat");
         }
-        public void End()
+        public void Close()
         {
+            if (!OutputFile.CanWrite) return;
+
             long mdatEnd = OutputFile.Position;
 
             OutputFile.Position = mdatStart;
@@ -73,7 +74,7 @@ namespace AAXClean.AudioFilters
 
                 if (samplesPerChunk > 0 && samplesPerChunk != lastSamplesPerChunk)
                 {
-                    Stsc.Samples.Add(new StscBox.ChunkEntry(currentChunk - 1, (uint)samplesPerChunk, 1));
+                    Stsc.Samples.Add(new StscBox.ChunkEntry(currentChunk - 1, samplesPerChunk, 1));
 
                     lastSamplesPerChunk = samplesPerChunk;
                 }
@@ -84,6 +85,18 @@ namespace AAXClean.AudioFilters
             samplesPerChunk++;
 
             OutputFile.Write(frame);
+        }
+
+        public void Dispose()
+        {
+            Close();
+            Stsc?.Samples.Clear();
+            Stsc = null;
+            Stsz?.SampleSizes.Clear();
+            Stsc = null;
+            Stco?.ChunkOffsets.Clear();
+            Stco = null;
+            Moov = null;
         }
     }
 }

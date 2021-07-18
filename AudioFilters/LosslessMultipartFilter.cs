@@ -14,23 +14,16 @@ namespace AAXClean.AudioFilters
         private int SampleRate { get; }
         private IEnumerator<Chapter> SplitChapters { get; }
         private Action<NewSplitCallback> NewFileCallback { get; }
-
-
-        private LosslessFilter LosslessFilter;
         private uint StartFrame;
         private long EndFrame;
         private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
-
-
         private FtypBox Ftyp { get; }
-
         private MemoryStream rawmoov { get; }
 
         Mp4aWriter writer;
 
         public LosslessMultipartFilter(ChapterInfo splitChapters, Action<NewSplitCallback> newFileCallback, FtypBox ftyp, MoovBox moov)
         {
-
             Ftyp = ftyp;
 
             rawmoov = MakeMultipartMoov(moov);
@@ -43,7 +36,6 @@ namespace AAXClean.AudioFilters
             NewFileCallback = newFileCallback;
 
             SampleRate = (int)moov.AudioTrack.Mdia.Mdhd.Timescale;
-
         }
 
         private MemoryStream MakeMultipartMoov(MoovBox moov)
@@ -100,13 +92,13 @@ namespace AAXClean.AudioFilters
 
         public void Close()
         {
-            writer?.End();
+            writer?.Close();
         }
 
         public void Dispose()
         {
             SplitChapters.Dispose();
-            LosslessFilter?.Dispose();
+            writer?.Dispose();
         }
 
         long lastChunk = -1;
@@ -114,7 +106,7 @@ namespace AAXClean.AudioFilters
         {
             if (frameIndex > EndFrame)
             {
-                writer?.End();
+                writer?.Close();
 
                 if (!GetNextChapter())
                     return false;
