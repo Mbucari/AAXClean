@@ -92,10 +92,12 @@ namespace AAXClean
         {
             var audioHandler = AudioChunkHandler;
 
+            double channelDown = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.ChannelCount == 1 ? 1 : 0.5;
+
             lameConfig ??= new NAudio.Lame.LameConfig
             {
-                ABRRateKbps = (int)(CalculateAudioSizeAndBitrate().avgBitrate / 1024),
-                Mode = NAudio.Lame.MPEGMode.JointStereo,
+                ABRRateKbps = (int)(CalculateAudioSizeAndBitrate().avgBitrate * channelDown / 1024),
+                Mode = NAudio.Lame.MPEGMode.Mono,
                 VBR = NAudio.Lame.VBRMode.ABR,
             };
 
@@ -124,9 +126,11 @@ namespace AAXClean
         {
             var audioHandler = AudioChunkHandler;
 
+            double channelDown = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.ChannelCount == 1 ? 1 : 0.5;
+
             lameConfig ??= new NAudio.Lame.LameConfig
             {
-                ABRRateKbps = (int)(CalculateAudioSizeAndBitrate().avgBitrate / 1024),
+                ABRRateKbps = (int)(CalculateAudioSizeAndBitrate().avgBitrate * channelDown / 1024),
                 Mode = NAudio.Lame.MPEGMode.JointStereo,
                 VBR = NAudio.Lame.VBRMode.ABR,
             };
