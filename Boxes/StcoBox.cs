@@ -7,7 +7,7 @@ namespace AAXClean.Boxes
 {
     internal class StcoBox : FullBox
     {
-        public override uint RenderSize => base.RenderSize + 4 + (uint)ChunkOffsets.Count * 4;
+        public override long RenderSize => base.RenderSize + 4 + ChunkOffsets.Count * 4;
         internal uint EntryCount { get; set; }
         internal List<uint> ChunkOffsets { get; } = new List<uint>();
 

@@ -11,7 +11,7 @@ namespace AAXClean.Boxes
         public Box Parent { get; }
         public BoxHeader Header { get; }
         public List<Box> Children { get; } = new List<Box>();
-        public virtual uint RenderSize => 8 + (uint)Children.Sum(b => b.RenderSize);
+        public virtual long RenderSize => 8 + Children.Sum(b => b.RenderSize);
 
         public Box(BoxHeader header, Box parent)
         {
@@ -54,8 +54,17 @@ namespace AAXClean.Boxes
 
         internal void Save(Stream file)
         {
-            file.WriteUInt32BE(RenderSize);
+            if (Header.Version == 1)
+                file.WriteUInt32BE(1);
+            else
+                file.WriteUInt32BE((uint)RenderSize);
+          
             file.WriteType(Header.Type);
+
+            if (Header.Version == 1)
+            {
+                file.WriteInt64BE(RenderSize);
+            }
 
             Render(file);
 

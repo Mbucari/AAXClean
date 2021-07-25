@@ -5,7 +5,7 @@ namespace AAXClean.Boxes
 {
     internal class MdhdBox : FullBox
     {
-        public override uint RenderSize => base.RenderSize + (uint)(Version == 0 ? 20 : 32);
+        public override long RenderSize => base.RenderSize + (Version == 0 ? 20 : 32);
         public ulong CreationTime { get; }
         public ulong ModificationTime { get; }
         public uint Timescale { get; }

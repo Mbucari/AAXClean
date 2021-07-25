@@ -4,7 +4,7 @@ namespace AAXClean.Boxes
 {
     internal class FreeBox : Box
     {
-        public override uint RenderSize => base.RenderSize + (uint)Header.TotalBoxSize - Header.HeaderSize;
+        public override long RenderSize => base.RenderSize + Header.TotalBoxSize - Header.HeaderSize;
 
         internal static FreeBox Create(int size, Box parent)
         {

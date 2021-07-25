@@ -10,7 +10,7 @@ namespace AAXClean.Boxes
 {
     internal class AdrmBox : Box
     {
-        public override uint RenderSize => base.RenderSize + (uint)(beginBlob.Length + DrmBlob.Length + middleBlob.Length + Checksum.Length + endBlob.Length);
+        public override long RenderSize => base.RenderSize + beginBlob.Length + DrmBlob.Length + middleBlob.Length + Checksum.Length + endBlob.Length;
         private byte[] beginBlob { get; }
         public byte[] DrmBlob { get; }
         private byte[] middleBlob { get; }

@@ -44,7 +44,7 @@ namespace AAXClean
 
         public bool InputStreamCanSeek { get; protected set; }
 
-        public Mp4File(Stream file, long fileSize) : base(new BoxHeader((uint)fileSize, "MPEG"), null)
+        public Mp4File(Stream file, long fileSize) : base(new BoxHeader(fileSize, "MPEG"), null)
         {
             LoadChildren(file);
             InputStream = file;

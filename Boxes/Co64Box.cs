@@ -10,7 +10,7 @@ namespace AAXClean.Boxes
 {
     internal class Co64Box : FullBox
     {
-        public override uint RenderSize => base.RenderSize + 4 + (uint)ChunkOffsets.Count * 8;
+        public override long RenderSize => base.RenderSize + 4 + ChunkOffsets.Count * 8;
         internal uint EntryCount { get; set; }
         internal List<long> ChunkOffsets { get; } = new List<long>();
 

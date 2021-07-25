@@ -6,7 +6,7 @@ namespace AAXClean.Boxes
 {
     internal class StszBox : FullBox
     {
-        public override uint RenderSize => base.RenderSize + 8 + (uint)SampleSizes.Count * 4;
+        public override long RenderSize => base.RenderSize + 8 + SampleSizes.Count * 4;
         internal uint SampleSize { get; }
         internal uint SampleCount { get; set; }
         internal List<int> SampleSizes { get; } = new List<int>();

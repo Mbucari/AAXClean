@@ -8,7 +8,7 @@ namespace AAXClean.Boxes
     internal class HdlrBox : FullBox
     {
         public bool HasNullTerminator { get; }
-        public override uint RenderSize => base.RenderSize + 20 + (uint)Encoding.ASCII.GetByteCount(HandlerName) + (uint)(HasNullTerminator ? 1 : 0);
+        public override long RenderSize => base.RenderSize + 20 + Encoding.ASCII.GetByteCount(HandlerName) + (HasNullTerminator ? 1 : 0);
         public uint PreDefined { get; }
         public string HandlerType { get; }
         private byte[] Reserved { get; }

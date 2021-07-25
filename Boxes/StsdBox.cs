@@ -5,7 +5,7 @@ namespace AAXClean.Boxes
 {
     internal class StsdBox : FullBox
     {
-        public override uint RenderSize => base.RenderSize + 4;
+        public override long RenderSize => base.RenderSize + 4;
         public uint EntryCount { get; }
         internal StsdBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
         {

@@ -39,7 +39,7 @@ namespace AAXClean.Boxes
 
         }
 
-        public override uint RenderSize => base.RenderSize + 8 + (uint)Data.Length;
+        public override long RenderSize => base.RenderSize + 8 + Data.Length;
         public FlagType DataType { get; }
         public uint Flags { get; }
         public byte[] Data { get; set; }

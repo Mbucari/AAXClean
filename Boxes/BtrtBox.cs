@@ -5,7 +5,7 @@ namespace AAXClean.Boxes
 {
     internal class BtrtBox : Box
     {
-        public override uint RenderSize => base.RenderSize + 12;
+        public override long RenderSize => base.RenderSize + 12;
         public uint BufferSizeDB { get; }
         public uint MaxBitrate { get; }
         public uint AvgBitrate { get; }

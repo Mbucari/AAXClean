@@ -10,7 +10,7 @@ namespace AAXClean.Boxes
 {
     class TkhdBox : FullBox
     {
-        public override uint RenderSize => (uint)(base.RenderSize + 3 * (Header.Version == 0 ? 4 : 8) + 2*4 + 8 + 4 * 2 + Matrix.Length + 2 * 4);
+        public override long RenderSize => base.RenderSize + 3 * (Header.Version == 0 ? 4 : 8) + 2*4 + 8 + 4 * 2 + Matrix.Length + 2 * 4;
         internal ulong CreationTime { get; }
         internal ulong ModificationTime { get; }
         internal uint TrackID { get; }

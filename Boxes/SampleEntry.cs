@@ -5,7 +5,7 @@ namespace AAXClean.Boxes
 {
     internal abstract class SampleEntry : Box
     {
-        public override uint RenderSize => base.RenderSize + 8;
+        public override long RenderSize => base.RenderSize + 8;
 
         private readonly byte[] reserved;
         public ushort DataReferenceIndex { get; }

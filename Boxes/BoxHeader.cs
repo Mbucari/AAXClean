@@ -10,8 +10,8 @@ namespace AAXClean.Boxes
         public long FilePosition { get; }
         public long TotalBoxSize { get; }
         public string Type { get; set; }
-        public uint HeaderSize { get; }
-        public int Version { get; }
+        public uint HeaderSize { get; private set; }
+        public int Version { get; private set; }
         internal BoxHeader(Stream file)
         {
             FilePosition = file.Position;
@@ -26,7 +26,7 @@ namespace AAXClean.Boxes
                 HeaderSize += 8;
             }
         }
-        public BoxHeader(uint boxSize, string boxType)
+        public BoxHeader(long boxSize, string boxType)
         {
             if (boxSize < 8)
                 throw new ArgumentException($"{nameof(boxSize)} must be at least 8 bytes.");
@@ -35,9 +35,11 @@ namespace AAXClean.Boxes
                 throw new ArgumentException($"{nameof(boxType)} must be a 4-byte long UTF-8 string.");
 
             FilePosition = 0;
+
+            Version = boxSize > uint.MaxValue ? 1 : 0;
             TotalBoxSize = boxSize;
             Type = boxType;
-            HeaderSize = 8;
+            HeaderSize = (boxSize > uint.MaxValue ? 16u : 8u);
         }
         public override string ToString()
         {

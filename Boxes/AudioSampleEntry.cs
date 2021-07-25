@@ -5,7 +5,7 @@ namespace AAXClean.Boxes
 {
     internal class AudioSampleEntry : SampleEntry
     {
-        public override uint RenderSize => base.RenderSize + 20;
+        public override long RenderSize => base.RenderSize + 20;
 
         private readonly byte[] reserved;
         private readonly byte[] reserved_2;

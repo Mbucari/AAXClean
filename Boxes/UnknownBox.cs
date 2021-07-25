@@ -5,7 +5,7 @@ namespace AAXClean.Boxes
 {
     internal class UnknownBox : Box
     {
-        public override uint RenderSize => base.RenderSize + (uint)Data.Length;
+        public override long RenderSize => base.RenderSize + Data.Length;
         public byte[] Data { get; }
         internal UnknownBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
         {

@@ -6,7 +6,7 @@ namespace AAXClean.Boxes
 {
     internal class FtypBox : Box
     {
-        public override uint RenderSize => base.RenderSize + 8 + (uint)CompatibleBrands.Count * 4;
+        public override long RenderSize => base.RenderSize + 8 + CompatibleBrands.Count * 4;
 
         public string MajorBrand { get; set; }
         public int MajorVersion { get; set; }
