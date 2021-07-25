@@ -9,86 +9,36 @@ using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    class LosslessMultipartFilter : IFrameFilter
+    class LosslessMultipartFilter : MultipartFilter
     {
-        private int SampleRate { get; }
-        private IEnumerator<Chapter> SplitChapters { get; }
-        private Action<NewSplitCallback> NewFileCallback { get; }
-        private uint StartFrame;
-        private long EndFrame;
-        private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
+        protected override Action<NewSplitCallback> NewFileCallback { get; }
         private FtypBox Ftyp { get; }
         private MoovBox Moov { get; }
 
         private Mp4aWriter writer;
+       
 
         public LosslessMultipartFilter(ChapterInfo splitChapters, Action<NewSplitCallback> newFileCallback, FtypBox ftyp, MoovBox moov)
+            :base(moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.Blob, splitChapters)
         {
+            NewFileCallback = newFileCallback;
             Ftyp = ftyp;
             Moov = moov;
-
-            if (splitChapters.Count == 0)
-                throw new Exception($"{nameof(splitChapters)} must contain at least one chapter.");
-
-            SplitChapters = splitChapters.GetEnumerator();
-            EndFrame = -1;
-            NewFileCallback = newFileCallback;
-
-            SampleRate = (int)moov.AudioTrack.Mdia.Mdhd.Timescale;
         }
 
-        public void Close()
+        protected override void Dispose(bool disposing)
         {
-            writer?.Close();
-        }
-
-        public void Dispose()
-        {
-            SplitChapters.Dispose();
             writer?.Dispose();
+            base.Dispose(disposing);
         }
 
-        long lastChunk = -1;
-        public bool FilterFrame(uint chunkIndex, uint frameIndex, byte[] audioFrame)
+        protected override void CloseCurrentWriter() => writer?.Close();
+        protected override void WriteFrameToFile(byte[] audioFrame, bool newChunk) => writer.AddFrame(audioFrame, newChunk);
+        protected override void CreateNewWriter(NewSplitCallback callback)
         {
-            if (frameIndex > EndFrame)
-            {
-                writer?.Close();
-
-                if (!GetNextChapter())
-                    return false;
-
-                var callback = new NewSplitCallback(SplitChapters.Current, null);
-                NewFileCallback(callback);
-
-                writer = new Mp4aWriter(callback.OutputFile, Ftyp, Moov, false);
-                writer.RemoveTextTrack();
-
-                writer.AddFrame(audioFrame, true);
-                lastChunk = chunkIndex;
-            }
-            else if (frameIndex >= StartFrame)
-            {
-                bool newChunk = false;
-                if (chunkIndex > lastChunk)
-                {
-                    newChunk = true;
-                    lastChunk = chunkIndex;
-                }
-                writer.AddFrame(audioFrame, newChunk);
-            }
-
-            return true;
-        }
-
-        private bool GetNextChapter()
-        {
-            if (!SplitChapters.MoveNext())
-                return false;
-
-            StartFrame = (uint)(SplitChapters.Current.StartOffset.TotalSeconds * SampleRate / AAC_TIME_DOMAIN_SAMPLES);
-            EndFrame = (uint)(SplitChapters.Current.EndOffset.TotalSeconds * SampleRate / AAC_TIME_DOMAIN_SAMPLES);
-            return true;
+            NewFileCallback(callback);
+            writer = new Mp4aWriter(callback.OutputFile, Ftyp, Moov, false);
+            writer.RemoveTextTrack();
         }
     }
 }

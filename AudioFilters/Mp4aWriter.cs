@@ -178,6 +178,8 @@ namespace AAXClean.AudioFilters
             var t4 = moov.TextTrack.Mdia.Minf.Stbl.Stco;
             var t5 = moov.TextTrack.Mdia.Minf.Stbl.Co64;
 
+            var ttUdata = moov.TextTrack.GetChild<UdtaBox>();
+
             moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a1);
             moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a2);
             moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a3);
@@ -189,6 +191,7 @@ namespace AAXClean.AudioFilters
             moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t3);
             moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t4);
             moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t5);
+            moov.TextTrack.Children.Remove(ttUdata);
 
             MemoryStream ms = new MemoryStream();
 
@@ -205,6 +208,7 @@ namespace AAXClean.AudioFilters
             moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t3);
             moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t4);
             moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t5);
+            moov.TextTrack.Children.Add(ttUdata);
 
             ms.Position = 0;
 

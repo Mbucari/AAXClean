@@ -6,17 +6,17 @@ namespace AAXClean.Util
 {
     internal static class StreamExtensions
     {
-        public static void WriteHeader(this Stream stream, BoxHeader header)
+        public static void WriteHeader(this Stream stream, BoxHeader header, long renderSize)
         {
-            if (header.Version == 1)
+            if (header.Version == 1 || renderSize > uint.MaxValue)
             {
                 stream.WriteUInt32BE(1);
                 stream.WriteType(header.Type);
-                stream.WriteInt64BE(header.TotalBoxSize);
+                stream.WriteInt64BE(renderSize);
             }
             else
             {
-                stream.WriteUInt32BE((uint)header.TotalBoxSize);
+                stream.WriteUInt32BE((uint)renderSize);
                 stream.WriteType(header.Type);
             }
         }
