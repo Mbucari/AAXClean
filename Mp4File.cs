@@ -33,14 +33,14 @@ namespace AAXClean
         public uint TimeScale => Moov.AudioTrack.Mdia.Mdhd.Timescale;
         public int AudioChannels => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.ChannelConfiguration;
 
-        protected bool isCancelled = false;
+        public bool InputStreamCanSeek { get; protected set; }
 
         internal virtual Mp4AudioChunkHandler AudioChunkHandler => new Mp4AudioChunkHandler(TimeScale, Moov.AudioTrack, InputStreamCanSeek);
         internal FtypBox Ftyp { get; set; }
         internal MoovBox Moov { get; }
         internal MdatBox Mdat { get; }
 
-        public bool InputStreamCanSeek { get; protected set; }
+        private bool isCancelled = false;
 
         public Mp4File(Stream file, long fileSize) : base(new BoxHeader(fileSize, "MPEG"), null)
         {
