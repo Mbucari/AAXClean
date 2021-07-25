@@ -154,12 +154,23 @@ namespace AAXClean
         {
             var audioHandler = AudioChunkHandler;
 
-            var chapters = Mp4aToMp4a(audioHandler, outputStream, Ftyp, Moov, userChapters);
+            Mp4aWriter mp4AWriter = new Mp4aWriter(outputStream, Ftyp, Moov, InputStream.Length > uint.MaxValue);
+
+            var losslessFilter = new LosslessFilter(mp4AWriter);
+            audioHandler.FrameFilter = losslessFilter;
+
+            var chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack);
+
+            ProcessAudio(audioHandler, chapterHandler);
+
+            var chapters = userChapters ?? chapterHandler.Chapters;
 
             Chapters = chapters;
+            mp4AWriter.WriteChapters(chapters);
+            losslessFilter.Close();
 
             return audioHandler.Success && !isCancelled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
-        }
+        }  
 
         public void ConvertToMultiMp4a(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback)
         {
@@ -177,7 +188,6 @@ namespace AAXClean
             audioFilter.Close();
         }
 
-
         public ChapterInfo GetChapterInfo()
         {
             var chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack, seekable: true);
@@ -187,56 +197,6 @@ namespace AAXClean
 
             while (!isCancelled && chunkReader.NextChunk()) ;
             return chapterHandler.Chapters; 
-        }
-
-        internal ChapterInfo Mp4aToMp4a(Mp4AudioChunkHandler audioHandler, Stream outputStream, FtypBox ftyp, MoovBox moov, ChapterInfo userChapters = null)
-        {
-            (uint audioSize, _) = CalculateAudioSizeAndBitrate();
-
-            var losslessFilter = new LosslessFilter(outputStream);
-            audioHandler.FrameFilter = losslessFilter;
-            var chapterHandler = new ChapterChunkHandler(TimeScale, moov.TextTrack);
-
-            uint chaptersSize;
-
-            if (userChapters is null)
-            {
-                chaptersSize = (uint)moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => s);
-            }
-            else
-            {
-                chaptersSize = (uint)userChapters.RenderSize;
-                //Aaxc files repeat the chapter titles in a metadata track, but they
-                //aren't necessary for media players and they will contradict the new
-                //chapter titles, so we remove them.
-                var textUdta = moov.TextTrack.GetChild<UdtaBox>();
-
-                if (textUdta is not null)
-                    moov.TextTrack.Children.Remove(textUdta);
-            }
-
-            ftyp.Save(outputStream);
-
-            //Calculate mdat size and write mdat header.
-            uint mdatSize = 8 + audioSize + chaptersSize;
-            outputStream.WriteUInt32BE(mdatSize);
-            outputStream.WriteType("mdat");
-
-            ProcessAudio(audioHandler, chapterHandler);
-
-            var chapters = userChapters ?? chapterHandler.Chapters;
-            //Write chapters to end of mdat and update moov
-            chapters.WriteChapters(moov.TextTrack, TimeScale, outputStream);
-
-            moov.AudioTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Clear();
-            moov.AudioTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.AddRange(losslessFilter.ChunkOffsets);
-
-            //write moov to end of file
-            moov.Save(outputStream);
-
-            losslessFilter.Close();
-            outputStream.Close();
-            return chapters;
         }
 
         public IEnumerable<(TimeSpan start,TimeSpan end)> DetectSilence(double decibels, TimeSpan minDuration)
@@ -289,14 +249,14 @@ namespace AAXClean
             }
         }
 
-        protected (uint audioSize, uint avgBitrate) CalculateAudioSizeAndBitrate()
+        protected (long audioSize, uint avgBitrate) CalculateAudioSizeAndBitrate()
         {
             //Calculate the actual average bitrate because aaxc file is wrong.
             long audioBits = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => (long)s) * 8;
             double duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
             uint avgBitrate = (uint)(audioBits * TimeScale / duration);
 
-            return ((uint)(audioBits / 8), avgBitrate);
+            return (audioBits / 8, avgBitrate);
         }
 
         public void Cancel()

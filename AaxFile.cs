@@ -43,7 +43,7 @@ namespace AAXClean
             Ftyp.CompatibleBrands.Add("M4B ");
 
 
-            (uint _, uint avgBitrate) = CalculateAudioSizeAndBitrate();
+            (_, uint avgBitrate) = CalculateAudioSizeAndBitrate();
 
             //This is the flag that, if set, prevents cover art from loading on android.
             Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.DependsOnCoreCoder = 0;
