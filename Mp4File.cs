@@ -90,29 +90,21 @@ namespace AAXClean
         {
             var audioHandler = AudioChunkHandler;
 
-            double channelDown = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.ChannelCount == 1 ? 1 : 0.5;
-
-            lameConfig ??= new NAudio.Lame.LameConfig
-            {
-                ABRRateKbps = (int)(CalculateAudioSizeAndBitrate().avgBitrate * channelDown / 1024),
-                Mode = NAudio.Lame.MPEGMode.Mono,
-                VBR = NAudio.Lame.VBRMode.ABR,
-            };
-
+            lameConfig ??= GetDefaultLameConfig();
             lameConfig.ID3 ??= AacToMp3Filter.GetDefaultMp3Tags(AppleTags);
 
-            using var aacToMp3Filter = new AacToMp3Filter(
+            using var audioFilter = new AacToMp3Filter(
                 outputStream,
                 audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.Blob,
                 audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleSize,
                 lameConfig);
 
-            audioHandler.FrameFilter = aacToMp3Filter;
+            audioHandler.FrameFilter = audioFilter;
             var chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack);
 
             ProcessAudio(audioHandler, chapterHandler);
 
-            aacToMp3Filter.Close();
+            audioFilter.Close();
             outputStream.Close();
 
             Chapters = userChapters ?? chapterHandler.Chapters;
@@ -124,15 +116,7 @@ namespace AAXClean
         {
             var audioHandler = AudioChunkHandler;
 
-            double channelDown = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.ChannelCount == 1 ? 1 : 0.5;
-
-            lameConfig ??= new NAudio.Lame.LameConfig
-            {
-                ABRRateKbps = (int)(CalculateAudioSizeAndBitrate().avgBitrate * channelDown / 1024),
-                Mode = NAudio.Lame.MPEGMode.JointStereo,
-                VBR = NAudio.Lame.VBRMode.ABR,
-            };
-
+            lameConfig ??= GetDefaultLameConfig();
             lameConfig.ID3 ??= AacToMp3Filter.GetDefaultMp3Tags(AppleTags);
 
             using var audioFilter = new AacToMp3MultipartFilter(
@@ -246,6 +230,20 @@ namespace AAXClean
                 }
             }
         }
+
+        private NAudio.Lame.LameConfig GetDefaultLameConfig()
+        {
+            double channelDown = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.ChannelCount == 1 ? 1 : 0.5;
+
+            var lameConfig = new NAudio.Lame.LameConfig
+            {
+                ABRRateKbps = (int)(CalculateAudioSizeAndBitrate().avgBitrate * channelDown / 1024),
+                Mode = NAudio.Lame.MPEGMode.Mono,
+                VBR = NAudio.Lame.VBRMode.ABR,
+            };
+            return lameConfig;
+        }
+
 
         protected (long audioSize, uint avgBitrate) CalculateAudioSizeAndBitrate()
         {
