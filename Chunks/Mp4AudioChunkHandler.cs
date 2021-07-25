@@ -55,26 +55,26 @@ namespace AAXClean.Chunks
         /// <summary>
         /// Gets the playback timestamp of an audio frame.
         /// </summary>
-        internal TimeSpan FrameToTime(uint frameIndxe)
+        internal TimeSpan FrameToTime(uint frameIndex)
         {
             double beginDelta = 0;
 
             foreach (var entry in Samples)
             {
-                if (frameIndxe > entry.FrameCount)
+                if (frameIndex > entry.FrameCount)
                 {
-                    beginDelta += entry.FrameCount * entry.FrameDelta;
-                    frameIndxe -= entry.FrameCount;
+                    beginDelta += (ulong)entry.FrameCount * entry.FrameDelta;
+                    frameIndex -= entry.FrameCount;
                 }
                 else
                 {
-                    beginDelta += frameIndxe * entry.FrameDelta;
+                    beginDelta += (ulong)frameIndex * entry.FrameDelta;
                     break;
                 }
             }
-
             return TimeSpan.FromSeconds(beginDelta / TimeScale);
         }
+
         //Defined at
         //http://man.hubwiz.com/docset/FFmpeg.docset/Contents/Resources/Documents/api/intreadwrite_8h_source.html
         private static ushort AV_RB16(byte[] frame)

@@ -241,7 +241,7 @@ namespace AAXClean
                 if (DateTime.Now > nextUpdate)
                 {
                     TimeSpan position = audioHandler.ProcessPosition;
-                    var speed = position / (DateTime.Now - beginProcess);
+                    var speed = position.TotalSeconds / (DateTime.Now - beginProcess).TotalSeconds;
                     ConversionProgressUpdate?.Invoke(this, new ConversionProgressEventArgs(position, speed));
 
                     nextUpdate = DateTime.Now.AddMilliseconds(200);
