@@ -24,24 +24,6 @@ namespace AAXClean
             _chapterList.Add(new Chapter(title, starttime, duration));
         }
 
-        internal void WriteChapters(TrakBox textTrak, double timeScale, Stream output)
-        {
-            textTrak.Mdia.Minf.Stbl.Stts.Samples.Clear();
-            textTrak.Mdia.Minf.Stbl.Stsz.SampleSizes.Clear();
-            textTrak.Mdia.Minf.Stbl.Stco.ChunkOffsets.Clear();
-
-            foreach (var c in this)
-            {
-                uint sampleDelta = (uint)(c.Duration.TotalSeconds * timeScale);
-
-                textTrak.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(sampleCount: 1, sampleDelta));
-                textTrak.Mdia.Minf.Stbl.Stsz.SampleSizes.Add(c.RenderSize);
-                textTrak.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add((uint)output.Position);
-
-                c.WriteChapter(output);
-            }
-        }
-
         public IEnumerator<Chapter> GetEnumerator()
         {
             return _chapterList.GetEnumerator();
