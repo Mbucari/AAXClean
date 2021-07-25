@@ -12,7 +12,7 @@ namespace AAXClean.Chunks
     class TrakChunkReader
     {
         private Stream InputStream { get; }
-        private Queue<(uint, ChunkTable)> ChunkQueue { get; }
+        private Queue<(long, ChunkTable)> ChunkQueue { get; }
 
         /// <summary>
         /// Reads track all chuncks sequentially
@@ -23,18 +23,37 @@ namespace AAXClean.Chunks
         {
             InputStream = file;
 
-            List<(uint chunkOffset, ChunkTable)> chunkList = new();
+            List<(long chunkOffset, ChunkTable)> chunkList = new();
 
             foreach (var handler in handlers)
             {
                 var chunkTable = new ChunkTable(handler.Track.Mdia.Minf.Stbl, handler);
 
-                chunkList.AddRange(handler.Track.Mdia.Minf.Stbl.Stco.ChunkOffsets.Select(co => (co, chunkTable)));
+                if (handler.Track.Mdia.Minf.Stbl.Stco is null)
+                    chunkList.AddRange(handler.Track.Mdia.Minf.Stbl.Co64.ChunkOffsets.Select(co => (co, chunkTable)));
+                else
+                {
+                    long lastOffset = 0;
+                    foreach (var co in handler.Track.Mdia.Minf.Stbl.Stco.ChunkOffsets)
+                    {
+                        if (co > lastOffset)
+                            lastOffset = co;
+                        else
+                        {
+                            //Seems some files incorrectly use stco box with offsets > uint.MAXVALUE
+                            //This causes the offsets to wrap around;
+                            lastOffset = (1L << 32) + co;
+                        }
+
+                        chunkList.Add((lastOffset, chunkTable));
+
+                    }
+                }
             }
 
             chunkList.Sort((o1, o2) => o1.chunkOffset.CompareTo(o2.chunkOffset));
 
-            ChunkQueue = new Queue<(uint, ChunkTable)>(chunkList);
+            ChunkQueue = new Queue<(long, ChunkTable)>(chunkList);
         }
         /// <summary>
         /// Reads the next available chunk.
@@ -44,7 +63,7 @@ namespace AAXClean.Chunks
         {
             if (ChunkQueue.Count == 0) return false;
 
-            (uint chunkOffset, ChunkTable table) = ChunkQueue.Dequeue();
+            (long chunkOffset, ChunkTable table) = ChunkQueue.Dequeue();
 
             if (InputStream.Position < chunkOffset)
             {

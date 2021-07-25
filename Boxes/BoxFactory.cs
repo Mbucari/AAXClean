@@ -31,6 +31,7 @@ namespace AAXClean.Boxes
                 "stsc" => new StscBox(file, header, parent),
                 "stsz" => new StszBox(file, header, parent),
                 "stco" => new StcoBox(file, header, parent),
+                "co64" => new Co64Box(file, header, parent),
                 "udta" => new UdtaBox(file, header, parent),
                 "meta" => new MetaBox(file, header, parent),
                 "ilst" => new AppleListBox(file, header, parent),

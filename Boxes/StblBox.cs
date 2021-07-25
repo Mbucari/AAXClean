@@ -11,6 +11,7 @@ namespace AAXClean.Boxes
         public StsdBox Stsd => GetChild<StsdBox>();
         public SttsBox Stts => GetChild<SttsBox>();
         public StcoBox Stco => GetChild<StcoBox>();
+        public Co64Box Co64 => GetChild<Co64Box>();
         public StszBox Stsz => GetChild<StszBox>();
         public StscBox Stsc => GetChild<StscBox>();
 
