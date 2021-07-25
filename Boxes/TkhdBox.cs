@@ -1,16 +1,11 @@
 ﻿using AAXClean.Util;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AAXClean.Boxes
 {
     class TkhdBox : FullBox
     {
-        public override long RenderSize => base.RenderSize + 3 * (Header.Version == 0 ? 4 : 8) + 2*4 + 8 + 4 * 2 + Matrix.Length + 2 * 4;
+        public override long RenderSize => base.RenderSize + 3 * (Header.Version == 0 ? 4 : 8) + 2 * 4 + 8 + 4 * 2 + Matrix.Length + 2 * 4;
         internal ulong CreationTime { get; }
         internal ulong ModificationTime { get; }
         internal uint TrackID { get; }
@@ -21,7 +16,7 @@ namespace AAXClean.Boxes
         internal short AlternateGroup { get; }
         internal short Volume { get; }
         internal ushort Reserved3 { get; }
-        internal byte[] Matrix { get; }        
+        internal byte[] Matrix { get; }
         internal uint Width { get; }
         internal uint Height { get; }
 

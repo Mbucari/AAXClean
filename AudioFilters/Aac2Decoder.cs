@@ -1,11 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
@@ -15,7 +9,7 @@ namespace AAXClean.AudioFilters
         private int decSz => AAC_FRAME_SIZE * Channels;
         public Aac2Decoder(byte[] asc) : base(asc)
         {
-            var ascUnmanaged =  Marshal.AllocHGlobal(asc.Length);
+            var ascUnmanaged = Marshal.AllocHGlobal(asc.Length);
 
             Handle = aacDecoder_Open(TRANSPORT_TYPE.TT_MP4_RAW, 1);
 

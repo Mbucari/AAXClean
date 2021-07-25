@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using AAXClean.Util;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using AAXClean.Util;
 
 namespace AAXClean.Boxes
 {

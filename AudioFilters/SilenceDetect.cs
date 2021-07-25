@@ -1,24 +1,17 @@
-﻿using AAXClean.Chunks;
-using NAudio.Wave;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
     class SilenceDetect : IFrameFilter
     {
-
         public List<(TimeSpan, TimeSpan)> Silences { get; }
-
 
         private const int BITS_PER_SAMPLE = 16;
         private AacDecoder decoder;
-        private BlockingCollection<(uint,short[])> waveSampleQueue;
+        private BlockingCollection<(uint, short[])> waveSampleQueue;
         private Task encoderLoopTask;
 
         private short maxAmplitude;
@@ -86,7 +79,7 @@ namespace AAXClean.AudioFilters
             waveSampleQueue.Add((frameIndex, waveFrame));
             return true;
         }
-      
+
         public void Close()
         {
             waveSampleQueue.CompleteAdding();

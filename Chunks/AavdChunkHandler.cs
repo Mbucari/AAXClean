@@ -1,9 +1,7 @@
-﻿using AAXClean.AudioFilters;
-using AAXClean.Boxes;
+﻿using AAXClean.Boxes;
 using AAXClean.Util;
 using System;
 using System.IO;
-using System.Linq;
 
 namespace AAXClean.Chunks
 {
@@ -12,7 +10,7 @@ namespace AAXClean.Chunks
         public byte[] Key { get; }
         public byte[] IV { get; }
 
-        public AavdChunkHandler(uint timeScale, TrakBox trak, byte[] key, byte[] iv, bool seekable = false) :base(timeScale, trak, seekable)
+        public AavdChunkHandler(uint timeScale, TrakBox trak, byte[] key, byte[] iv, bool seekable = false) : base(timeScale, trak, seekable)
         {
             if (key is null || key.Length != 16)
                 throw new ArgumentException($"{nameof(key)} must be 16 bytes long.");
@@ -24,7 +22,7 @@ namespace AAXClean.Chunks
         }
         public override byte[] ReadBlock(Stream file, int size)
         {
-            byte[] encData =  base.ReadBlock(file, size);
+            byte[] encData = base.ReadBlock(file, size);
 
             Crypto.DecryptInPlace(Key, IV, encData);
 

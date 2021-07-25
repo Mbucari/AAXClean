@@ -3,15 +3,12 @@ using NAudio.Wave;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
     internal class AacToMp3Filter : IFrameFilter
     {
-        
         private const int MAX_BUFFER_SZ = 1024 * 1024;
         private AacDecoder decoder;
         private BlockingCollection<byte[]> waveFrameQueue;

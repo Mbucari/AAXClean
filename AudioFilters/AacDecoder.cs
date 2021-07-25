@@ -1,13 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    internal abstract class AacDecoder :IDisposable
+    internal abstract class AacDecoder : IDisposable
     {
         internal const int BITS_PER_SAMPLE = 16;
 
@@ -26,6 +21,6 @@ namespace AAXClean.AudioFilters
         public abstract byte[] DecodeBytes(byte[] aacFrame);
         public abstract short[] DecodeShort(byte[] aacFrame);
         protected abstract IntPtr DecodeUnmanaged(byte[] aacFrame);
-        public abstract void Dispose();       
+        public abstract void Dispose();
     }
 }

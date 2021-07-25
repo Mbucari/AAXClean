@@ -1,12 +1,10 @@
 ﻿using AAXClean.AudioFilters;
 using AAXClean.Boxes;
 using AAXClean.Chunks;
-using AAXClean.Util;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace AAXClean
 {
@@ -62,12 +60,12 @@ namespace AAXClean
             if (Moov.iLst is not null)
                 AppleTags = new AppleTags(Moov.iLst);
         }
-        public Mp4File(Stream file) : this(file, file.Length) 
+        public Mp4File(Stream file) : this(file, file.Length)
         {
             InputStreamCanSeek = file.CanSeek;
         }
 
-        public Mp4File(string fileName, FileAccess access = FileAccess.Read) : this(File.Open(fileName, FileMode.Open, access)) 
+        public Mp4File(string fileName, FileAccess access = FileAccess.Read) : this(File.Open(fileName, FileMode.Open, access))
         {
             InputStreamCanSeek = true;
         }
@@ -117,7 +115,7 @@ namespace AAXClean
             aacToMp3Filter.Close();
             outputStream.Close();
 
-            Chapters = userChapters ?? chapterHandler.Chapters; 
+            Chapters = userChapters ?? chapterHandler.Chapters;
 
             return audioHandler.Success && !isCancelled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
         }
@@ -138,8 +136,8 @@ namespace AAXClean
             lameConfig.ID3 ??= AacToMp3Filter.GetDefaultMp3Tags(AppleTags);
 
             using var audioFilter = new AacToMp3MultipartFilter(
-                userChapters, 
-                newFileCallback, 
+                userChapters,
+                newFileCallback,
                 audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.Blob,
                 audioHandler.Track.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleSize,
                 lameConfig);
@@ -170,7 +168,7 @@ namespace AAXClean
             losslessFilter.Close();
 
             return audioHandler.Success && !isCancelled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
-        }  
+        }
 
         public void ConvertToMultiMp4a(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback)
         {
@@ -196,10 +194,10 @@ namespace AAXClean
             isCancelled = false;
 
             while (!isCancelled && chunkReader.NextChunk()) ;
-            return chapterHandler.Chapters; 
+            return chapterHandler.Chapters;
         }
 
-        public IEnumerable<(TimeSpan start,TimeSpan end)> DetectSilence(double decibels, TimeSpan minDuration)
+        public IEnumerable<(TimeSpan start, TimeSpan end)> DetectSilence(double decibels, TimeSpan minDuration)
         {
             if (decibels >= 0 || decibels < -90)
                 throw new ArgumentException($"{nameof(decibels)} must fall in [-90,0)");

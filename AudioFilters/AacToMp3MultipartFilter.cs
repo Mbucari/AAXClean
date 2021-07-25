@@ -1,10 +1,5 @@
-﻿using AAXClean.Chunks;
-using NAudio.Lame;
+﻿using NAudio.Lame;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
@@ -28,7 +23,7 @@ namespace AAXClean.AudioFilters
         }
 
         protected override void CloseCurrentWriter() => AacToMp3Filter?.Dispose();
-        
+
         protected override void WriteFrameToFile(byte[] audioFrame, bool newChunk) => AacToMp3Filter.FilterFrame(0, 0, audioFrame);
 
         protected override void CreateNewWriter(NewSplitCallback callback)

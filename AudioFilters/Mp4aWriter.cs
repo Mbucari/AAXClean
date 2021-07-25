@@ -1,11 +1,6 @@
 ﻿using AAXClean.Boxes;
 using AAXClean.Util;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
@@ -85,7 +80,7 @@ namespace AAXClean.AudioFilters
 
             Moov.AudioTrack.Mdia.Mdhd.Duration = (ulong)Stsz.SampleCount * AAC_TIME_DOMAIN_SAMPLES;
             Moov.Mvhd.Duration = Moov.AudioTrack.Mdia.Mdhd.Duration * Moov.Mvhd.Timescale / Moov.AudioTrack.Mdia.Mdhd.Timescale;
-            Moov.AudioTrack.Tkhd.Duration = Moov.Mvhd.Duration;         
+            Moov.AudioTrack.Tkhd.Duration = Moov.Mvhd.Duration;
 
             Moov.Save(OutputFile);
             OutputFile.Close();
@@ -106,7 +101,7 @@ namespace AAXClean.AudioFilters
                 if (isCo64)
                     Moov.TextTrack.Mdia.Minf.Stbl.Co64.ChunkOffsets.Add(OutputFile.Position);
                 else
-                Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add((uint)OutputFile.Position);
+                    Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add((uint)OutputFile.Position);
 
                 c.WriteChapter(OutputFile);
             }

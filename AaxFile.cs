@@ -1,13 +1,10 @@
-﻿using AAXClean.AudioFilters;
-using AAXClean.Boxes;
+﻿using AAXClean.Boxes;
 using AAXClean.Chunks;
 using AAXClean.Util;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AAXClean
 {
@@ -18,14 +15,14 @@ namespace AAXClean
     }
     public class AaxFile : Mp4File
     {
-        public byte[] Key { get; private set; } 
+        public byte[] Key { get; private set; }
         public byte[] IV { get; private set; }
 
-        internal override Mp4AudioChunkHandler AudioChunkHandler => new AavdChunkHandler(TimeScale, Moov.AudioTrack,Key, IV, InputStreamCanSeek);
+        internal override Mp4AudioChunkHandler AudioChunkHandler => new AavdChunkHandler(TimeScale, Moov.AudioTrack, Key, IV, InputStreamCanSeek);
 
         private FtypBox mp4aFtyp;
 
-        public AaxFile(Stream file, long fileSize) : base(file, fileSize) 
+        public AaxFile(Stream file, long fileSize) : base(file, fileSize)
         {
             if (FileType != FileType.Aax && FileType != FileType.Aaxc)
                 throw new ArgumentException($"This instance of {nameof(Mp4File)} is not an Aax or Aaxc file.");
@@ -62,17 +59,17 @@ namespace AAXClean
             //Add a btrt box to the audio sample description.
             BtrtBox.Create(0, MaxBitrate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
         }
-        public AaxFile(Stream file) : this(file, file.Length) 
+        public AaxFile(Stream file) : this(file, file.Length)
         {
             InputStreamCanSeek = file.CanSeek;
         }
-        public AaxFile(string fileName, FileAccess access = FileAccess.Read) : this(File.Open(fileName, FileMode.Open, access)) 
+        public AaxFile(string fileName, FileAccess access = FileAccess.Read) : this(File.Open(fileName, FileMode.Open, access))
         {
             InputStreamCanSeek = true;
         }
 
         #region Aax(c) Keys
-        
+
         public void SetDecryptionKey(string activationBytes)
         {
             if (string.IsNullOrWhiteSpace(activationBytes) || activationBytes.Length != 8)
@@ -168,6 +165,6 @@ namespace AAXClean
             IV = iv;
         }
 
-        #endregion      
-     }
+        #endregion
+    }
 }

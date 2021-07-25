@@ -1,5 +1,4 @@
-﻿using AAXClean.Chunks;
-using System.IO;
+﻿using System.IO;
 
 namespace AAXClean.Boxes
 {
@@ -39,5 +38,5 @@ namespace AAXClean.Boxes
                 _ => new UnknownBox(file, header, parent),
             };
         }
-    }   
+    }
 }

@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AAXClean.Chunks
 {
@@ -46,7 +44,7 @@ namespace AAXClean.Chunks
                         }
                         else
                             lastOffset = co;
-                        
+
                         chunkList.Add((lastOffset, chunkTable));
 
                     }

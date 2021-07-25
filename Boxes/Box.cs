@@ -64,7 +64,7 @@ namespace AAXClean.Boxes
             }
         }
 
-        private bool _disposed = false;        
+        private bool _disposed = false;
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
