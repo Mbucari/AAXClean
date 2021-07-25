@@ -12,7 +12,7 @@ namespace AAXClean.Chunks
     {
         public bool Success { get; private set; } = true;
         public double TimeScale { get; }
-        public IFrameeFilter FrameFilter { get; set; }
+        public IFrameFilter FrameFilter { get; set; }
         public TrakBox Track { get; }
         public bool InputStreamSeekable { get; }
         public TimeSpan ProcessPosition => FrameToTime(lastFrameProcessed);

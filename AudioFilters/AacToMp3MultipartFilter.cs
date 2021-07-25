@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    sealed class AacToMp3MultipartFilter : IFrameeFilter
+    sealed class AacToMp3MultipartFilter : IFrameFilter
     {
         private byte[] ASC { get; }
         private ushort SampleSize { get; }

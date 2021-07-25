@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    internal class AacToMp3Filter : IFrameeFilter
+    internal class AacToMp3Filter : IFrameFilter
     {
         
         private const int MAX_BUFFER_SZ = 1024 * 1024;

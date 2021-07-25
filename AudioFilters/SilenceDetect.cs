@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    class SilenceDetect : IFrameeFilter
+    class SilenceDetect : IFrameFilter
     {
 
         public List<(TimeSpan, TimeSpan)> Silences { get; }

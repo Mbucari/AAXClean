@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    class LosslessFilter : IFrameeFilter
+    class LosslessFilter : IFrameFilter
     {
         private Mp4aWriter Mp4writer;
         public LosslessFilter(Mp4aWriter mp4writer)

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    class LosslessMultipartFilter : IFrameeFilter
+    class LosslessMultipartFilter : IFrameFilter
     {
         private int SampleRate { get; }
         private IEnumerator<Chapter> SplitChapters { get; }

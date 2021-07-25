@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    interface IFrameeFilter : IDisposable
+    interface IFrameFilter : IDisposable
     {
         bool FilterFrame(uint chunkIndex, uint frameIndex, byte[] audioFrame);
         void Close();
