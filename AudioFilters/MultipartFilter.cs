@@ -47,7 +47,7 @@ namespace AAXClean.AudioFilters
                 if (!GetNextChapter())
                     return false;
 
-                var callback = new NewSplitCallback(SplitChapters.Current, null);
+                var callback = new NewSplitCallback(SplitChapters.Current);
                 CreateNewWriter(callback);
                 WriteFrameToFile(audioFrame, true);
                 lastChunk = chunkIndex;
