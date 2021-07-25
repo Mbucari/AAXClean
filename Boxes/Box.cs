@@ -54,7 +54,18 @@ namespace AAXClean.Boxes
 
         internal void Save(Stream file)
         {
-            file.WriteHeader(Header);
+            if (Header.Version == 1)
+                file.WriteUInt32BE(1);
+            else
+                file.WriteUInt32BE((uint)RenderSize);
+          
+            file.WriteType(Header.Type);
+
+            if (Header.Version == 1)
+            {
+                file.WriteInt64BE(RenderSize);
+            }
+
             Render(file);
 
             foreach (var child in Children)
