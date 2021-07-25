@@ -36,15 +36,17 @@ namespace AAXClean.Chunks
                     long lastOffset = 0;
                     foreach (var co in handler.Track.Mdia.Minf.Stbl.Stco.ChunkOffsets)
                     {
-                        if (co > lastOffset)
-                            lastOffset = co;
-                        else
+                        if (co < lastOffset && lastOffset - co > uint.MaxValue / 2)
                         {
-                            //Seems some files incorrectly use stco box with offsets > uint.MAXVALUE
-                            //This causes the offsets to wrap around;
+                            //Seems some files incorrectly use stco box with offsets > uint.MAXVALUE. This causes
+                            //the offsets to wrap around. Unfottnately, somtimes chapters are out of order and
+                            //co is supposed to be less than lastOffset (e.g. Altered Carbon). To attempt to detect
+                            //this, only assume it's a wrap around if lastOffset - co > uint.MaxValue / 2
                             lastOffset = (1L << 32) + co;
                         }
-
+                        else
+                            lastOffset = co;
+                        
                         chunkList.Add((lastOffset, chunkTable));
 
                     }
@@ -64,6 +66,11 @@ namespace AAXClean.Chunks
             if (ChunkQueue.Count == 0) return false;
 
             (long chunkOffset, ChunkTable table) = ChunkQueue.Dequeue();
+
+            if (InputStream.Position == 0x01dcc62c5)
+            {
+
+            }
 
             if (InputStream.Position < chunkOffset)
             {
