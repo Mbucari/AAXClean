@@ -36,6 +36,11 @@ namespace AAXClean.AudioFilters
         protected abstract void WriteFrameToFile(byte[] audioFrame, bool newChunk);
         protected abstract void CreateNewWriter(NewSplitCallback callback);
 
+        public void Close()
+        {
+            CloseCurrentWriter();
+        }
+
         public bool FilterFrame(uint chunkIndex, uint frameIndex, byte[] audioFrame)
         {
             if (frameIndex > EndFrame)
@@ -89,10 +94,6 @@ namespace AAXClean.AudioFilters
             }
 
             _disposed = true;
-        }
-        public void Close()
-        {
-            CloseCurrentWriter();
         }
     }
 }

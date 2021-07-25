@@ -20,9 +20,6 @@ namespace AAXClean.AudioFilters
         public AacToMp3MultipartFilter(ChapterInfo splitChapters, Action<NewSplitCallback> newFileCallback, byte[] audioSpecificConfig, ushort sampleSize, LameConfig lameConfig)
                         : base(audioSpecificConfig, splitChapters)
         {
-            if (splitChapters.Count == 0)
-                throw new Exception($"{nameof(splitChapters)} must contain at least one chapter.");
-
             LameConfig = lameConfig;
             ASC = audioSpecificConfig;
             SampleSize = sampleSize;
@@ -40,6 +37,11 @@ namespace AAXClean.AudioFilters
             NewFileCallback(callback);
             LameConfig = callback.LameConfig;
             AacToMp3Filter = new AacToMp3Filter(callback.OutputFile, ASC, SampleSize, callback.LameConfig);
+        }
+        protected override void Dispose(bool disposing)
+        {
+            AacToMp3Filter?.Dispose();
+            base.Dispose(disposing);
         }
     }
 }
