@@ -13,14 +13,12 @@ namespace AAXClean
         Mp4a,
         Mp3
     }
-    public class AaxFile : Mp4File
+    public sealed class AaxFile : Mp4File
     {
         public byte[] Key { get; private set; }
         public byte[] IV { get; private set; }
 
         internal override Mp4AudioChunkHandler AudioChunkHandler => new AavdChunkHandler(TimeScale, Moov.AudioTrack, Key, IV, InputStreamCanSeek);
-
-        private FtypBox mp4aFtyp;
 
         public AaxFile(Stream file, long fileSize) : base(file, fileSize)
         {
