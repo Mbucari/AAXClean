@@ -1,5 +1,5 @@
 # AAXClean
-Decrypts Audible's aax and aaxc files on the fly, to an m4b (lossless mp4) or mp3 (lossy). Also supports conversion of existing decrypted m4b to mp3. During decryption neither input nor output stream is required to be seekable, but output stream is required to be seekable if converting an existing m4b to mp3. All file-level and stream-level metadata is preserved with lossless decryption, but not with mp3 decryption/conversion. There is an option for reading/writing file-level mp4 metadata tags and adding different chapter information.
+Decrypts Audible's aax and aaxc files, without FFMpeg, to an m4b (lossless mp4) or mp3 (lossy). Also supports conversion of existing decrypted m4b to mp3. The input stream is not required to be seekable when decrypting. All file-level and stream-level metadata is preserved with lossless decryption, but not with mp3 decryption/conversion. There is an option for reading/writing file-level mp4 metadata tags and adding different chapter information.
 
 Usage:
 
@@ -36,4 +36,21 @@ var mp4File = new Mp4File(input);
 
 var output = File.OpenWrite(@"C:\Decrypted book.mp3");
 var conversionResult = mp4File.ConvertToMp3(output);
+```
+Multipart Conversion Example:
+Note that the input stream needs to be seekable to call GetChapterInfo()
+
+
+```C#
+var chapters = aaxcFile.GetChapterInfo();
+aaxcFile.ConvertToMultiMp4a(chapters, NetMp3Split);
+            
+private static void NetMp3Split(NewSplitCallback newSplitCallback)
+{
+	string dir = @"C:\book split\";
+
+	string fileName = newSplitCallback.Chapter.Title.Replace(":", "") + ".m4b";
+
+	newSplitCallback.OutputFile = File.OpenWrite(Path.Combine(dir, fileName));
+}
 ```
