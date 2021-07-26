@@ -74,7 +74,7 @@ namespace AAXClean.Boxes
             if (disposing)
             {
                 foreach (var child in Children)
-                    child.Dispose();
+                    child?.Dispose();
 
                 Children.Clear();
             }
