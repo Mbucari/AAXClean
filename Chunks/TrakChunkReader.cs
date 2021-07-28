@@ -55,6 +55,7 @@ namespace AAXClean.Chunks
 
             ChunkQueue = new Queue<(long, ChunkTable)>(chunkList);
         }
+
         /// <summary>
         /// Reads the next available chunk.
         /// </summary>
@@ -65,14 +66,9 @@ namespace AAXClean.Chunks
 
             (long chunkOffset, ChunkTable table) = ChunkQueue.Dequeue();
 
-            if (InputStream.Position == 0x01dcc62c5)
-            {
-
-            }
-
             if (InputStream.Position < chunkOffset)
             {
-                //Unknown Track or data type. Read passed it to next known chunk.
+                //Unknown Track or data type. Read past it to next known chunk.
                 if (table.Handler.InputStreamSeekable)
                     InputStream.Position = chunkOffset;
                 else
