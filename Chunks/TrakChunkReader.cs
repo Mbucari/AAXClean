@@ -115,6 +115,14 @@ namespace AAXClean.Chunks
 
                 for (uint i = 0; i < numFrames; i++)
                 {
+                    if (i + firstFrame >= SampleSizes.Length)
+                    {
+                        //This handels a case whwere the last Stsc entry was not written correctly.
+                        int[] correctFrameSizes = new int[i];
+                        Array.Copy(frameSizes, 0, correctFrameSizes, 0, i);
+                        return (totalChunkSize, firstFrame, correctFrameSizes);
+                    }
+
                     frameSizes[i] = SampleSizes[i + firstFrame];
                     totalChunkSize += frameSizes[i];
                 }
