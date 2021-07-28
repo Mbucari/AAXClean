@@ -67,6 +67,9 @@ namespace AAXClean.AudioFilters
 
             OutputFile.Position = mdatEnd;
 
+
+            Stsc.Samples.Add(new StscBox.ChunkEntry(currentChunk, samplesPerChunk, 1));
+
             Stts.EntryCount = 1;
             Stts.Samples.Add(new SttsBox.SampleEntry((uint)Stsz.SampleSizes.Count, AAC_TIME_DOMAIN_SAMPLES));
 
