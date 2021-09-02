@@ -4,38 +4,33 @@ Decrypts Audible's aax and aaxc files, without FFMpeg, to an m4b (lossless mp4) 
 Usage:
 
 ```C#
-var input = File.OpenRead(@"C:\Source File.aax");
-var aaxcFile = new AaxFile(input);
+var aaxcFile = new AaxFile(File.OpenRead(@"C:\Source File.aax"));
 ```
 Aaxc:
 ```C#
 var audible_key = "0a0b0c0d0e0f1a1b1c1d1e1f2a2b2c2d";
 var audible_iv = "2e2f3a3b3c3d3e3f4a4b4c4d4e4f5a5b";
-aaxcFile.SetDecryptionKey(audible_key, audible_iv)
+aaxcFile.SetDecryptionKey(audible_key, audible_iv);
 ```
 Aax:
 ```C#
 var activation_bytes = "0a1b2c3d";
-aaxcFile.SetDecryptionKey(activation_bytes)
+aaxcFile.SetDecryptionKey(activation_bytes);
 ```
 Output:
 ```C#
-var output = File.OpenWrite(@"C:\Decrypted book.mb4");
-var conversionResult = aaxcFile.ConvertToMp4a(output);
+var conversionResult = aaxcFile.ConvertToMp4a(File.OpenWrite(@"C:\Decrypted book.mb4"));
 ```
 OR
 ```C#
-var output = File.OpenWrite(@"C:\Decrypted book.mp3");
-var conversionResult = aaxcFile.ConvertToMp3(output);
+var conversionResult = aaxcFile.ConvertToMp3(File.OpenWrite(@"C:\Decrypted book.mp3"));
 ```
 
 Conversion Usage:
 ```C#
-var input = File.OpenRead(@"C:\Decrypted book.m4b");
-var mp4File = new Mp4File(input);
-
-var output = File.OpenWrite(@"C:\Decrypted book.mp3");
-var conversionResult = mp4File.ConvertToMp3(output);
+var mp4File = new Mp4File(File.OpenRead(@"C:\Decrypted book.m4b"));
+var conversionResult = mp4File.ConvertToMp3(File.OpenWrite(@"C:\Decrypted book.mp3"));
+mp4File.InputStream.Close();
 ```
 Multipart Conversion Example:
 Note that the input stream needs to be seekable to call GetChapterInfo()
