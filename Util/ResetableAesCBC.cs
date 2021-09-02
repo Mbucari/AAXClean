@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 
 namespace AAXClean.Util
 {
-    internal class ResetableAes : IDisposable
+    internal class ResetableAesCBC : IDisposable
     {
         /// <summary>
         /// Reset the initialization vector to its original state.
@@ -11,18 +11,21 @@ namespace AAXClean.Util
         internal Action Reset { get; }
         private Aes Aes { get; }
         private ICryptoTransform AesTransform { get; }
-        public ResetableAes(byte[] key, byte[] iv, CipherMode mode, PaddingMode padding)
+        public ResetableAesCBC(byte[] key, byte[] iv)
         {
             Aes = Aes.Create();
-            Aes.Mode = mode;
-            Aes.Padding = padding;
+            Aes.Mode = CipherMode.CBC;
+            Aes.Padding = PaddingMode.None;
             AesTransform = Aes.CreateDecryptor(key, iv);
 
-            var symmetricCipherProperty = AesTransform.GetType().GetProperty("BasicSymmetricCipher", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var basicSymmetricCipherBCrypt = 
+                AesTransform
+                .GetType()
+                .GetProperty("BasicSymmetricCipher", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                .GetValue(AesTransform);
 
-            var basicSymmetricCipherBCrypt = symmetricCipherProperty.GetValue(AesTransform);
-
-            Reset = basicSymmetricCipherBCrypt
+            Reset = 
+                basicSymmetricCipherBCrypt
                 .GetType()
                 .GetMethod("Reset", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
                 .CreateDelegate<Action>(basicSymmetricCipherBCrypt);

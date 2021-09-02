@@ -7,7 +7,7 @@ namespace AAXClean.Chunks
 {
     internal sealed class AavdChunkHandler : Mp4AudioChunkHandler
     {
-        private ResetableAes ResetableAes { get; }
+        private ResetableAesCBC ResetableAes { get; }
 
         public AavdChunkHandler(uint timeScale, TrakBox trak, byte[] key, byte[] iv, bool seekable = false) : base(timeScale, trak, seekable)
         {
@@ -16,7 +16,7 @@ namespace AAXClean.Chunks
             if (iv is null || iv.Length != 16)
                 throw new ArgumentException($"{nameof(iv)} must be 16 bytes long.");
 
-            ResetableAes = new(key, iv, System.Security.Cryptography.CipherMode.CBC, System.Security.Cryptography.PaddingMode.None);
+            ResetableAes = new(key, iv);
         }
         public override byte[] ReadBlock(Stream file, int size)
         {
