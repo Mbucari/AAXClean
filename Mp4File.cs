@@ -35,7 +35,6 @@ namespace AAXClean
 
         public bool InputStreamCanSeek { get; protected set; }
 
-        internal virtual Mp4AudioChunkHandler AudioChunkHandler => new Mp4AudioChunkHandler(TimeScale, Moov.AudioTrack, InputStreamCanSeek);
         internal FtypBox Ftyp { get; set; }
         internal MoovBox Moov { get; }
         internal MdatBox Mdat { get; }
@@ -70,6 +69,9 @@ namespace AAXClean
             InputStreamCanSeek = true;
         }
 
+        internal virtual Mp4AudioChunkHandler GetAudioChunkHandler()
+            => new Mp4AudioChunkHandler(TimeScale, Moov.AudioTrack, InputStreamCanSeek);
+
         public void Save()
         {
             if (Moov.Header.FilePosition < Mdat.Header.FilePosition)
@@ -88,7 +90,7 @@ namespace AAXClean
 
         public ConversionResult ConvertToMp3(Stream outputStream, NAudio.Lame.LameConfig lameConfig = null, ChapterInfo userChapters = null)
         {
-            var audioHandler = AudioChunkHandler;
+            using var audioHandler = GetAudioChunkHandler();
 
             lameConfig ??= GetDefaultLameConfig();
             lameConfig.ID3 ??= AacToMp3Filter.GetDefaultMp3Tags(AppleTags);
@@ -114,7 +116,7 @@ namespace AAXClean
 
         public void ConvertToMultiMp3(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback, NAudio.Lame.LameConfig lameConfig = null)
         {
-            var audioHandler = AudioChunkHandler;
+            using var audioHandler = GetAudioChunkHandler();
 
             lameConfig ??= GetDefaultLameConfig();
             lameConfig.ID3 ??= AacToMp3Filter.GetDefaultMp3Tags(AppleTags);
@@ -134,7 +136,7 @@ namespace AAXClean
 
         public ConversionResult ConvertToMp4a(Stream outputStream, ChapterInfo userChapters = null)
         {
-            var audioHandler = AudioChunkHandler;
+            using var audioHandler = GetAudioChunkHandler();
 
             Mp4aWriter mp4AWriter = new Mp4aWriter(outputStream, Ftyp, Moov, InputStream.Length > uint.MaxValue);
 
@@ -156,7 +158,7 @@ namespace AAXClean
 
         public void ConvertToMultiMp4a(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback)
         {
-            var audioHandler = AudioChunkHandler;
+            using var audioHandler = GetAudioChunkHandler();
 
             using var audioFilter = new LosslessMultipartFilter(
                 userChapters,
@@ -188,7 +190,7 @@ namespace AAXClean
             if (minDuration.TotalSeconds * TimeScale < 2)
                 throw new ArgumentException($"{nameof(minDuration)} must be no shorter than 2 audio samples.");
 
-            var audioHandler = AudioChunkHandler;
+            using var audioHandler = GetAudioChunkHandler();
 
             SilenceDetect sil = new SilenceDetect(
                 decibels,

@@ -18,8 +18,6 @@ namespace AAXClean
         public byte[] Key { get; private set; }
         public byte[] IV { get; private set; }
 
-        internal override Mp4AudioChunkHandler AudioChunkHandler => new AavdChunkHandler(TimeScale, Moov.AudioTrack, Key, IV, InputStreamCanSeek);
-
         public AaxFile(Stream file, long fileSize) : base(file, fileSize)
         {
             if (FileType != FileType.Aax && FileType != FileType.Aaxc)
@@ -65,6 +63,9 @@ namespace AAXClean
         {
             InputStreamCanSeek = true;
         }
+
+        internal override Mp4AudioChunkHandler GetAudioChunkHandler()
+            => new AavdChunkHandler(TimeScale, Moov.AudioTrack, Key, IV, InputStreamCanSeek);
 
         #region Aax(c) Keys
 

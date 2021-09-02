@@ -9,11 +9,11 @@ namespace AAXClean.Chunks
     internal class ChapterChunkHandler : IChunkHandler
     {
         public bool InputStreamSeekable { get; }
-        public ChapterInfo Chapters { get; } = new();
+        public ChapterInfo Chapters { get; private set; } = new();
         public double TimeScale { get; }
         public TrakBox Track { get; }
 
-        private SttsBox.SampleEntry[] Samples { get; }
+        private SttsBox.SampleEntry[] Samples { get; set; }
 
         public ChapterChunkHandler(uint timeScale, TrakBox trak, bool seekable = false)
         {
@@ -38,6 +38,25 @@ namespace AAXClean.Chunks
             Chapters.AddChapter(title, TimeSpan.FromSeconds(duration));
 
             return true;
+        }
+
+        bool disposed = false;
+        public void Dispose() => Dispose(true);
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose managed resources.
+                    Chapters = null;
+                    Samples = null;
+                }
+
+                // Call the appropriate methods to clean up
+                // unmanaged resources here.
+                disposed = true;
+            }
         }
     }
 }

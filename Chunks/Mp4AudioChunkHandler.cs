@@ -16,7 +16,7 @@ namespace AAXClean.Chunks
         public TimeSpan ProcessPosition => FrameToTime(lastFrameProcessed);
 
         private uint lastFrameProcessed { get; set; }
-        private SttsBox.SampleEntry[] Samples { get; }
+        private SttsBox.SampleEntry[] Samples { get; set; }
 
         public Mp4AudioChunkHandler(uint timeScale, TrakBox trak, bool inputCanSeek)
         {
@@ -78,6 +78,25 @@ namespace AAXClean.Chunks
         private static ushort AV_RB16(byte[] frame)
         {
             return (ushort)(frame[0] << 8 | frame[1]);
+        }
+
+        bool disposed = false;
+        public void Dispose() => Dispose(true);
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose managed resources.
+                    FrameFilter?.Dispose();
+                    Samples = null;
+                }
+
+                // Call the appropriate methods to clean up
+                // unmanaged resources here.
+                disposed = true;
+            }
         }
     }
 }

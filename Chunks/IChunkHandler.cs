@@ -1,9 +1,10 @@
 ﻿using AAXClean.Boxes;
+using System;
 using System.IO;
 
 namespace AAXClean.Chunks
 {
-    internal interface IChunkHandler
+    internal interface IChunkHandler : IDisposable
     {
         bool InputStreamSeekable { get; }
         TrakBox Track { get; }

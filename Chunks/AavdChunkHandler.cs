@@ -5,10 +5,9 @@ using System.IO;
 
 namespace AAXClean.Chunks
 {
-    internal class AavdChunkHandler : Mp4AudioChunkHandler
+    internal sealed class AavdChunkHandler : Mp4AudioChunkHandler
     {
-        public byte[] Key { get; }
-        public byte[] IV { get; }
+        private ResetableAes ResetableAes { get; }
 
         public AavdChunkHandler(uint timeScale, TrakBox trak, byte[] key, byte[] iv, bool seekable = false) : base(timeScale, trak, seekable)
         {
@@ -17,16 +16,28 @@ namespace AAXClean.Chunks
             if (iv is null || iv.Length != 16)
                 throw new ArgumentException($"{nameof(iv)} must be 16 bytes long.");
 
-            Key = key;
-            IV = iv;
+            ResetableAes = new(key, iv, System.Security.Cryptography.CipherMode.CBC, System.Security.Cryptography.PaddingMode.None);
         }
         public override byte[] ReadBlock(Stream file, int size)
         {
             byte[] encData = base.ReadBlock(file, size);
 
-            Crypto.DecryptInPlace(Key, IV, encData);
+            ResetableAes.Reset();
+            ResetableAes.DecryptInPlace(encData);
 
             return encData;
         }
-    }
+
+        bool disposed = false;
+        protected override void Dispose(bool disposing)
+		{
+            if (disposing && !disposed)
+			{
+                ResetableAes?.Dispose();
+                disposed = true;
+            }
+
+			base.Dispose(disposing);
+		}
+	}
 }

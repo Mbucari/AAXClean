@@ -5,6 +5,9 @@ namespace AAXClean.Util
 {
     internal class ResetableAes : IDisposable
     {
+        /// <summary>
+        /// Reset the initialization vector to its original state.
+        /// </summary>
         internal Action Reset { get; }
         private Aes Aes { get; }
         private ICryptoTransform AesTransform { get; }
