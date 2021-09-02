@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace AAXClean.AudioFilters
 {
-    sealed internal class Aac2Decoder : AacDecoder
+    unsafe sealed internal class Aac2Decoder : AacDecoder
     {
         private DecoderHandle Handle;
         private int decSz => AAC_FRAME_SIZE * Channels;
@@ -14,10 +14,12 @@ namespace AAXClean.AudioFilters
             Handle = aacDecoder_Open(TRANSPORT_TYPE.TT_MP4_RAW, 1);
 
             Marshal.Copy(asc, 0, ascUnmanaged, asc.Length);
-            var err = aacDecoder_ConfigRaw(Handle, ref ascUnmanaged, new int[] { asc.Length });
+
+            int length = asc.Length;
+            var err = aacDecoder_ConfigRaw(Handle, &ascUnmanaged, &length);
             Marshal.FreeHGlobal(ascUnmanaged);
         }
-        public override byte[] DecodeBytes(byte[] aacFrame)
+        public override byte[] DecodeBytes(Span<byte> aacFrame)
         {
             IntPtr unmanagedBuff = DecodeUnmanaged(aacFrame);
 
@@ -29,7 +31,7 @@ namespace AAXClean.AudioFilters
             return buffer;
         }
 
-        public override short[] DecodeShort(byte[] aacFrame)
+        public override short[] DecodeShort(Span<byte> aacFrame)
         {
             IntPtr unmanagedBuff = DecodeUnmanaged(aacFrame);
 
@@ -41,12 +43,17 @@ namespace AAXClean.AudioFilters
             return buffer;
         }
 
-        protected override IntPtr DecodeUnmanaged(byte[] aacFrame)
+        protected override IntPtr DecodeUnmanaged(Span<byte> aacFrame)
         {
             int inputSize = aacFrame.Length;
             int bytesValid = inputSize;
+            int error;
 
-            int error = aacDecoder_Fill(Handle, ref aacFrame, ref inputSize, ref bytesValid);
+            fixed (byte* buff = aacFrame)
+            {
+                error = aacDecoder_Fill(Handle, &buff, &inputSize, &bytesValid); 
+            }
+            
             if (error != 0 || bytesValid != 0)
             {
                 throw new Exception($"Error filling decoder buffer. Code {error:X}");
@@ -88,10 +95,10 @@ namespace AAXClean.AudioFilters
         private static extern int aacDecoder_Close(DecoderHandle self);
 
         [DllImport(libName)]
-        private static extern int aacDecoder_ConfigRaw(DecoderHandle self, ref IntPtr ASC, int[] ASCSize);
+        private static extern int aacDecoder_ConfigRaw(DecoderHandle self, IntPtr* ASC, int* ASCSize);
 
         [DllImport(libName)]
-        private static extern int aacDecoder_Fill(DecoderHandle self, ref byte[] buffer, ref int bufferSize, ref int bytesValid);
+        private static extern int aacDecoder_Fill(DecoderHandle self,  byte** buffer, int* bufferSize, int* bytesValid);
 
         [DllImport(libName)]
         private static extern int aacDecoder_DecodeFrame(DecoderHandle self, IntPtr buffer, int bufferSize, DecoderFlags bytesValid);

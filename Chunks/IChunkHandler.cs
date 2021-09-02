@@ -7,6 +7,6 @@ namespace AAXClean.Chunks
     {
         bool InputStreamSeekable { get; }
         TrakBox Track { get; }
-        bool ChunkAvailable(byte[][] frames, uint chunkIndex, uint frameIndex, int totalChunkSize);
+        bool ChunkAvailable(Span<byte> chunk, uint chunkIndex, uint frameIndex, int totalChunkSize, int[] frameSizes);
     }
 }

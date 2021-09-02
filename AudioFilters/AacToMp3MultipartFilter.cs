@@ -24,7 +24,7 @@ namespace AAXClean.AudioFilters
 
         protected override void CloseCurrentWriter() => AacToMp3Filter?.Dispose();
 
-        protected override void WriteFrameToFile(byte[] audioFrame, bool newChunk) => AacToMp3Filter.FilterFrame(0, 0, audioFrame);
+        protected override void WriteFrameToFile(Span<byte> audioFrame, bool newChunk) => AacToMp3Filter.FilterFrame(0, 0, audioFrame);
 
         protected override void CreateNewWriter(NewSplitCallback callback)
         {

@@ -1,4 +1,6 @@
-﻿namespace AAXClean.AudioFilters
+﻿using System;
+
+namespace AAXClean.AudioFilters
 {
     class LosslessFilter : IFrameFilter
     {
@@ -9,7 +11,7 @@
         }
 
         private long lastChunk = -1;
-        public bool FilterFrame(uint chunkIndex, uint frameIndex, byte[] audioSample)
+        public bool FilterFrame(uint chunkIndex, uint frameIndex, Span<byte> audioSample)
         {
             Mp4writer.AddFrame(audioSample, chunkIndex > lastChunk);
             lastChunk = chunkIndex;

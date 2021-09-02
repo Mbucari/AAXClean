@@ -26,18 +26,23 @@ namespace AAXClean.Chunks
             InputStreamSeekable = inputCanSeek;
         }
 
-        protected virtual bool ValidateFrame(byte[] frame) => (AV_RB16(frame) & 0xfff0) != 0xfff0;
+        protected virtual bool ValidateFrame(Span<byte> frame) => (AV_RB16(frame) & 0xfff0) != 0xfff0;
 
-        public bool ChunkAvailable(byte[][] andioFrame, uint chunkIndex, uint frameIndex, int totalChunkSize)
+        public bool ChunkAvailable(Span<byte> chunk, uint chunkIndex, uint frameIndex, int totalChunkSize, int[] frameSizes)
         {
-            for (uint fIndex = 0; fIndex < andioFrame.Length; fIndex++)
+            int framePosition = 0;
+            for (uint fIndex = 0; fIndex < frameSizes.Length; fIndex++)
             {
                 lastFrameProcessed = frameIndex + fIndex;
 
-                Success = ValidateFrame(andioFrame[fIndex]) && FrameFilter?.FilterFrame(chunkIndex, lastFrameProcessed, andioFrame[fIndex]) == true;
+                Span<byte> frame = chunk.Slice(framePosition, frameSizes[fIndex]);
+
+                Success = ValidateFrame(frame) && FrameFilter?.FilterFrame(chunkIndex, lastFrameProcessed, frame) == true;
 
                 if (!Success)
                     return false;
+
+                framePosition += frameSizes[fIndex];
             }
             return true;
         }
@@ -67,7 +72,7 @@ namespace AAXClean.Chunks
 
         //Defined at
         //http://man.hubwiz.com/docset/FFmpeg.docset/Contents/Resources/Documents/api/intreadwrite_8h_source.html
-        private static ushort AV_RB16(byte[] frame)
+        private static ushort AV_RB16(Span<byte> frame)
         {
             return (ushort)(frame[0] << 8 | frame[1]);
         }

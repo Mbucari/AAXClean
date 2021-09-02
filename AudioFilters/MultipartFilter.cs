@@ -18,7 +18,7 @@ namespace AAXClean.AudioFilters
         private bool _disposed = false;
         private static readonly int[] asc_samplerates = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
 
-        internal MultipartFilter(byte[] audioSpecificConfig, ChapterInfo splitChapters)
+        internal MultipartFilter(Span<byte> audioSpecificConfig, ChapterInfo splitChapters)
         {
             if (splitChapters.Count == 0)
                 throw new Exception($"{nameof(splitChapters)} must contain at least one chapter.");
@@ -30,7 +30,7 @@ namespace AAXClean.AudioFilters
         }
 
         protected abstract void CloseCurrentWriter();
-        protected abstract void WriteFrameToFile(byte[] audioFrame, bool newChunk);
+        protected abstract void WriteFrameToFile(Span<byte> audioFrame, bool newChunk);
         protected abstract void CreateNewWriter(NewSplitCallback callback);
 
         public void Close()
@@ -38,7 +38,7 @@ namespace AAXClean.AudioFilters
             CloseCurrentWriter();
         }
 
-        public bool FilterFrame(uint chunkIndex, uint frameIndex, byte[] audioFrame)
+        public bool FilterFrame(uint chunkIndex, uint frameIndex, Span<byte> audioFrame)
         {
             if (frameIndex > EndFrame)
             {

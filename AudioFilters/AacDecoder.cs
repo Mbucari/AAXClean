@@ -18,9 +18,9 @@ namespace AAXClean.AudioFilters
             Channels = (asc[1] >> 3) & 7;
 
         }
-        public abstract byte[] DecodeBytes(byte[] aacFrame);
-        public abstract short[] DecodeShort(byte[] aacFrame);
-        protected abstract IntPtr DecodeUnmanaged(byte[] aacFrame);
+        public abstract byte[] DecodeBytes(Span<byte> aacFrame);
+        public abstract short[] DecodeShort(Span<byte> aacFrame);
+        protected abstract IntPtr DecodeUnmanaged(Span<byte> aacFrame);
         public abstract void Dispose();
     }
 }

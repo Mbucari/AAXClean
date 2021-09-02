@@ -73,7 +73,7 @@ namespace AAXClean.AudioFilters
             {
             }
         }
-        public bool FilterFrame(uint chunkIndex, uint frameIndex, byte[] aacSample)
+        public bool FilterFrame(uint chunkIndex, uint frameIndex, Span<byte> aacSample)
         {
             var waveFrame = decoder.DecodeShort(aacSample);
             waveSampleQueue.Add((frameIndex, waveFrame));

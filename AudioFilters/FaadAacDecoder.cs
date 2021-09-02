@@ -3,9 +3,8 @@ using System.Runtime.InteropServices;
 
 namespace AAXClean.AudioFilters
 {
-    sealed internal class FaadAacDecoder : AacDecoder
+    unsafe sealed internal class FaadAacDecoder : AacDecoder
     {
-
         private FaadHandle Handle;
         public FaadAacDecoder(byte[] asc) : base(asc)
         {
@@ -17,7 +16,7 @@ namespace AAXClean.AudioFilters
                 throw new Exception($"Error initializing {nameof(libFaad2)}");
         }
 
-        public override byte[] DecodeBytes(byte[] aacFrame)
+        public override byte[] DecodeBytes(Span<byte> aacFrame)
         {
             IntPtr unmanagedBuff = DecodeUnmanaged(aacFrame);
 
@@ -29,7 +28,7 @@ namespace AAXClean.AudioFilters
 
         }
 
-        public override short[] DecodeShort(byte[] aacFrame)
+        public override short[] DecodeShort(Span<byte> aacFrame)
         {
             IntPtr unmanagedBuff = DecodeUnmanaged(aacFrame);
 
@@ -40,9 +39,14 @@ namespace AAXClean.AudioFilters
             return waveSample;
         }
 
-        protected override IntPtr DecodeUnmanaged(byte[] aacFrame)
+        protected override IntPtr DecodeUnmanaged(Span<byte> aacFrame)
         {
-            var pDecodeBuff = libFaad2.NeAACDecDecode(Handle, out libFaad2.NeAACDecFrameInfo info, aacFrame, aacFrame.Length);
+            IntPtr pDecodeBuff;
+            libFaad2.NeAACDecFrameInfo info;
+            fixed (byte* buffer = aacFrame)
+            {
+                pDecodeBuff = libFaad2.NeAACDecDecode(Handle, out info, buffer, aacFrame.Length);
+            }
 
             if (info.error != 0)
             {
@@ -190,7 +194,7 @@ namespace AAXClean.AudioFilters
             public static extern byte NeAACDecAudioSpecificConfig(byte[] pBuffer, int buffer_size, out mp4AudioSpecificConfig mp4ASC);
 
             [DllImport(libPath)]
-            public static extern IntPtr NeAACDecDecode(FaadHandle hpDecoder, out NeAACDecFrameInfo hInfo, byte[] buffer, int buffer_size);
+            public static extern IntPtr NeAACDecDecode(FaadHandle hpDecoder, out NeAACDecFrameInfo hInfo, byte* buffer, int buffer_size);
 
 
             [DllImport(libPath, CharSet = CharSet.Auto)]

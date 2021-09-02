@@ -1,16 +1,12 @@
 ﻿using AAXClean.Boxes;
+using AAXClean.Util;
 using System;
-using System.IO;
-using System.Security.Cryptography;
 
 namespace AAXClean.Chunks
 {
     internal sealed class AavdChunkHandler : Mp4AudioChunkHandler
     {
-        private Aes Aes { get; }
-        private ICryptoTransform AesTransform { get; }
-
-        private static readonly byte[] emptyArray = Array.Empty<byte>();
+        private AesCryptoTransform Aes { get; }
 
         public AavdChunkHandler(uint timeScale, TrakBox trak, byte[] key, byte[] iv, bool seekable = false) : base(timeScale, trak, seekable)
         {
@@ -19,17 +15,13 @@ namespace AAXClean.Chunks
             if (iv is null || iv.Length != 16)
                 throw new ArgumentException($"{nameof(iv)} must be 16 bytes long.");
 
-            Aes = Aes.Create();
-            Aes.Mode = CipherMode.CBC;
-            Aes.Padding = PaddingMode.None;
-            AesTransform = Aes.CreateDecryptor(key, iv);
+            Aes = new AesCryptoTransform(key, iv);
         }
-		protected override bool ValidateFrame(byte[] audioFrame)
+		protected override bool ValidateFrame(Span<byte> audioFrame)
         {
             if (audioFrame.Length >= 0x10)
             {
-                AesTransform.TransformBlock(audioFrame, 0, audioFrame.Length & 0x7ffffff0, audioFrame, 0);
-                AesTransform.TransformFinalBlock(emptyArray, 0, 0);
+                Aes.TransformFinal(audioFrame.Slice(0, audioFrame.Length & 0x7ffffff0), audioFrame);
             }
 
             return base.ValidateFrame(audioFrame);
@@ -41,11 +33,10 @@ namespace AAXClean.Chunks
             if (disposing && !disposed)
 			{
                 Aes.Dispose();
-                AesTransform.Dispose();
                 disposed = true;
             }
 
 			base.Dispose(disposing);
 		}
-	}
+    }
 }

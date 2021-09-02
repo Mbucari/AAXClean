@@ -1,5 +1,6 @@
 ﻿using AAXClean.Boxes;
 using AAXClean.Util;
+using System;
 using System.IO;
 
 namespace AAXClean.AudioFilters
@@ -123,7 +124,7 @@ namespace AAXClean.AudioFilters
 
             Moov.Mvhd.NextTrackID--;
         }
-        public void AddFrame(byte[] frame, bool newChunk)
+        public void AddFrame(Span<byte> frame, bool newChunk)
         {
             if (newChunk)
             {

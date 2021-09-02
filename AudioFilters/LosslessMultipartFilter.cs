@@ -38,7 +38,7 @@ namespace AAXClean.AudioFilters
             waveFrameQueue?.CompleteAdding();
             encoderLoopTask?.Wait();
         }
-        protected override void WriteFrameToFile(byte[] audioFrame, bool newChunk) => waveFrameQueue.Add((newChunk, audioFrame));
+        protected override void WriteFrameToFile(Span<byte> audioFrame, bool newChunk) => waveFrameQueue.Add((newChunk, audioFrame.ToArray()));
         protected override void CreateNewWriter(NewSplitCallback callback)
         {
             NewFileCallback(callback);
