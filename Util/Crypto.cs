@@ -1,4 +1,4 @@
-﻿using System.IO;
+﻿using System;
 using System.Security.Cryptography;
 
 namespace AAXClean.Util
@@ -13,9 +13,7 @@ namespace AAXClean.Util
 
             using var cbcDecryptor = aes.CreateDecryptor(key, iv);
 
-            using var cStream = new CryptoStream(new MemoryStream(encryptedBlocks), cbcDecryptor, CryptoStreamMode.Read);
-
-            cStream.Read(encryptedBlocks, 0, encryptedBlocks.Length & 0x7ffffff0);
+            cbcDecryptor.TransformBlock(encryptedBlocks, 0, encryptedBlocks.Length & 0x7ffffff0, encryptedBlocks, 0);
         }
 
         internal static byte[] Sha1(params (byte[] bytes, int start, int length)[] blocks)
