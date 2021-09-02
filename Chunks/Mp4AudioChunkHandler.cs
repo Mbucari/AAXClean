@@ -26,25 +26,17 @@ namespace AAXClean.Chunks
             InputStreamSeekable = inputCanSeek;
         }
 
-        public virtual byte[] ReadBlock(Stream file, int size)
-        {
-            return file.ReadBlock(size);
-        }
+        protected virtual bool ValidateFrame(byte[] frame) => (AV_RB16(frame) & 0xfff0) != 0xfff0;
 
-        public bool ChunkAvailable(Stream file, uint chunkIndex, uint frameIndex, int totalChunkSize, int[] frameSizes)
+        public bool ChunkAvailable(byte[][] andioFrame, uint chunkIndex, uint frameIndex, int totalChunkSize)
         {
-            for (uint fIndex = 0; fIndex < frameSizes.Length; fIndex++)
+            for (uint fIndex = 0; fIndex < andioFrame.Length; fIndex++)
             {
-                byte[] andioFrame = ReadBlock(file, frameSizes[fIndex]);
-
-                if ((AV_RB16(andioFrame) & 0xfff0) == 0xfff0)
-                {
-                    Success = false;
-                    return Success;
-                }
-
                 lastFrameProcessed = frameIndex + fIndex;
-                if (FrameFilter?.FilterFrame(chunkIndex, lastFrameProcessed, andioFrame) == false)
+
+                Success = ValidateFrame(andioFrame[fIndex]) && FrameFilter?.FilterFrame(chunkIndex, lastFrameProcessed, andioFrame[fIndex]) == true;
+
+                if (!Success)
                     return false;
             }
             return true;

@@ -84,7 +84,12 @@ namespace AAXClean.Chunks
 
             (int totalChunkSize, uint frameIndex, int[] frameSizes) = table.GetNextChunk();
 
-            return table.Handler.ChunkAvailable(InputStream, table.NextChunkIndex - 1, frameIndex, totalChunkSize, frameSizes);
+            byte[][] frames = new byte[frameSizes.Length][];
+
+            for (int f = 0; f < frames.Length; f++)
+                frames[f] = InputStream.ReadBlock(frameSizes[f]);
+
+            return table.Handler.ChunkAvailable(frames, table.NextChunkIndex - 1, frameIndex, totalChunkSize);
         }
 
         private class ChunkTable

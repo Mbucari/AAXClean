@@ -23,17 +23,16 @@ namespace AAXClean.Chunks
             InputStreamSeekable = seekable;
         }
 
-        public bool ChunkAvailable(Stream file, uint chunkIndex, uint frameIndex, int totalChunkSize, int[] frameSizes)
+        public bool ChunkAvailable(byte[][] frames, uint chunkIndex, uint frameIndex, int totalChunkSize)
         {
-            if (chunkIndex < 0 || chunkIndex >= Samples.Length)
+            if (chunkIndex < 0 || chunkIndex >= Samples.Length || frames.Length != 1)
                 return false;
 
             var duration = Samples[chunkIndex].FrameDelta / TimeScale;
 
-            short size = file.ReadInt16BE();
-            byte[] titleBytes = file.ReadBlock(size);
+            int size = frames[0][1] | frames[0][0];
 
-            var title = Encoding.UTF8.GetString(titleBytes);
+            var title = Encoding.UTF8.GetString(frames[0], 2, size);
 
             Chapters.AddChapter(title, TimeSpan.FromSeconds(duration));
 

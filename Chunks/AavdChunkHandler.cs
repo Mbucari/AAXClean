@@ -1,5 +1,4 @@
 ﻿using AAXClean.Boxes;
-using AAXClean.Util;
 using System;
 using System.IO;
 using System.Security.Cryptography;
@@ -25,19 +24,17 @@ namespace AAXClean.Chunks
             Aes.Padding = PaddingMode.None;
             AesTransform = Aes.CreateDecryptor(key, iv);
         }
-
-        public override byte[] ReadBlock(Stream file, int size)
+		protected override bool ValidateFrame(byte[] audioFrame)
         {
-            byte[] encData = base.ReadBlock(file, size);
+            if (audioFrame.Length >= 0x10)
+            {
+                AesTransform.TransformBlock(audioFrame, 0, audioFrame.Length & 0x7ffffff0, audioFrame, 0);
+                AesTransform.TransformFinalBlock(emptyArray, 0, 0);
+            }
 
-            if (size < 0x10)
-                return encData;
-
-            AesTransform.TransformBlock(encData, 0, encData.Length & 0x7ffffff0, encData, 0);
-            AesTransform.TransformFinalBlock(emptyArray, 0, 0);
-            return encData;
-        }
-
+            return base.ValidateFrame(audioFrame);
+		}
+	
         bool disposed = false;
         protected override void Dispose(bool disposing)
 		{

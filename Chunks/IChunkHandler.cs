@@ -1,6 +1,5 @@
 ﻿using AAXClean.Boxes;
 using System;
-using System.IO;
 
 namespace AAXClean.Chunks
 {
@@ -8,6 +7,6 @@ namespace AAXClean.Chunks
     {
         bool InputStreamSeekable { get; }
         TrakBox Track { get; }
-        bool ChunkAvailable(Stream file, uint chunkIndex, uint frameIndex, int totalChunkSize, int[] frameSizes);
+        bool ChunkAvailable(byte[][] frames, uint chunkIndex, uint frameIndex, int totalChunkSize);
     }
 }
