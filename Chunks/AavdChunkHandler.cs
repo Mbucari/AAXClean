@@ -30,6 +30,9 @@ namespace AAXClean.Chunks
         {
             byte[] encData = base.ReadBlock(file, size);
 
+            if (size < 0x10)
+                return encData;
+
             AesTransform.TransformBlock(encData, 0, encData.Length & 0x7ffffff0, encData, 0);
             AesTransform.TransformFinalBlock(emptyArray, 0, 0);
             return encData;
