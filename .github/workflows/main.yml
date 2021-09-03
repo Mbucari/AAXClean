@@ -9,17 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-
-      - name: Setup dotnet
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 3.1.200
           
-      - name: Build
-        run: dotnet build AAXClean.csproj -c:Release -p:Platform=x64
-      - name: Create the package
-        run: dotnet pack AAXClean.csproj -c:Release -p:Platform=x64
-
       # Publish
       - name: publish on version change
         id: publish_nuget
