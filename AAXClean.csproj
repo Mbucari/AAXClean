@@ -17,6 +17,10 @@
     <NuspecFile>AAXClean.nuspec</NuspecFile>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutputPath>bin\x64\Release\net5.0\</OutputPath>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="NAudio.Lame" Version="2.0.0" />
   </ItemGroup>
