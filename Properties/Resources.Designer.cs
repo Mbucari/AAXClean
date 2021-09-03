@@ -69,5 +69,15 @@ namespace AAXClean.Properties {
                 return ((byte[])(obj));
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] libmp3lame_64 {
+            get {
+                object obj = ResourceManager.GetObject("libmp3lame_64", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
     }
 }
