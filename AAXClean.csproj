@@ -7,7 +7,7 @@
     <Authors>MrGneissGuy</Authors>
     <Company>Just Me, Inc.</Company>
     <Description>Decrypts Audible aax and aaxc files to mp4 or mp3.</Description>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <RepositoryUrl>https://github.com/Mbucari/AAXClean</RepositoryUrl>
     <PackageTags>Audible, audiobook, aax, aaxc</PackageTags>
   </PropertyGroup>
@@ -17,9 +17,6 @@
     <NuspecFile>AAXClean.nuspec</NuspecFile>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutputPath>bin\x64\Release\net5.0\</OutputPath>
-  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="NAudio.Lame" Version="2.0.0" />
