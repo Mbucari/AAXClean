@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>AAXClean</id>
+    <version>0.1.2</version>
+    <authors>Michael Bucari-Tovo</authors>
+    <owners>Michael Bucari-Tovo</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectUrl>https://github.com/Mbucari/AAXClean</projectUrl>
+    <description>Decrypt Audible aax and aaxc files. Optionally decrypt to mp3, or convert m4b to mp3 using LAME encoder.</description>
+    <summary>Decrypt Audible aax and aaxc files.</summary>
+    <releaseNotes />
+    <language>en-US</language>
+    <tags>Audible AAC AAXC m4b audiobook</tags>
+    <repository type="git" url="https://github.com/Mbucari/AAXClean" />
+    <dependencies>
+      <dependency id="NAudio.Lame" version="2.0.0" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="aac2.dll" target="build\aac2.dll" />
+    <file src="libfaad2_dll.dll" target="build\libfaad2_dll.dll" />
+  </files>
+</package>
