@@ -3,37 +3,36 @@
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <Platforms>x64</Platforms>
-    <Version>0.1.4</Version> 
+    <Version>0.1.7</Version>
     <Authors>MrGneissGuy</Authors>
     <Company>Just Me, Inc.</Company>
     <Description>Decrypts Audible aax and aaxc files to mp4 or mp3.</Description>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <RepositoryUrl>https://github.com/Mbucari/AAXClean</RepositoryUrl>
-    <PackageTags>Audible, audiobook, aax, aaxc</PackageTags>
+    <Summary>Decrypt Audible aax and aaxc files.</Summary>
+    <RequireLicenseAcceptance>false</RequireLicenseAcceptance>
+    <Tags>Audible AAC AAXC m4b audiobook</Tags>
+    <ProjectUrl>https://github.com/Mbucari/AAXClean</ProjectUrl>
   </PropertyGroup>
 
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <NuspecFile>AAXClean.nuspec</NuspecFile>
   </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutputPath></OutputPath>
-  </PropertyGroup>
-
 
   <ItemGroup>
     <PackageReference Include="NAudio.Lame" Version="2.0.0" />
   </ItemGroup>
 
-
   <ItemGroup>
-    <None Update="aac2.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="libfaad2_dll.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
 </Project>
