@@ -26,16 +26,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="aac2.dll">
+    <Content Include="aac2.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="libfaad2_dll.dll">
+    </Content>
+    <Content Include="libfaad2_dll.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <NativeLibs Remove="aac2.dll" />
+    </Content>
   </ItemGroup>
 
 </Project>
