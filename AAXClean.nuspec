@@ -19,5 +19,7 @@
   </metadata>
   <files>
 	<file src="bin\x64\Release\net5.0\AAXClean.dll" target="lib\x64\net5.0\AAXClean.dll" />
+    <file src="aac2.dll" target="lib\x64\net5.0\aac2.dll" />
+    <file src="libfaad2_dll.dll" target="lib\x64\net5.0\libfaad2_dll.dll" />
   </files>
 </package>
