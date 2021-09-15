@@ -67,6 +67,7 @@ namespace AAXClean.AudioFilters
 			}
 			catch (InvalidOperationException)
 			{
+				lameMp3Encoder.Flush();
 				lameMp3Encoder.Close();
 			}
 		}
