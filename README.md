@@ -51,6 +51,6 @@ private static void NewSplit(NewSplitCallback newSplitCallback)
 
 	string fileName = newSplitCallback.Chapter.Title.Replace(":", "") + ".m4b";
 
-	newSplitCallback.OutputFile = File.Open(Path.Combine(dir, fileName));
+	newSplitCallback.OutputFile = File.OpenWrite(Path.Combine(dir, fileName));
 }
 ```
