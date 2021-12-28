@@ -78,14 +78,14 @@ namespace AAXClean.Chunks
 			/// </summary>
 			public ChapterInfo ToChapterInfo()
 			{
-                checked
-                {
+				checked
+				{
 					//Sort chapters by chunk index
 					var orderedChapters = Chapters.OrderBy(c => c.chunkIndex).ToList();
 					List<(string title, long frameEnd)> list = new();
-
+				
 					long last = 0;
-
+				
 					//Calculate the frame position of the chapter's end.
 					foreach (var c in orderedChapters)
 					{
@@ -95,17 +95,17 @@ namespace AAXClean.Chunks
 						last = last + c.frameDelta;
 					}
 					var sortedEnds = list.OrderBy(c => c.frameEnd).ToList();
-
+				
 					last = 0;
 					var cInfo = new ChapterInfo();
-
+				
 					//Create ChapterInfo by calculating each chapter's duration.
 					foreach (var c in sortedEnds)
 					{
 						cInfo.AddChapter(c.title, TimeSpan.FromSeconds((c.frameEnd - last) / TimeScale));
 						last = c.frameEnd;
 					}
-
+				
 					return cInfo;
 				}
 			}
