@@ -20,8 +20,6 @@ jobs:
           
           BUILD_CONFIGURATION: Release
           
-          BUILD_PLATFORM: x64
-          
           # NuGet package id, used for version detection & defaults to project name
           PACKAGE_NAME: AAXClean
           
