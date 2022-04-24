@@ -22,22 +22,45 @@ namespace AAXClean
 		public string RecordingCopyright => _copyright is not null && _copyright.Length > 1 ? _copyright[1] : default;
 		private string[] _copyright => Copyright?.Replace("&#169;", string.Empty)?.Replace("(P)", string.Empty)?.Split(';');
 
-		public string Title => GetTagString("©nam");
-		public string Performers => GetTagString("©ART");
-		public string AlbumArtists => GetTagString("aART");
-		public string Album => GetTagString("©alb");
-		public string Generes => GetTagString("©gen");
-		public string ProductID => GetTagString("prID");
-		public string Comment => GetTagString("©cmt");
-		public string LongDescription => GetTagString("©des");
-		public string Copyright => GetTagString("cprt");
-		public string Publisher => GetTagString("©pub");
-		public string Year => GetTagString("©day");
-		public string Narrator => GetTagString("©nrt");
-		public string Asin => GetTagString("CDEK");
-		public string ReleaseDate => GetTagString("rldt");
-		public byte[] Cover => GetTag("covr");
+		public string Title { get => GetTagString("©nam"); set => EditOrAddTag("©nam", value); }
+		public string Performers { get => GetTagString("©ART"); set => EditOrAddTag("©ART", value); }
+		public string AlbumArtists { get => GetTagString("aART"); set => EditOrAddTag("aART", value); }
+		public string Album { get => GetTagString("©alb"); set => EditOrAddTag("©alb", value); }
+		public string Generes { get => GetTagString("©gen"); set => EditOrAddTag("©gen", value); }
+		public string ProductID { get => GetTagString("prID"); set => EditOrAddTag("prID", value); }
+		public string Comment { get => GetTagString("©cmt"); set => EditOrAddTag("©cmt", value); }
+		public string LongDescription { get => GetTagString("©des"); set => EditOrAddTag("©des", value); }
+		public string Copyright { get => GetTagString("cprt"); set => EditOrAddTag("cprt", value); }
+		public string Publisher { get => GetTagString("©pub"); set => EditOrAddTag("©pub", value); }
+		public string Year { get => GetTagString("©day"); set => EditOrAddTag("©day", value); }
+		public string Narrator { get => GetTagString("©nrt"); set => EditOrAddTag("©nrt", value); }
+		public string Asin { get => GetTagString("CDEK"); set => EditOrAddTag("CDEK", value); }
+		public string ReleaseDate { get => GetTagString("rldt"); set => EditOrAddTag("rldt", value); }
+		public byte[] Cover { get => GetTagBytes("covr"); set => EditOrAddTag("covr", value, AppleDataBox.FlagType.ContainsJpegData); }
 
+
+		public void EditOrAddTag(string name, string data)
+		{
+			EditOrAddTag(name, Encoding.UTF8.GetBytes(data), AppleDataBox.FlagType.ContainsText);
+		}
+
+		public void EditOrAddTag(string name, byte[] data)
+		{
+			EditOrAddTag(name, data, AppleDataBox.FlagType.ContainsData);
+		}
+		private void EditOrAddTag(string name, byte[] data, AppleDataBox.FlagType type)
+		{
+			var tag = Tags.Where(t => t.Header.Type == name).FirstOrDefault();
+
+			if (tag is null)
+			{
+				AddTag(name, data, type);
+			}
+			else if (tag.Data.DataType == type)
+			{
+				tag.Data.Data = data;
+			}
+		}
 		public void AddTag(string name, string data)
 		{
 			AddTag(name, Encoding.UTF8.GetBytes(data), AppleDataBox.FlagType.ContainsText);
@@ -53,13 +76,13 @@ namespace AAXClean
 
 		public string GetTagString(string name)
 		{
-			var tag = GetTag(name);
+			var tag = GetTagBytes(name);
 			if (tag is null) return null;
 
 			return Encoding.UTF8.GetString(tag);
 		}
 
-		public byte[] GetTag(string name)
+		public byte[] GetTagBytes(string name)
 		{
 			var tag = Tags.Where(t => t.Header.Type == name).FirstOrDefault();
 
@@ -74,14 +97,7 @@ namespace AAXClean
 
 		public void SetCoverArt(byte[] coverArt)
 		{
-			if (coverArt is null) return;
-
-			var covr = Tags.Where(t => t.Header.Type == "covr").FirstOrDefault();
-
-			if (covr is not null)
-				covr.Data.Data = coverArt;
-			else
-				AddTag("covr", coverArt, AppleDataBox.FlagType.ContainsJpegData);
+			Cover = coverArt;
 		}
 	}
 }
