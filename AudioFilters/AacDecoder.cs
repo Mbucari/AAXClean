@@ -1,9 +1,16 @@
 ﻿using System;
+using System.IO;
 
 namespace AAXClean.AudioFilters
 {
 	internal abstract class AacDecoder : IDisposable
 	{
+		static AacDecoder()
+		{
+			if (!File.Exists("libmp3lame.64.dll"))
+				File.WriteAllBytes("libmp3lame.64.dll", AAXClean.Properties.Resources.libmp3lame_64);
+		}
+
 		internal const int BITS_PER_SAMPLE = 16;
 
 		protected const int AAC_FRAME_SIZE = 1024 * BITS_PER_SAMPLE / 8;

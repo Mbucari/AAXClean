@@ -9,19 +9,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-
-      # - name: Setup dotnet
-      #   uses: actions/setup-dotnet@v1
-      #   with:
-      #     dotnet-version: 3.1.200
-
+          
       # Publish
       - name: publish on version change
         id: publish_nuget
-        uses: rohith/publish-nuget@v2
+        uses: Mbucari/publish-nuget@master
         with:
           # Filepath of the project to be packaged, relative to root of repository
           PROJECT_FILE_PATH: AAXClean.csproj
+          
+          BUILD_CONFIGURATION: Release
+          
+          BUILD_PLATFORM: x64
           
           # NuGet package id, used for version detection & defaults to project name
           PACKAGE_NAME: AAXClean

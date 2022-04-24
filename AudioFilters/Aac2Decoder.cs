@@ -1,10 +1,16 @@
 ﻿using System;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace AAXClean.AudioFilters
 {
 	internal sealed unsafe class Aac2Decoder : AacDecoder
 	{
+		static Aac2Decoder()
+		{
+			if (!File.Exists(libName))
+				File.WriteAllBytes(libName, AAXClean.Properties.Resources.aac2);
+		}
 		private readonly DecoderHandle Handle;
 		private int decSz => AAC_FRAME_SIZE * Channels;
 		public Aac2Decoder(byte[] asc) : base(asc)

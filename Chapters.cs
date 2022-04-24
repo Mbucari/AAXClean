@@ -59,6 +59,10 @@ namespace AAXClean
 			output.Write(title);
 			output.Write(encd);
 		}
+		public override string ToString()
+		{
+			return $"{Title} {{{StartOffset.TotalSeconds:F6} - {EndOffset.TotalSeconds:F6}}}";
+		}
 
 		//This is constant folr UTF-8 text
 		//https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/movenc.c
