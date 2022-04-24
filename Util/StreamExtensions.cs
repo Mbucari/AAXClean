@@ -4,7 +4,7 @@ using System.IO;
 
 namespace AAXClean.Util
 {
-	internal static class StreamExtensions
+	public static class StreamExtensions
 	{
 		public static void WriteHeader(this Stream stream, BoxHeader header, long renderSize)
 		{

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace AAXClean.AudioFilters
 {
-	internal abstract class MultipartFilter : IFrameFilter
+	public abstract class MultipartFilter : AudioFilter
 	{
 		protected abstract Action<NewSplitCallback> NewFileCallback { get; }
 		private int SampleRate { get; }
@@ -15,13 +15,12 @@ namespace AAXClean.AudioFilters
 		private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
 
 		private long lastChunk = -1;
-		private bool _disposed = false;
 		private static readonly int[] asc_samplerates = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
 
-		internal MultipartFilter(Span<byte> audioSpecificConfig, ChapterInfo splitChapters)
+		public MultipartFilter(Span<byte> audioSpecificConfig, ChapterInfo splitChapters)
 		{
-			if (splitChapters.Count == 0)
-				throw new Exception($"{nameof(splitChapters)} must contain at least one chapter.");
+			if (splitChapters is null || splitChapters.Count == 0)
+				throw new ArgumentException($"{nameof(splitChapters)} must contain at least one chapter.");
 
 			SampleRate = asc_samplerates[(audioSpecificConfig[0] & 7) << 1 | audioSpecificConfig[1] >> 7];
 			SplitChapters = splitChapters.GetEnumerator();
@@ -33,12 +32,12 @@ namespace AAXClean.AudioFilters
 		protected abstract void WriteFrameToFile(Span<byte> audioFrame, bool newChunk);
 		protected abstract void CreateNewWriter(NewSplitCallback callback);
 
-		public void Close()
+		public override void Close()
 		{
 			CloseCurrentWriter();
 		}
 
-		public bool FilterFrame(uint chunkIndex, uint frameIndex, Span<byte> audioFrame)
+		public override bool FilterFrame(uint chunkIndex, uint frameIndex, Span<byte> audioFrame)
 		{
 			if (frameIndex > EndFrame)
 			{
@@ -76,21 +75,10 @@ namespace AAXClean.AudioFilters
 			return true;
 		}
 
-		public void Dispose() => Dispose(true);
-		protected virtual void Dispose(bool disposing)
+		protected override void Dispose(bool disposing)
 		{
-			if (_disposed)
-			{
-				return;
-			}
-
-			if (disposing)
-			{
-				Close();
-				SplitChapters.Dispose();
-			}
-
-			_disposed = true;
+			SplitChapters?.Dispose();
+			base.Dispose(disposing);
 		}
 	}
 }

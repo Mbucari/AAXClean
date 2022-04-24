@@ -1,17 +1,10 @@
 ﻿using System;
-using System.IO;
 
 namespace AAXClean.AudioFilters
 {
-	internal abstract class AacDecoder : IDisposable
+	public abstract class AacDecoder : IDisposable
 	{
-		static AacDecoder()
-		{
-			if (!File.Exists("libmp3lame.64.dll"))
-				File.WriteAllBytes("libmp3lame.64.dll", AAXClean.Properties.Resources.libmp3lame_64);
-		}
-
-		internal const int BITS_PER_SAMPLE = 16;
+		public const int BITS_PER_SAMPLE = 16;
 
 		protected const int AAC_FRAME_SIZE = 1024 * BITS_PER_SAMPLE / 8;
 		public int Channels { get; }
@@ -25,9 +18,8 @@ namespace AAXClean.AudioFilters
 			Channels = (asc[1] >> 3) & 7;
 
 		}
-		public abstract byte[] DecodeBytes(Span<byte> aacFrame);
-		public abstract short[] DecodeShort(Span<byte> aacFrame);
-		protected abstract IntPtr DecodeUnmanaged(Span<byte> aacFrame);
+		public abstract Span<byte> DecodeBytes(Span<byte> aacFrame);
+		public abstract Span<short> DecodeShort(Span<byte> aacFrame);
 		public abstract void Dispose();
 	}
 }

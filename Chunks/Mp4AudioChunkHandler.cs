@@ -8,7 +8,7 @@ namespace AAXClean.Chunks
 	{
 		public bool Success { get; private set; } = true;
 		public double TimeScale { get; }
-		public IFrameFilter FrameFilter { get; set; }
+		public AudioFilter AudioFilter { get; set; }
 		public TrakBox Track { get; }
 		public bool InputStreamSeekable { get; }
 		public TimeSpan ProcessPosition => FrameToTime(lastFrameProcessed);
@@ -35,7 +35,7 @@ namespace AAXClean.Chunks
 
 				Span<byte> frame = chunk.Slice(framePosition, frameSizes[fIndex]);
 
-				Success = ValidateFrame(frame) && FrameFilter?.FilterFrame(chunkIndex, lastFrameProcessed, frame) == true;
+				Success = ValidateFrame(frame) && AudioFilter?.FilterFrame(chunkIndex, lastFrameProcessed, frame) == true;
 
 				if (!Success)
 					return false;
@@ -84,7 +84,7 @@ namespace AAXClean.Chunks
 				if (disposing)
 				{
 					// Dispose managed resources.
-					FrameFilter?.Dispose();
+					AudioFilter?.Dispose();
 					Samples = null;
 				}
 
