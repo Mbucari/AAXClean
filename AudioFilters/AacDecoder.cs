@@ -2,9 +2,9 @@
 
 namespace AAXClean.AudioFilters
 {
-	public abstract class AacDecoder : IDisposable
+	internal abstract class AacDecoder : IDisposable
 	{
-		public const int BITS_PER_SAMPLE = 16;
+		internal const int BITS_PER_SAMPLE = 16;
 
 		protected const int AAC_FRAME_SIZE = 1024 * BITS_PER_SAMPLE / 8;
 		public int Channels { get; }
@@ -18,8 +18,9 @@ namespace AAXClean.AudioFilters
 			Channels = (asc[1] >> 3) & 7;
 
 		}
-		public abstract Span<byte> DecodeBytes(Span<byte> aacFrame);
-		public abstract Span<short> DecodeShort(Span<byte> aacFrame);
+		public abstract byte[] DecodeBytes(Span<byte> aacFrame);
+		public abstract short[] DecodeShort(Span<byte> aacFrame);
+		protected abstract IntPtr DecodeUnmanaged(Span<byte> aacFrame);
 		public abstract void Dispose();
 	}
 }
