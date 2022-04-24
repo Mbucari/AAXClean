@@ -78,33 +78,35 @@ namespace AAXClean.Chunks
             /// </summary>
             public ChapterInfo ToChapterInfo()
             {
-                //Sort chapters by chunk index
-                var orderedChapters = Chapters.OrderBy(c => c.chunkIndex).ToList();
-                List<(string title, int frameEnd)> list = new();
-
-                var last = 0;
-
-                //Calculate the frame position of the chapter's end.
-                foreach (var c in orderedChapters)
+                checked                
                 {
-                    //If the frame delta is negative, assume the duration is 1 frame. This is what ffmpeg does.
-                    var endTime = last + (c.frameDelta < 0 ? 1 : c.frameDelta);
-                    list.Add((c.title, endTime));
-                    last = last + c.frameDelta;
+                    var orderedChapters = Chapters.OrderBy(c => c.chunkIndex).ToList();
+                    List<(string title, long frameEnd)> list = new();
+
+                    long last = 0;
+
+                    //Calculate the frame position of the chapter's end.
+                    foreach (var c in orderedChapters)
+                    {
+                        //If the frame delta is negative, assume the duration is 1 frame. This is what ffmpeg does.
+                        var endTime = last + (c.frameDelta < 0 ? 1 : c.frameDelta);
+                        list.Add((c.title, endTime));
+                        last = last + c.frameDelta;
+                    }
+                    var sortedEnds = list.OrderBy(c => c.frameEnd).ToList();
+
+                    last = 0;
+                    var cInfo = new ChapterInfo();
+
+                    //Create ChapterInfo by calculating each chapter's duration.
+                    foreach (var c in sortedEnds)
+                    {
+                        cInfo.AddChapter(c.title, TimeSpan.FromSeconds((c.frameEnd - last) / TimeScale));
+                        last = c.frameEnd;
+                    }
+
+                    return cInfo;
                 }
-                var sortedEnds = list.OrderBy(c => c.frameEnd).ToList();
-
-                last = 0;
-                var cInfo = new ChapterInfo();
-
-                //Create ChapterInfo by calculating each chapter's duration.
-                foreach (var c in sortedEnds)
-                {
-                    cInfo.AddChapter(c.title, TimeSpan.FromSeconds((c.frameEnd - last) / TimeScale));
-                    last = c.frameEnd;
-                }
-
-                return cInfo;
             }
         }
     }
