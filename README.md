@@ -5,52 +5,44 @@ Decrypts Audible's aax and aaxc files, without FFMpeg, to an m4b (lossless mp4) 
 ## Nuget
 Include the [AAXClean](https://www.nuget.org/packages/AAXClean/) NuGet package to your project.
 
+## Convert to Mp3
+
+To convert audiobooks to Mp3, use [AAXClean.Codecs](https://github.com/Mbucari/AAXClean.Codecs).
+
 ## Usage:
 
-```C#
-var aaxcFile = new AaxFile(File.OpenRead(@"C:\Source File.aax"));
+```C# 
+var aaxFile = new AaxFile(File.OpenRead(@"C:\Source File.aax"));
 ```
 ### Aaxc:
 ```C#
 var audible_key = "0a0b0c0d0e0f1a1b1c1d1e1f2a2b2c2d";
 var audible_iv = "2e2f3a3b3c3d3e3f4a4b4c4d4e4f5a5b";
-aaxcFile.SetDecryptionKey(audible_key, audible_iv);
+aaxFile.SetDecryptionKey(audible_key, audible_iv);
 ```
 ### Aax:
 ```C#
 var activation_bytes = "0a1b2c3d";
-aaxcFile.SetDecryptionKey(activation_bytes);
+aaxFile.SetDecryptionKey(activation_bytes);
 ```
 ### Output:
 ```C#
-var conversionResult = aaxcFile.ConvertToMp4a(File.OpenWrite(@"C:\Decrypted book.mb4"));
-```
-### OR
-```C#
-var conversionResult = aaxcFile.ConvertToMp3(File.Open(@"C:\Decrypted book.mp3", FileMode.OpenOrCreate, FileAccess.ReadWrite);
-```
-Note that the output stream must be Readable, Writable and Seekable for the mp3 Xing header to be written. See [NAudio.Lame #24](https://github.com/Corey-M/NAudio.Lame/issues/24)
-
-### Conversion Usage:
-```C#
-var mp4File = new Mp4File(File.OpenRead(@"C:\Decrypted book.m4b"));
-var conversionResult = mp4File.ConvertToMp3(File.OpenWrite(@"C:\Decrypted book.mp3"));
-mp4File.InputStream.Close();
+var conversionResult = aaxFile.ConvertToMp4a(File.OpenWrite(@"C:\Decrypted book.mb4"));
 ```
 ### Multipart Conversion Example:
 Note that the input stream needs to be seekable to call GetChapterInfo()
-
-
 ```C#
-var chapters = aaxcFile.GetChapterInfo();
-aaxcFile.ConvertToMultiMp4a(chapters, NewSplit);
+var chapters = aaxFile.GetChapterInfo();
+aaxFile.ConvertToMultiMp4a(chapters, NewSplit);
             
 private static void NewSplit(NewSplitCallback newSplitCallback)
 {
 	string dir = @"C:\book split\";
-
 	string fileName = newSplitCallback.Chapter.Title.Replace(":", "") + ".m4b";
-
 	newSplitCallback.OutputFile = File.OpenWrite(Path.Combine(dir, fileName));
 }
+```
+### Edit Metadata Tags:
+```C#
+aaxFile.AppleTags.Generes = "Adventure"
 ```

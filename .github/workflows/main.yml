@@ -9,11 +9,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
           
       # Publish
       - name: publish on version change
         id: publish_nuget
-        uses: brandedoutcast/publish-nuget@master
+        uses: rohith/publish-nuget@master
         with:
           # Filepath of the project to be packaged, relative to root of repository
           PROJECT_FILE_PATH: AAXClean.csproj
