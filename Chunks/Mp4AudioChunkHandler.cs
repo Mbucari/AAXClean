@@ -8,7 +8,7 @@ namespace AAXClean.Chunks
     {
         public bool Success { get; private set; } = true;
         public double TimeScale { get; }
-        public AudioFilter AudioFilter { get; set; }
+        public AudioFilterBase AudioFilter { get; set; }
         public TrakBox Track { get; }
         public bool InputStreamSeekable { get; }
         public TimeSpan ProcessPosition => FrameToTime(lastFrameProcessed);

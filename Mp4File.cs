@@ -90,7 +90,7 @@ namespace AAXClean
             }
         }
 
-        public ConversionResult FilterAudio(AudioFilter audioFilter, ChapterInfo userChapters = null)
+        public ConversionResult FilterAudio(AudioFilterBase audioFilter, ChapterInfo userChapters = null)
         {
             using var audioHandler = GetAudioChunkHandler();
             audioHandler.AudioFilter = audioFilter;

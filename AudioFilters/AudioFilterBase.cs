@@ -2,7 +2,7 @@ using System;
 
 namespace AAXClean.AudioFilters
 {
-    public abstract class AudioFilter : IDisposable
+    public abstract class AudioFilterBase : IDisposable
     {
         protected bool _disposed = false;
         protected ChapterInfo Chapters { get; private set; }
@@ -12,7 +12,7 @@ namespace AAXClean.AudioFilters
             Chapters = chapters;
         }
         public abstract void Close();
-        internal virtual void EndOfAudio() { }
+        protected virtual void EndOfAudio() { }
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {

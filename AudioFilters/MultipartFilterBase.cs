@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace AAXClean.AudioFilters
 {
-    public abstract class MultipartFilter : AudioFilter
+    public abstract class MultipartFilterBase : AudioFilterBase
     {
         protected abstract Action<NewSplitCallback> NewFileCallback { get; }
         private int SampleRate { get; }
@@ -17,7 +17,7 @@ namespace AAXClean.AudioFilters
         private long lastChunk = -1;
         private static readonly int[] asc_samplerates = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
 
-        public MultipartFilter(Span<byte> audioSpecificConfig, ChapterInfo splitChapters)
+        public MultipartFilterBase(Span<byte> audioSpecificConfig, ChapterInfo splitChapters)
         {
             if (splitChapters is null || splitChapters.Count == 0)
                 throw new ArgumentException($"{nameof(splitChapters)} must contain at least one chapter.");

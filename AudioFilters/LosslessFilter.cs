@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace AAXClean.AudioFilters
 {
-    internal class LosslessFilter : AudioFilter
+    internal class LosslessFilter : AudioFilterBase
     {
         private readonly Mp4aWriter Mp4writer;
         public LosslessFilter(Stream outputStream, Mp4File mp4Audio)
@@ -21,7 +21,7 @@ namespace AAXClean.AudioFilters
             return true;
         }
 
-        internal override void EndOfAudio()
+        protected override void EndOfAudio()
         {
             if (Chapters != null)
                 Mp4writer.WriteChapters(Chapters);

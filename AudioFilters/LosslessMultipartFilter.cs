@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.AudioFilters
 {
-    internal sealed class LosslessMultipartFilter : MultipartFilter
+    internal sealed class LosslessMultipartFilter : MultipartFilterBase
     {
         protected override Action<NewSplitCallback> NewFileCallback { get; }
         private FtypBox Ftyp { get; }
