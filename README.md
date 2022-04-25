@@ -1,6 +1,6 @@
 
 # AAXClean
-Decrypts Audible's aax and aaxc files, without FFMpeg, to an m4b (lossless mp4) or mp3 (lossy). Also supports conversion of existing decrypted m4b to mp3. The input stream is not required to be seekable when decrypting. All file-level and stream-level metadata is preserved with lossless decryption, but not with mp3 decryption/conversion. There is an option for reading/writing file-level mp4 metadata tags and adding different chapter information.
+Decrypts Audible's aax and aaxc files, without FFMpeg, to an m4b (lossless mp4). The input stream is not required to be seekable when decrypting. All file-level and stream-level metadata is preserved with lossless decryption. There is an option for reading/writing file-level mp4 metadata tags and adding different chapter information.
 
 ## Nuget
 Include the [AAXClean](https://www.nuget.org/packages/AAXClean/) NuGet package to your project.
