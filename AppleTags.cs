@@ -1,4 +1,5 @@
 ﻿using AAXClean.Boxes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -95,6 +96,7 @@ namespace AAXClean
             return tagData.Data;
         }
 
+        [Obsolete("This method has been deprecated. Please use the Cover property.")]
         public void SetCoverArt(byte[] coverArt)
         {
             Cover = coverArt;
