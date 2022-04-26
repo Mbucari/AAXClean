@@ -21,7 +21,7 @@ namespace AAXClean
 
         public string BookCopyright => _copyright is not null && _copyright.Length > 0 ? _copyright[0] : default;
         public string RecordingCopyright => _copyright is not null && _copyright.Length > 1 ? _copyright[1] : default;
-        private string[] _copyright => Copyright?.Replace("&#169;", string.Empty)?.Replace("(P)", string.Empty)?.Split(';');
+        private string[] _copyright => Copyright?.Replace("&#169;", "©")?.Split(';');
 
         public string Title { get => GetTagString("©nam"); set => EditOrAddTag("©nam", value); }
         public string Performers { get => GetTagString("©ART"); set => EditOrAddTag("©ART", value); }
