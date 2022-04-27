@@ -23,6 +23,7 @@ namespace AAXClean.AudioFilters
         private uint currentChunk = 0;
 
         private readonly bool isCo64;
+        public bool Closed { get; private set; }
         public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov, bool co64)
         {
             OutputFile = outputFile;
@@ -46,7 +47,7 @@ namespace AAXClean.AudioFilters
         }
         public void Close()
         {
-            if (!OutputFile.CanWrite) return;
+            if (Closed) return;
 
             long mdatEnd = OutputFile.Position;
 
@@ -87,7 +88,7 @@ namespace AAXClean.AudioFilters
             Moov.AudioTrack.Tkhd.Duration = Moov.Mvhd.Duration;
 
             Moov.Save(OutputFile);
-            OutputFile.Close();
+            Closed = true;
         }
 
         public void WriteChapters(ChapterInfo chapters)

@@ -4,28 +4,20 @@ namespace AAXClean.AudioFilters
 {
     public abstract class AudioFilterBase : IDisposable
     {
-        protected bool _disposed = false;
-        protected ChapterInfo Chapters { get; private set; }
+        public bool Closed { get; protected set; }
+        protected bool Disposed { get; private set; }
+        internal virtual ChapterInfo Chapters { get; set; }
         public abstract bool FilterFrame(uint chunkIndex, uint frameIndex, Span<byte> audioFrame);
-        internal void SetChapters(ChapterInfo chapters)
-        {
-            Chapters = chapters;
-        }
         public abstract void Close();
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
-            if (_disposed)
+            if (Disposed)
             {
                 return;
             }
 
-            if (disposing)
-            {
-                Close();
-            }
-
-            _disposed = true;
+            Disposed = true;
         }
     }
 }

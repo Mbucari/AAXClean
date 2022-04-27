@@ -5,6 +5,7 @@ namespace AAXClean.AudioFilters
 {
     public abstract class MultipartFilterBase : AudioFilterBase
     {
+        private new bool Closed { get; set; }
         protected abstract Action<NewSplitCallback> NewFileCallback { get; }
         private int SampleRate { get; }
         private IEnumerator<Chapter> SplitChapters { get; }
@@ -79,6 +80,7 @@ namespace AAXClean.AudioFilters
         {
             SplitChapters?.Dispose();
             base.Dispose(disposing);
+            Closed = true;
         }
     }
 }
