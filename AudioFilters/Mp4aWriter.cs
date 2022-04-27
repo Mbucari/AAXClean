@@ -92,6 +92,8 @@ namespace AAXClean.AudioFilters
 
         public void WriteChapters(ChapterInfo chapters)
         {
+            if (Moov.TextTrack is null) return;
+
             Moov.TextTrack.Mdia.Minf.Stbl.Stsc.EntryCount = 1;
             Moov.TextTrack.Mdia.Minf.Stbl.Stsc.Samples.Add(new StscBox.ChunkEntry(1, 1, 1));
 
