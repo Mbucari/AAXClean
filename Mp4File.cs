@@ -94,11 +94,18 @@ namespace AAXClean
         {
             using var audioHandler = GetAudioChunkHandler();
             audioHandler.AudioFilter = audioFilter;
-            var chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack);
-
-            ProcessAudio(audioHandler, chapterHandler);
-            Chapters = userChapters ?? chapterHandler.Chapters;
-            audioFilter.SetChapters(Chapters);
+            if (Moov.TextTrack is null)
+            {
+                ProcessAudio(audioHandler);
+                Chapters ??= userChapters;
+            }
+            else
+            {
+                var chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack);
+                ProcessAudio(audioHandler, chapterHandler);
+                Chapters = userChapters ?? chapterHandler.Chapters;
+            }
+            audioFilter.Chapters = Chapters;
 
             return audioHandler.Success && !isCancelled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
         }
