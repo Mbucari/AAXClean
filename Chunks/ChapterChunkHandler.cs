@@ -12,7 +12,7 @@ namespace AAXClean.Chunks
         public ChapterInfo Chapters => Builder.ToChapterInfo();
         public double TimeScale { get; }
         public TrakBox Track { get; }
-
+        private uint lastFrameProcessed { get; set; }
         private SttsBox.SampleEntry[] Samples { get; set; }
         private ChapterBuilder Builder { get; set; }
 
@@ -27,14 +27,18 @@ namespace AAXClean.Chunks
 
         public bool ChunkAvailable(Span<byte> chunk, uint chunkIndex, uint frameIndex, int totalChunkSize, int[] frameSizes)
         {
-            if (chunkIndex < 0 || chunkIndex >= Samples.Length || frameSizes.Length != 1)
+            if (chunkIndex < 0 || chunkIndex >= Samples.Length)
                 return false;
 
-            int size = chunk[1] | chunk[0];
+            for (int start = 0, i = 0; i < frameSizes.Length; start += frameSizes[i], i++, lastFrameProcessed++)
+            {
+                var chunki = chunk.Slice(start, frameSizes[i]);
+                int size = chunki[1] | chunki[0];
 
-            var title = Encoding.UTF8.GetString(chunk.Slice(2, size));
+                var title = Encoding.UTF8.GetString(chunki.Slice(2, size));
 
-            Builder.AddChapter(title, (int)Samples[chunkIndex].FrameDelta, chunkIndex);
+                Builder.AddChapter(title, (int)Samples[lastFrameProcessed].FrameDelta, chunkIndex);
+            }
 
             return true;
         }
@@ -74,7 +78,7 @@ namespace AAXClean.Chunks
 
             /// <summary>
             /// This method is necessary because some books have mangled chapters (eg. Broken Angels: B002V8H59I)
-            /// with chunk offsets out of order and negarive frame deltas.
+            /// with chunk offsets out of order and negative frame deltas.
             /// </summary>
             public ChapterInfo ToChapterInfo()
             {
