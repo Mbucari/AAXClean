@@ -12,7 +12,6 @@ namespace AAXClean.AudioFilters
             Chapters = chapters;
         }
         public abstract void Close();
-        protected virtual void EndOfAudio() { }
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {

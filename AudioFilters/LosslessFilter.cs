@@ -14,6 +14,7 @@ namespace AAXClean.AudioFilters
         }
 
         private long lastChunk = -1;
+        private bool closed = false;
         public override bool FilterFrame(uint chunkIndex, uint frameIndex, Span<byte> audioSample)
         {
             Mp4writer.AddFrame(audioSample, chunkIndex > lastChunk);
@@ -21,19 +22,20 @@ namespace AAXClean.AudioFilters
             return true;
         }
 
-        protected override void EndOfAudio()
-        {
-            if (Chapters != null)
-                Mp4writer.WriteChapters(Chapters);
-        }
-
         public override void Close()
         {
-            Mp4writer.Close();
+            if (!closed)
+            {
+                if (Chapters != null)
+                    Mp4writer.WriteChapters(Chapters);
+                Mp4writer.Close();
+                closed = true;
+            }
         }
 
         protected override void Dispose(bool disposing)
         {
+            Close();
             Mp4writer?.Dispose();
             base.Dispose(disposing);
         }
