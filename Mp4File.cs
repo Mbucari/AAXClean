@@ -139,6 +139,7 @@ namespace AAXClean
             isCancelled = false;
 
             while (!isCancelled && chunkReader.NextChunk()) ;
+            Chapters ??= chapterHandler.Chapters;
             return chapterHandler.Chapters;
         }
 
