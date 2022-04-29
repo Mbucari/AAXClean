@@ -16,10 +16,10 @@ namespace AAXClean.Test
         private static string AC_WebPath { get; } = "https://drive.google.com/uc?export=download&id=11hz3AjNJOK3GGDl5V9buicvVNdJ5acFC&confirm=t";
         private static string SH_WebPath { get; } = "https://drive.google.com/uc?export=download&id=1qZLKhWh61R8C2MhKqXwipC5uPcffVt--&confirm=t";
 
-        private static string _HP_BookPath { get; } = @"..\..\..\..\..\..\TestFiles\Harry Potter and the Sorcerer's Stone, Book 1 [B017V4IM1G] - Zero.aax";
-        private static string _BA_BookPath { get; } = @"..\..\..\..\..\..\TestFiles\Broken Angels [B002V8H59I] - Zero.aax";
-        private static string _AC_BookPath { get; } = @"..\..\..\..\..\..\TestFiles\Altered Carbon [B002V1O6X8] - Zero.aax";
-        private static string _SH_BookPath { get; } = @"..\..\..\..\..\..\TestFiles\50 Self-Help Classics to Guide You to Financial Fr [2291082140] - Zero.aax";
+        private static string _HP_BookPath { get; } = @"..\..\..\..\..\TestFiles\Harry Potter and the Sorcerer's Stone, Book 1 [B017V4IM1G] - Zero.aax";
+        private static string _BA_BookPath { get; } = @"..\..\..\..\..\TestFiles\Broken Angels [B002V8H59I] - Zero.aax";
+        private static string _AC_BookPath { get; } = @"..\..\..\..\..\TestFiles\Altered Carbon [B002V1O6X8] - Zero.aax";
+        private static string _SH_BookPath { get; } = @"..\..\..\..\..\TestFiles\50 Self-Help Classics to Guide You to Financial Fr [2291082140] - Zero.aax";
 
         public static string HP_BookPath => FindOrDownload(_HP_BookPath, HP_WebPath);
         public static string BA_BookPath => FindOrDownload(_BA_BookPath, BA_WebPath);

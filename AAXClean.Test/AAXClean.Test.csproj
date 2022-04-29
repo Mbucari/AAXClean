@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\AAXClean.csproj" />
+    <ProjectReference Include="..\src\AAXClean.csproj" />
   </ItemGroup>
 
 </Project>

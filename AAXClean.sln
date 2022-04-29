@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.31515.178
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AAXClean", "src\AAXClean.csproj", "{9D36366C-1345-4BC0-BC5B-14D24C5F47EB}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AAXClean.Test", "tests\AAXClean.Test\AAXClean.Test.csproj", "{0B8FD3C3-7E8B-455B-BE8F-954A174F11A0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AAXClean.Test", "AAXClean.Test\AAXClean.Test.csproj", "{0B8FD3C3-7E8B-455B-BE8F-954A174F11A0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
