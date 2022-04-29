@@ -30,7 +30,9 @@ namespace AAXClean.AudioFilters
             {
                 writer.AddFrame(aacFrame.audioFrame, aacFrame.newFrame);
             }
+
             writer.Close();
+            writer.OutputFile.Close();
         }
 
         protected override void CloseCurrentWriter()

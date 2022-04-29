@@ -7,7 +7,7 @@ namespace AAXClean.AudioFilters
 {
     internal class Mp4aWriter
     {
-        private readonly Stream OutputFile;
+        internal Stream OutputFile { get; }
         private MoovBox Moov;
         private readonly long mdatStart = 0;
         private readonly SttsBox Stts;
