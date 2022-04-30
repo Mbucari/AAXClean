@@ -28,8 +28,8 @@ namespace AAXClean.Chunks
 
         private class Tracks
         {
-            public IEnumerator<ChunkEntry> ChunkEnumerator { get; set; }
-            public IChunkHandler Handler { get; set; }
+            public IEnumerator<ChunkEntry> ChunkEnumerator { get; init; }
+            public IChunkHandler Handler { get; init; }
             public bool TrackEnded { get; set; }
         }
 
@@ -63,8 +63,7 @@ namespace AAXClean.Chunks
                 for (int i = 0; i < Tracks.Length; i++)
                 {
                     Tracks[i].ChunkEnumerator.Dispose();
-                    Tracks[i].ChunkEnumerator = null;
-                    Tracks[i].Handler = null;
+                    Tracks[i].Handler.Dispose();
                 }
                 Tracks = null;
             }
@@ -125,11 +124,6 @@ namespace AAXClean.Chunks
             IEnumerator IEnumerable.GetEnumerator()
             {
                 return GetEnumerator();
-            }
-            private class ChunkRemap
-            {
-                public uint OriginalIndex { get; init; }
-                public uint NewIndex { get; init; }
             }
 
             private class TrachChunkEnumerator : IEnumerator<ChunkEntry>
