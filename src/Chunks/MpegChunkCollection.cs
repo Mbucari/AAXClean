@@ -246,23 +246,13 @@ namespace AAXClean.Chunks
                     uint firstFrameIndex = 0;
                     int lastStscIndex = 0;
 
-                    for (uint chunk = 1; chunk <= numChunks;)
+                    for (uint chunk = 1; chunk <= numChunks; chunk++)
                     {
-                        if (lastStscIndex + 1 == stscSamples.Count)
-                        {
-                            table[chunk - 1] = (firstFrameIndex, stscSamples[lastStscIndex].SamplesPerChunk);
-                            firstFrameIndex += stscSamples[lastStscIndex].SamplesPerChunk;
-                            chunk++;
-                        }
-                        else
-                        {
-                            for (; chunk < stscSamples[lastStscIndex + 1].FirstChunk; chunk++)
-                            {
-                                table[chunk - 1] = (firstFrameIndex, stscSamples[lastStscIndex].SamplesPerChunk);
-                                firstFrameIndex += stscSamples[lastStscIndex].SamplesPerChunk;
-                            }
+                        if (lastStscIndex + 1 < stscSamples.Count && chunk == stscSamples[lastStscIndex + 1].FirstChunk)
                             lastStscIndex++;
-                        }
+
+                        table[chunk - 1] = (firstFrameIndex, stscSamples[lastStscIndex].SamplesPerChunk);
+                        firstFrameIndex += stscSamples[lastStscIndex].SamplesPerChunk;
                     }
 
                     return table;
