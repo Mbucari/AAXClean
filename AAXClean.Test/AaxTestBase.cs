@@ -88,7 +88,7 @@ namespace AAXClean.Test
         }       
 
         [TestMethod]
-        public void _3_ReadChapters()
+        public void _2_ReadChapters()
         {
             try
             {
@@ -120,7 +120,7 @@ namespace AAXClean.Test
         }
 
         [TestMethod]
-        public void _4_ConvertSingle()
+        public void _3_ConvertSingle()
         {
             try
             {
@@ -153,7 +153,7 @@ namespace AAXClean.Test
         }
 
         [TestMethod]
-        public void _5_ConvertMultiple()
+        public void _4_ConvertMultiple()
         {
             try
             {
