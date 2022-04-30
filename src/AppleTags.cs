@@ -37,6 +37,7 @@ namespace AAXClean
         public string Narrator { get => GetTagString("©nrt"); set => EditOrAddTag("©nrt", value); }
         public string Asin { get => GetTagString("CDEK"); set => EditOrAddTag("CDEK", value); }
         public string ReleaseDate { get => GetTagString("rldt"); set => EditOrAddTag("rldt", value); }
+        public string Acr { get => GetTagString("AACR"); set => EditOrAddTag("AACR", value); }
         public byte[] Cover { get => GetTagBytes("covr"); set => EditOrAddTag("covr", value, AppleDataType.ContainsJpegData); }
 
         public void EditOrAddTag(string name, string data)
