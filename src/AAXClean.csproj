@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <Version>0.3.0</Version>
+    <Version>0.3.1</Version>
     <Authors>MrGneissGuy</Authors>
     <Company>Just Me, Inc.</Company>
     <Description>Decrypts Audible aax and aaxc files to mp4.</Description>
@@ -10,10 +10,17 @@
     <RequireLicenseAcceptance>false</RequireLicenseAcceptance>
     <Tags>Audible AAC AAXC m4b audiobook</Tags>
     <ProjectUrl>https://github.com/Mbucari/AAXClean</ProjectUrl>
+    <PackageProjectUrl>https://github.com/Mbucari/AAXClean</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Mbucari/AAXClean</RepositoryUrl>
+	<PackageProjectUrl>https://github.com/Mbucari/AAXClean</PackageProjectUrl>
+	<RepositoryUrl>https://github.com/Mbucari/AAXClean</RepositoryUrl>
+	<RepositoryType>Git</RepositoryType>
+	<PackageTags>Audible AAC AAXC m4b audiobook</PackageTags>
+	<NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
   <PropertyGroup>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
