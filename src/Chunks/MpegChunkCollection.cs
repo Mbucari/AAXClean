@@ -5,10 +5,17 @@ using System.Collections.Generic;
 
 namespace AAXClean.Chunks
 {
+    /// <summary>
+    /// Enumerates over all chunks in all Mpeg tracks in order of the cunk offset
+    /// </summary>
     internal sealed class MpegChunkCollection : IEnumerable<TrackChunk>
     {
         private readonly TrackChunkCollection[] trackChunks;
-
+        /// <summary>
+        /// Enumerates over all chunks in all Mpeg tracks in order of the cunk offset
+        /// </summary>
+        /// <param name="handler">A track chunk handler</param>
+        /// <param name="handlers">Additional track chunk handlers</param>
         public MpegChunkCollection(IChunkHandler handler, params IChunkHandler[] handlers)
         {
             trackChunks = new TrackChunkCollection[handlers.Length + 1];
@@ -28,8 +35,17 @@ namespace AAXClean.Chunks
 
         private class Tracks
         {
+            /// <summary>
+            /// The Track's Chunk enumerator
+            /// </summary>
             public IEnumerator<ChunkEntry> ChunkEnumerator { get; init; }
+            /// <summary>
+            /// The handler of the track tha is being enumerated
+            /// </summary>
             public IChunkHandler Handler { get; init; }
+            /// <summary>
+            /// If true, the last chunk in the track has already been enumerated
+            /// </summary>
             public bool TrackEnded { get; set; }
         }
 
@@ -63,6 +79,7 @@ namespace AAXClean.Chunks
                 for (int i = 0; i < Tracks.Length; i++)
                 {
                     Tracks[i].ChunkEnumerator.Dispose();
+                    //Do not dispose of Tracks[i].Handler. It is still used after the MpegChunkCollection
                 }
                 Tracks = null;
             }
@@ -86,12 +103,13 @@ namespace AAXClean.Chunks
                     Handler = t.Handler
                 };
 
+                //Once we have the next chuk offset, move to the next chunk in the track where we found it
                 t.TrackEnded = !t.ChunkEnumerator.MoveNext();
 
                 bool theend = true;
                 for (int i = 0; i < Tracks.Length; i++)
                     theend &= Tracks[i].TrackEnded;
-
+                //Exit the enumerator after all tracks have reached the end
                 ReachedEnd = theend;
 
                 return true;
@@ -124,22 +142,19 @@ namespace AAXClean.Chunks
             {
                 return GetEnumerator();
             }
-            private class ChunkRemap
-            {
-                public uint OriginalIndex { get; init; }
-                public uint NewIndex { get; init; }
-            }
 
+            /// <summary>
+            /// Enumerate over all track chunks in a track, and retrieve all information about that chunk.
+            /// </summary>
             private class TrachChunkEnumerator : IEnumerator<ChunkEntry>
             {
-                private List<ChunkOffsetEntry> ChunkTable;
-                private List<StscBox.ChunkEntry> SamplesToChunks;
-                private List<int> SampleSizes;
+                private IReadOnlyList<ChunkOffsetEntry> ChunkTable;
+                private IReadOnlyList<int> SampleSizes;
                 private readonly uint EntryCount;
-                private uint chunkIndex = 0;
+                private readonly (uint firstFrameIndex, uint numFrames)[] ChunkFrameTable;
+                private uint CurrentChunkIndex = 0;
                 public TrachChunkEnumerator(TrakBox track)
                 {
-                    SamplesToChunks = track.Mdia.Minf.Stbl.Stsc.Samples;
                     SampleSizes = track.Mdia.Minf.Stbl.Stsz.SampleSizes;
 
                     if (track.Mdia.Minf.Stbl.Stco is not null)
@@ -152,6 +167,8 @@ namespace AAXClean.Chunks
                         ChunkTable = track.Mdia.Minf.Stbl.Co64.ChunkOffsets;
                         EntryCount = track.Mdia.Minf.Stbl.Co64.EntryCount;
                     }
+
+                    ChunkFrameTable = CalculateChunkFrameTable(EntryCount, track.Mdia.Minf.Stbl.Stsc.Samples);
                 }
 
                 public ChunkEntry Current { get; private set; }
@@ -161,77 +178,94 @@ namespace AAXClean.Chunks
                 public void Dispose()
                 {
                     ChunkTable = null;
-                    SamplesToChunks = null;
                     SampleSizes = null;
                 }
 
                 public bool MoveNext()
                 {
-                    if (chunkIndex >= EntryCount) return false;
+                    if (CurrentChunkIndex >= EntryCount) return false;
 
-                    var cEntry = ChunkTable[(int)chunkIndex];
+                    var cEntry = ChunkTable[(int)CurrentChunkIndex];
 
-                    (int totalChunkSize, uint frameIndex, int[] frameSizes) = GetChunkFrames(cEntry.EntryIndex);
+                    (uint firstFrameIndex, uint numFrames) = ChunkFrameTable[cEntry.EntryIndex];
+
+                    (int[] frameSizes, int totalChunkSize) = GetChunkFrameSizes(firstFrameIndex, numFrames);
+
                     Current = new ChunkEntry
                     {
-                        FirstFrameIndex = frameIndex,
+                        FirstFrameIndex = firstFrameIndex,
                         FrameSizes = frameSizes,
                         ChunkIndex = cEntry.EntryIndex,
                         ChunkSize = totalChunkSize,
                         ChunkOffset = cEntry.ChunkOffset
                     };
-                    chunkIndex++;
+
+                    CurrentChunkIndex++;
                     return true;
                 }
 
                 public void Reset()
                 {
-                    chunkIndex = 0;
+                    CurrentChunkIndex = 0;
                 }
 
-                private (int totalChunkSize, uint frameIndex, int[] frameSizes) GetChunkFrames(uint chunkIndex)
+                private (int[] frameSizes, int totalChunkSize) GetChunkFrameSizes(uint firstFrameIndex, uint numFrames)
                 {
-                    (uint firstFrame, uint numFrames) = NumSamplesInChunk(chunkIndex);
-
                     int[] frameSizes = new int[numFrames];
                     int totalChunkSize = 0;
 
                     for (uint i = 0; i < numFrames; i++)
                     {
-                        if (i + firstFrame >= SampleSizes.Count)
+                        if (i + firstFrameIndex >= SampleSizes.Count)
                         {
-                            //This handels a case whwere the last Stsc entry was not written correctly.
+                            //This handels a case where the last Stsc entry was not written correctly.
+                            //This is only necessary to correct for an early error in AAXClean when
+                            //decrypting to m4b. This bug was introduced to Libation in 5.1.9 and was
+                            //fixed in 5.4.4. All m4b files created in affected versions will fail to
+                            //convert to mp3.
                             int[] correctFrameSizes = new int[i];
                             Array.Copy(frameSizes, 0, correctFrameSizes, 0, i);
-                            return (totalChunkSize, firstFrame, correctFrameSizes);
+                            return (frameSizes, totalChunkSize);
                         }
 
-                        frameSizes[i] = SampleSizes[(int)(i + firstFrame)];
+                        frameSizes[i] = SampleSizes[(int)(i + firstFrameIndex)];
                         totalChunkSize += frameSizes[i];
                     }
 
-                    return (totalChunkSize, firstFrame, frameSizes);
+                    return (frameSizes, totalChunkSize);
                 }
 
-                private (uint firstFrame, uint numFrames) NumSamplesInChunk(uint chunk)
+                /// <summary>
+                /// Effectively expand the Stsc table to one entry for every chunk. Table size is 8 * <paramref name="numChunks"/> bytes.
+                /// </summary>
+                /// <returns>A zero-base table of frame indices and sizes for each chunk</returns>
+                private static (uint firstFrameIndex, uint numFrames)[] CalculateChunkFrameTable(uint numChunks, IReadOnlyList<StscBox.ChunkEntry> stscSamples)
                 {
-                    //Mp4 uses one-based counting
-                    chunk++;
+                    (uint firstFrameIndex, uint numFrames)[] table = new (uint, uint)[numChunks];
 
-                    uint firstFrame = 0, numFrames = 0;
+                    uint firstFrameIndex = 0;
+                    int lastStscIndex = 0;
 
-                    for (int i = 0; i < SamplesToChunks.Count; i++)
+                    for (uint chunk = 1; chunk <= numChunks;)
                     {
-                        if (i + 1 == SamplesToChunks.Count || chunk < SamplesToChunks[i + 1].FirstChunk)
+                        if (lastStscIndex + 1 == stscSamples.Count)
                         {
-                            firstFrame += (chunk - SamplesToChunks[i].FirstChunk) * SamplesToChunks[i].SamplesPerChunk;
-                            numFrames = SamplesToChunks[i].SamplesPerChunk;
-                            break;
+                            table[chunk - 1] = (firstFrameIndex, stscSamples[lastStscIndex].SamplesPerChunk);
+                            firstFrameIndex += stscSamples[lastStscIndex].SamplesPerChunk;
+                            chunk++;
                         }
-                        firstFrame += (SamplesToChunks[i + 1].FirstChunk - SamplesToChunks[i].FirstChunk) * SamplesToChunks[i].SamplesPerChunk;
+                        else
+                        {
+                            for (; chunk < stscSamples[lastStscIndex + 1].FirstChunk; chunk++)
+                            {
+                                table[chunk - 1] = (firstFrameIndex, stscSamples[lastStscIndex].SamplesPerChunk);
+                                firstFrameIndex += stscSamples[lastStscIndex].SamplesPerChunk;
+                            }
+                            lastStscIndex++;
+                        }
                     }
 
-                    return (firstFrame, numFrames);
+                    return table;
                 }
             }
         }
