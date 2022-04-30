@@ -85,62 +85,7 @@ namespace AAXClean.Test
             {
                 Aax.Close();
             }
-        }
-
-        [TestMethod]
-        public void _2_WriteTags()
-        {
-            string tagstring = "this is a tag string";
-
-            try
-            {
-                Aax.AppleTags.Album = tagstring;
-                Aax.AppleTags.AlbumArtists = tagstring;
-                Aax.AppleTags.Asin = tagstring;
-                Aax.AppleTags.Comment = tagstring;
-                Aax.AppleTags.Copyright = tagstring;
-                Aax.AppleTags.Generes = tagstring;
-                Aax.AppleTags.LongDescription = tagstring;
-                Aax.AppleTags.Narrator = tagstring;
-                Aax.AppleTags.Performers = tagstring;
-                Aax.AppleTags.ProductID = tagstring;
-                Aax.AppleTags.Publisher = tagstring;
-                Aax.AppleTags.ReleaseDate = tagstring;
-                Aax.AppleTags.Title = tagstring;
-                Aax.AppleTags.Year = tagstring;
-
-                Assert.AreEqual(Aax.AppleTags.Album, tagstring);
-                Assert.AreEqual(Aax.AppleTags.AlbumArtists, tagstring);
-                Assert.AreEqual(Aax.AppleTags.Asin, tagstring);
-                Assert.AreEqual(Aax.AppleTags.Comment, tagstring);
-                Assert.AreEqual(Aax.AppleTags.Copyright, tagstring);
-                Assert.AreEqual(Aax.AppleTags.Generes, tagstring);
-                Assert.AreEqual(Aax.AppleTags.LongDescription, tagstring);
-                Assert.AreEqual(Aax.AppleTags.Narrator, tagstring);
-                Assert.AreEqual(Aax.AppleTags.Performers, tagstring);
-                Assert.AreEqual(Aax.AppleTags.ProductID, tagstring);
-                Assert.AreEqual(Aax.AppleTags.Publisher, tagstring);
-                Assert.AreEqual(Aax.AppleTags.ReleaseDate, tagstring);
-                Assert.AreEqual(Aax.AppleTags.Title, tagstring);
-                Assert.AreEqual(Aax.AppleTags.Year, tagstring);
-
-                var newPic = new byte[500];
-
-                using var sha = SHA1.Create();
-                sha.ComputeHash(newPic);
-                var newPicHash = string.Join("", sha.Hash.Select(b => b.ToString("x2")));
-
-                Aax.AppleTags.Cover = newPic;
-                sha.ComputeHash(Aax.AppleTags.Cover);
-
-                var coverHash = string.Join("", sha.Hash.Select(b => b.ToString("x2")));
-                Assert.AreEqual(coverHash, newPicHash);
-            }
-            finally
-            {
-                Aax.Close();
-            }
-        }
+        }       
 
         [TestMethod]
         public void _3_ReadChapters()
