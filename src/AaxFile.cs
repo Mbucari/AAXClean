@@ -65,7 +65,7 @@ namespace AAXClean
         }
 
         internal override Mp4AudioChunkHandler GetAudioChunkHandler()
-            => new AavdChunkHandler(TimeScale, Moov.AudioTrack, Key, IV, InputStreamCanSeek);
+            => new AavdChunkHandler(TimeScale, Moov.AudioTrack, Key, IV);
 
         #region Aax(c) Keys
 

@@ -1,6 +1,7 @@
 ﻿using AAXClean.AudioFilters;
 using AAXClean.Boxes;
 using AAXClean.Chunks;
+using AAXClean.Util;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -72,7 +73,7 @@ namespace AAXClean
         }
 
         internal virtual Mp4AudioChunkHandler GetAudioChunkHandler()
-            => new Mp4AudioChunkHandler(TimeScale, Moov.AudioTrack, InputStreamCanSeek);
+            => new Mp4AudioChunkHandler(TimeScale, Moov.AudioTrack);
 
         public void Save()
         {
@@ -133,12 +134,19 @@ namespace AAXClean
 
         public ChapterInfo GetChapterInfo()
         {
-            var chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack, seekable: true);
-            var chunkReader = new TrakChunkReader(InputStream, chapterHandler);
+            var chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack);
 
             isCancelled = false;
 
-            while (!isCancelled && chunkReader.NextChunk()) ;
+            foreach (var chunk in new MpegChunkCollection(InputStream, chapterHandler))
+            {
+                if (isCancelled)
+                    break;
+
+                Span<byte> buff = new byte[chunk.Entry.ChunkSize];
+                InputStream.ReadNextChunk(chunk.Entry.ChunkOffset, buff);
+                isCancelled  =!chunk.Handler.ChunkAvailable(buff, chunk.Entry);
+            }
             Chapters ??= chapterHandler.Chapters;
             return chapterHandler.Chapters;
         }
@@ -149,15 +157,21 @@ namespace AAXClean
             handlers.Add(audioHandler);
             handlers.AddRange(chunkHandlers);
 
-            var chunkReader = new TrakChunkReader(InputStream, handlers.ToArray());
-
             var beginProcess = DateTime.Now;
             var nextUpdate = beginProcess;
 
             isCancelled = false;
 
-            while (!isCancelled && chunkReader.NextChunk())
+
+            foreach (var chunk in new MpegChunkCollection(InputStream, handlers.ToArray()))
             {
+                if (isCancelled)
+                    return;
+
+                Span<byte> buff = new byte[chunk.Entry.ChunkSize];
+                InputStream.ReadNextChunk(chunk.Entry.ChunkOffset, buff);
+                isCancelled = !chunk.Handler.ChunkAvailable(buff, chunk.Entry);
+
                 //Throttle update so it doesn't bog down UI
                 if (DateTime.Now > nextUpdate)
                 {

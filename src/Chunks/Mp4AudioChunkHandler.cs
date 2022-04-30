@@ -10,37 +10,35 @@ namespace AAXClean.Chunks
         public double TimeScale { get; }
         public AudioFilterBase AudioFilter { get; set; }
         public TrakBox Track { get; }
-        public bool InputStreamSeekable { get; }
         public TimeSpan ProcessPosition => FrameToTime(lastFrameProcessed);
 
         private uint lastFrameProcessed { get; set; }
         private SttsBox.SampleEntry[] Samples { get; set; }
 
-        public Mp4AudioChunkHandler(uint timeScale, TrakBox trak, bool inputCanSeek)
+        public Mp4AudioChunkHandler(uint timeScale, TrakBox trak)
         {
             TimeScale = timeScale;
             Track = trak;
             Samples = Track.Mdia.Minf.Stbl.Stts.Samples.ToArray();
-            InputStreamSeekable = inputCanSeek;
         }
 
         protected virtual bool ValidateFrame(Span<byte> frame) => (AV_RB16(frame) & 0xfff0) != 0xfff0;
 
-        public bool ChunkAvailable(Span<byte> chunk, uint chunkIndex, uint frameIndex, int totalChunkSize, int[] frameSizes)
+        public bool ChunkAvailable(Span<byte> chunkData, ChunkEntry chunkEntry)
         {
             int framePosition = 0;
-            for (uint fIndex = 0; fIndex < frameSizes.Length; fIndex++)
+            for (uint fIndex = 0; fIndex < chunkEntry.FrameSizes.Length; fIndex++)
             {
-                lastFrameProcessed = frameIndex + fIndex;
+                lastFrameProcessed = chunkEntry.FirstFrameIndex + fIndex;
 
-                Span<byte> frame = chunk.Slice(framePosition, frameSizes[fIndex]);
+                Span<byte> frame = chunkData.Slice(framePosition, chunkEntry.FrameSizes[fIndex]);
 
-                Success = ValidateFrame(frame) && AudioFilter?.FilterFrame(chunkIndex, lastFrameProcessed, frame) == true;
+                Success = ValidateFrame(frame) && AudioFilter?.FilterFrame(chunkEntry.ChunkIndex, lastFrameProcessed, frame) == true;
 
                 if (!Success)
                     return false;
 
-                framePosition += frameSizes[fIndex];
+                framePosition += chunkEntry.FrameSizes[fIndex];
             }
             return true;
         }

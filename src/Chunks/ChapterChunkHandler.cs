@@ -8,7 +8,6 @@ namespace AAXClean.Chunks
 {
     internal class ChapterChunkHandler : IChunkHandler
     {
-        public bool InputStreamSeekable { get; }
         public ChapterInfo Chapters => Builder.ToChapterInfo();
         public double TimeScale { get; }
         public TrakBox Track { get; }
@@ -16,28 +15,27 @@ namespace AAXClean.Chunks
         private SttsBox.SampleEntry[] Samples { get; set; }
         private ChapterBuilder Builder { get; set; }
 
-        public ChapterChunkHandler(uint timeScale, TrakBox trak, bool seekable = false)
+        public ChapterChunkHandler(uint timeScale, TrakBox trak)
         {
             TimeScale = timeScale;
             Track = trak;
             Samples = Track.Mdia.Minf.Stbl.Stts.Samples.ToArray();
-            InputStreamSeekable = seekable;
             Builder = new ChapterBuilder(TimeScale);
         }
 
-        public bool ChunkAvailable(Span<byte> chunk, uint chunkIndex, uint frameIndex, int totalChunkSize, int[] frameSizes)
+        public bool ChunkAvailable(Span<byte> chunkData, ChunkEntry chunkEntry)
         {
-            if (chunkIndex < 0 || chunkIndex >= Samples.Length)
+            if (chunkEntry.ChunkIndex < 0 || chunkEntry.ChunkIndex >= Samples.Length)
                 return false;
 
-            for (int start = 0, i = 0; i < frameSizes.Length; start += frameSizes[i], i++, lastFrameProcessed++)
+            for (int start = 0, i = 0; i < chunkEntry.FrameSizes.Length; start += chunkEntry.FrameSizes[i], i++, lastFrameProcessed++)
             {
-                var chunki = chunk.Slice(start, frameSizes[i]);
+                var chunki = chunkData.Slice(start, chunkEntry.FrameSizes[i]);
                 int size = chunki[1] | chunki[0];
 
                 var title = Encoding.UTF8.GetString(chunki.Slice(2, size));
 
-                Builder.AddChapter(title, (int)Samples[lastFrameProcessed].FrameDelta, chunkIndex);
+                Builder.AddChapter(title, (int)Samples[lastFrameProcessed].FrameDelta, chunkEntry.ChunkIndex);
             }
 
             return true;
@@ -90,12 +88,12 @@ namespace AAXClean.Chunks
                     long last = 0;
 
                     //Calculate the frame position of the chapter's end.
-                    foreach (var c in orderedChapters)
+                    foreach (var (chunkIndex, title, frameDelta) in orderedChapters)
                     {
                         //If the frame delta is negative, assume the duration is 1 frame. This is what ffmpeg does.
-                        var endTime = last + (c.frameDelta < 0 ? 1 : c.frameDelta);
-                        list.Add((c.title, endTime));
-                        last = last + c.frameDelta;
+                        var endTime = last + (frameDelta < 0 ? 1 : frameDelta);
+                        list.Add((title, endTime));
+                        last += frameDelta;
                     }
                     var sortedEnds = list.OrderBy(c => c.frameEnd).ToList();
 

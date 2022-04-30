@@ -8,7 +8,7 @@ namespace AAXClean.Chunks
     {
         private AesCryptoTransform Aes { get; }
 
-        public AavdChunkHandler(uint timeScale, TrakBox trak, byte[] key, byte[] iv, bool seekable = false) : base(timeScale, trak, seekable)
+        public AavdChunkHandler(uint timeScale, TrakBox trak, byte[] key, byte[] iv) : base(timeScale, trak)
         {
             if (key is null || key.Length != 16)
                 throw new ArgumentException($"{nameof(key)} must be 16 bytes long.");

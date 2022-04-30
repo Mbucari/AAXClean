@@ -8,7 +8,7 @@ namespace AAXClean.Boxes
     {
         public override long RenderSize => base.RenderSize + 4 + ChunkOffsets.Count * 8;
         internal uint EntryCount { get; set; }
-        internal List<long> ChunkOffsets { get; } = new List<long>();
+        internal List<ChunkEntry> ChunkOffsets { get; } = new List<ChunkEntry>();
 
         internal static Co64Box CreateBlank(Box parent)
         {
@@ -20,28 +20,33 @@ namespace AAXClean.Boxes
             parent.Children.Add(co64Box);
             return co64Box;
         }
-        private Co64Box(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent)
-        {
-
-        }
+        private Co64Box(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent) { }
 
         internal Co64Box(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
         {
             EntryCount = file.ReadUInt32BE();
 
-            for (int i = 0; i < EntryCount; i++)
+            for (uint i = 0; i < EntryCount; i++)
             {
-                long sampleSize = file.ReadInt64BE();
-                ChunkOffsets.Add(sampleSize);
+                long chunkOffset = file.ReadInt64BE();
+                ChunkOffsets.Add(new ChunkEntry
+                {
+                    EntryIndex = i,
+                    ChunkOffset = chunkOffset
+                });
             }
+            //Load ChunkOffsets sorted by the offset
+            ChunkOffsets.Sort((c1, c2) => c1.ChunkOffset.CompareTo(c2.ChunkOffset));
         }
         protected override void Render(Stream file)
         {
             base.Render(file);
             file.WriteUInt32BE((uint)ChunkOffsets.Count);
+            //Write ChunkOffsets sorted by the chunk index
+            ChunkOffsets.Sort((c1, c2) => c1.EntryIndex.CompareTo(c2.EntryIndex));
             foreach (var chunkOffset in ChunkOffsets)
             {
-                file.WriteInt64BE(chunkOffset);
+                file.WriteInt64BE(chunkOffset.ChunkOffset);
             }
         }
         private bool _disposed = false;

@@ -20,6 +20,31 @@ namespace AAXClean.Util
                 stream.WriteType(header.Type);
             }
         }
+        /// <summary>
+        /// Read the next track chuink from the input stream
+        /// </summary>
+        /// <param name="chunkOffset">The chuink's file offset</param>
+        /// <param name="chunkBuffer">Buffer to copy the chink data into</param>
+        public static void ReadNextChunk(this Stream inputStream, long chunkOffset, Span<byte> chunkBuffer)
+        {
+            if (inputStream.Position < chunkOffset)
+            {
+                //Unknown Track or data type. Read past it to next known chunk.
+                if (inputStream.CanSeek)
+                    inputStream.Position = chunkOffset;
+                else
+                    inputStream.ReadBlock((int)(chunkOffset - inputStream.Position));
+            }
+            else if (inputStream.Position > chunkOffset)
+            {
+                if (inputStream.CanSeek)
+                    inputStream.Position = chunkOffset;
+                else
+                    throw new Exception($"Input stream position 0x{inputStream.Position:X8} is past the chunk offset 0x{chunkOffset:X8} and is not seekable.");
+            }
+            inputStream.Read(chunkBuffer);
+        }
+
         public static void WriteType(this Stream stream, string type)
         {
             if (type?.Length != 4)

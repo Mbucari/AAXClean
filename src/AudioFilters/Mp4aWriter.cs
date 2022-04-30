@@ -98,6 +98,7 @@ namespace AAXClean.AudioFilters
             Moov.TextTrack.Mdia.Minf.Stbl.Stsc.EntryCount = 1;
             Moov.TextTrack.Mdia.Minf.Stbl.Stsc.Samples.Add(new StscBox.ChunkEntry(1, 1, 1));
 
+            uint entIndex = 0;
             foreach (var c in chapters)
             {
                 uint sampleDelta = (uint)(c.Duration.TotalSeconds * Moov.AudioTrack.Mdia.Mdhd.Timescale);
@@ -106,9 +107,9 @@ namespace AAXClean.AudioFilters
                 Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Add(c.RenderSize);
 
                 if (isCo64)
-                    Moov.TextTrack.Mdia.Minf.Stbl.Co64.ChunkOffsets.Add(OutputFile.Position);
+                    Moov.TextTrack.Mdia.Minf.Stbl.Co64.ChunkOffsets.Add(new ChunkEntry { EntryIndex = entIndex++, ChunkOffset = OutputFile.Position });
                 else
-                    Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add((uint)OutputFile.Position);
+                    Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add(new ChunkEntry { EntryIndex = entIndex++, ChunkOffset = (uint)OutputFile.Position });
 
                 c.WriteChapter(OutputFile);
             }
@@ -127,24 +128,25 @@ namespace AAXClean.AudioFilters
 
             Moov.Mvhd.NextTrackID--;
         }
+
         public void AddFrame(Span<byte> frame, bool newChunk)
         {
             if (newChunk)
             {
-                currentChunk++;
 
                 if (isCo64)
-                    Co64.ChunkOffsets.Add(OutputFile.Position);
+                    Co64.ChunkOffsets.Add(new ChunkEntry { EntryIndex = currentChunk, ChunkOffset = OutputFile.Position });
                 else
-                    Stco.ChunkOffsets.Add((uint)OutputFile.Position);
+                    Stco.ChunkOffsets.Add(new ChunkEntry { EntryIndex = currentChunk, ChunkOffset = (uint)OutputFile.Position });
 
                 if (samplesPerChunk > 0 && samplesPerChunk != lastSamplesPerChunk)
                 {
-                    Stsc.Samples.Add(new StscBox.ChunkEntry(currentChunk - 1, samplesPerChunk, 1));
+                    Stsc.Samples.Add(new StscBox.ChunkEntry(currentChunk, samplesPerChunk, 1));
 
                     lastSamplesPerChunk = samplesPerChunk;
                 }
                 samplesPerChunk = 0;
+                currentChunk++;
             }
 
             Stsz.SampleSizes.Add(frame.Length);
