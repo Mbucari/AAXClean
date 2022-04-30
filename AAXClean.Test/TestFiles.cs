@@ -10,29 +10,29 @@ namespace AAXClean.Test
 {
     public static class TestFiles
     {
-        private static List<FileStream> OpenTempFiles { get; } = new List<FileStream>();
-        private static string HP_WebPath { get; } = "https://drive.google.com/uc?export=download&id=1UIc0ouxIspS2RjGstX1Rzvp3QdeidDrR&confirm=t";
-        private static string BA_WebPath { get; } = "https://drive.google.com/uc?export=download&id=1Sl8m7-qEFtCVRVRcC09q66DledzWxTP8&confirm=t";
-        private static string AC_WebPath { get; } = "https://drive.google.com/uc?export=download&id=11hz3AjNJOK3GGDl5V9buicvVNdJ5acFC&confirm=t";
-        private static string SH_WebPath { get; } = "https://drive.google.com/uc?export=download&id=1qZLKhWh61R8C2MhKqXwipC5uPcffVt--&confirm=t";
+        private static readonly List<FileStream> OpenTempFiles = new List<FileStream>();
+        private const string TEST_FILE_DIR = @"..\..\..\..\..\TestFiles";
+        private const string HP_URL = "https://drive.google.com/uc?export=download&id=1UIc0ouxIspS2RjGstX1Rzvp3QdeidDrR&confirm=t";
+        private const string BA_URL = "https://drive.google.com/uc?export=download&id=1Sl8m7-qEFtCVRVRcC09q66DledzWxTP8&confirm=t";
+        private const string AC_URL = "https://drive.google.com/uc?export=download&id=11hz3AjNJOK3GGDl5V9buicvVNdJ5acFC&confirm=t";
+        private const string SH_URL = "https://drive.google.com/uc?export=download&id=1qZLKhWh61R8C2MhKqXwipC5uPcffVt--&confirm=t";
 
-        private static string _HP_BookPath { get; } = @"..\..\..\..\..\TestFiles\Harry Potter and the Sorcerer's Stone, Book 1 [B017V4IM1G] - Zero.aax";
-        private static string _BA_BookPath { get; } = @"..\..\..\..\..\TestFiles\Broken Angels [B002V8H59I] - Zero.aax";
-        private static string _AC_BookPath { get; } = @"..\..\..\..\..\TestFiles\Altered Carbon [B002V1O6X8] - Zero.aax";
-        private static string _SH_BookPath { get; } = @"..\..\..\..\..\TestFiles\50 Self-Help Classics to Guide You to Financial Fr [2291082140] - Zero.aax";
+        private static readonly string HP_FILENAME = Path.Combine(TEST_FILE_DIR, "HP_Zero.aax");
+        private static readonly string BA_FILENAME = Path.Combine(TEST_FILE_DIR, "BA_Zero.aax");
+        private static readonly string AC_FILENAME = Path.Combine(TEST_FILE_DIR, "AC_Zero.aax");
+        private static readonly string SH_FILENAME = Path.Combine(TEST_FILE_DIR, "SH_Zero.aax");
 
-        public static string HP_BookPath => FindOrDownload(_HP_BookPath, HP_WebPath);
-        public static string BA_BookPath => FindOrDownload(_BA_BookPath, BA_WebPath);
-        public static string AC_BookPath => FindOrDownload(_AC_BookPath, AC_WebPath);
-        public static string SH_BookPath => FindOrDownload(_SH_BookPath, SH_WebPath);
+        public static string HP_BookPath => FindOrDownload(HP_FILENAME, HP_URL);
+        public static string BA_BookPath => FindOrDownload(BA_FILENAME, BA_URL);
+        public static string AC_BookPath => FindOrDownload(AC_FILENAME, AC_URL);
+        public static string SH_BookPath => FindOrDownload(SH_FILENAME, SH_URL);
 
         private static string FindOrDownload(string path, string url)
         {
             if (!File.Exists(path))
             {
-                var dir = Path.GetDirectoryName(path);
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
+                if (!Directory.Exists(TEST_FILE_DIR))
+                    Directory.CreateDirectory(TEST_FILE_DIR);
                 using WebClient cli = new();
                 cli.DownloadFile(url, path);
             }
