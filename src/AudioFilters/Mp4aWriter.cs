@@ -107,9 +107,9 @@ namespace AAXClean.AudioFilters
                 Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Add(c.RenderSize);
 
                 if (isCo64)
-                    Moov.TextTrack.Mdia.Minf.Stbl.Co64.ChunkOffsets.Add(new ChunkEntry { EntryIndex = entIndex++, ChunkOffset = OutputFile.Position });
+                    Moov.TextTrack.Mdia.Minf.Stbl.Co64.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = entIndex++, ChunkOffset = OutputFile.Position });
                 else
-                    Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add(new ChunkEntry { EntryIndex = entIndex++, ChunkOffset = (uint)OutputFile.Position });
+                    Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = entIndex++, ChunkOffset = (uint)OutputFile.Position });
 
                 c.WriteChapter(OutputFile);
             }
@@ -135,9 +135,9 @@ namespace AAXClean.AudioFilters
             {
 
                 if (isCo64)
-                    Co64.ChunkOffsets.Add(new ChunkEntry { EntryIndex = currentChunk, ChunkOffset = OutputFile.Position });
+                    Co64.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = currentChunk, ChunkOffset = OutputFile.Position });
                 else
-                    Stco.ChunkOffsets.Add(new ChunkEntry { EntryIndex = currentChunk, ChunkOffset = (uint)OutputFile.Position });
+                    Stco.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = currentChunk, ChunkOffset = (uint)OutputFile.Position });
 
                 if (samplesPerChunk > 0 && samplesPerChunk != lastSamplesPerChunk)
                 {
@@ -208,7 +208,7 @@ namespace AAXClean.AudioFilters
             moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a4);
             moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a5);         
 
-            MemoryStream ms = new MemoryStream();
+            MemoryStream ms = new();
 
             moov.Save(ms);
 
@@ -230,7 +230,7 @@ namespace AAXClean.AudioFilters
 
             ms.Position = 0;
 
-            MoovBox newMoov = new MoovBox(ms, new BoxHeader(ms), null);
+            MoovBox newMoov = new(ms, new BoxHeader(ms), null);
 
             SttsBox.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
             StscBox.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);

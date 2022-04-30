@@ -8,7 +8,7 @@ namespace AAXClean.Boxes
     {
         public override long RenderSize => base.RenderSize + 4 + ChunkOffsets.Count * 4;
         internal uint EntryCount { get; set; }
-        internal List<ChunkEntry> ChunkOffsets { get; } = new List<ChunkEntry>();
+        internal List<ChunkOffsetEntry> ChunkOffsets { get; } = new List<ChunkOffsetEntry>();
 
         internal static StcoBox CreateBlank(Box parent)
         {
@@ -38,7 +38,7 @@ namespace AAXClean.Boxes
                 {
                     chunkOffset += 1L << 32;
                 }
-                ChunkOffsets.Add(new ChunkEntry
+                ChunkOffsets.Add(new ChunkOffsetEntry
                 {
                     EntryIndex = i,
                     ChunkOffset = chunkOffset

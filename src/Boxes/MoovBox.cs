@@ -15,7 +15,7 @@ namespace AAXClean.Boxes
         public TrakBox AudioTrack => Tracks.Where(t => t.GetChild<MdiaBox>()?.GetChild<HdlrBox>()?.HandlerType == "soun").FirstOrDefault();
         public TrakBox TextTrack => Tracks.Where(t => t.GetChild<MdiaBox>()?.GetChild<HdlrBox>()?.HandlerType == "text").FirstOrDefault();
 
-        public AppleListBox iLst => GetChild<UdtaBox>().GetChild<MetaBox>().GetChild<AppleListBox>();
+        public AppleListBox ILst => GetChild<UdtaBox>().GetChild<MetaBox>().GetChild<AppleListBox>();
         public IEnumerable<TrakBox> Tracks => GetChildren<TrakBox>();
 
         protected override void Render(Stream file)

@@ -11,7 +11,7 @@ namespace AAXClean.Chunks
         public ChapterInfo Chapters => Builder.ToChapterInfo();
         public double TimeScale { get; }
         public TrakBox Track { get; }
-        private uint lastFrameProcessed { get; set; }
+        private uint LastFrameProcessed { get; set; }
         private SttsBox.SampleEntry[] Samples { get; set; }
         private ChapterBuilder Builder { get; set; }
 
@@ -28,14 +28,14 @@ namespace AAXClean.Chunks
             if (chunkEntry.ChunkIndex < 0 || chunkEntry.ChunkIndex >= Samples.Length)
                 return false;
 
-            for (int start = 0, i = 0; i < chunkEntry.FrameSizes.Length; start += chunkEntry.FrameSizes[i], i++, lastFrameProcessed++)
+            for (int start = 0, i = 0; i < chunkEntry.FrameSizes.Length; start += chunkEntry.FrameSizes[i], i++, LastFrameProcessed++)
             {
                 var chunki = chunkData.Slice(start, chunkEntry.FrameSizes[i]);
                 int size = chunki[1] | chunki[0];
 
                 var title = Encoding.UTF8.GetString(chunki.Slice(2, size));
 
-                Builder.AddChapter(title, (int)Samples[lastFrameProcessed].FrameDelta, chunkEntry.ChunkIndex);
+                Builder.AddChapter(title, (int)Samples[LastFrameProcessed].FrameDelta, chunkEntry.ChunkIndex);
             }
 
             return true;
@@ -63,7 +63,7 @@ namespace AAXClean.Chunks
         private class ChapterBuilder
         {
             public double TimeScale { get; }
-            private List<(uint chunkIndex, string title, int frameDelta)> Chapters = new();
+            private readonly List<(uint chunkIndex, string title, int frameDelta)> Chapters = new();
             public ChapterBuilder(double timeScale)
             {
                 TimeScale = timeScale;

@@ -8,7 +8,7 @@ namespace AAXClean.Boxes
     {
         public override long RenderSize => base.RenderSize + 4 + ChunkOffsets.Count * 8;
         internal uint EntryCount { get; set; }
-        internal List<ChunkEntry> ChunkOffsets { get; } = new List<ChunkEntry>();
+        internal List<ChunkOffsetEntry> ChunkOffsets { get; } = new List<ChunkOffsetEntry>();
 
         internal static Co64Box CreateBlank(Box parent)
         {
@@ -29,7 +29,7 @@ namespace AAXClean.Boxes
             for (uint i = 0; i < EntryCount; i++)
             {
                 long chunkOffset = file.ReadInt64BE();
-                ChunkOffsets.Add(new ChunkEntry
+                ChunkOffsets.Add(new ChunkOffsetEntry
                 {
                     EntryIndex = i,
                     ChunkOffset = chunkOffset

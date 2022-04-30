@@ -59,8 +59,8 @@ namespace AAXClean
                 _ => FileType.Mpeg4
             };
 
-            if (Moov.iLst is not null)
-                AppleTags = new AppleTags(Moov.iLst);
+            if (Moov.ILst is not null)
+                AppleTags = new AppleTags(Moov.ILst);
         }
         public Mp4File(Stream file) : this(file, file.Length)
         {
@@ -73,7 +73,7 @@ namespace AAXClean
         }
 
         internal virtual Mp4AudioChunkHandler GetAudioChunkHandler()
-            => new Mp4AudioChunkHandler(TimeScale, Moov.AudioTrack);
+            => new(TimeScale, Moov.AudioTrack);
 
         public void Save()
         {
@@ -138,7 +138,7 @@ namespace AAXClean
 
             isCancelled = false;
 
-            foreach (var chunk in new MpegChunkCollection(InputStream, chapterHandler))
+            foreach (var chunk in new MpegChunkCollection(chapterHandler))
             {
                 if (isCancelled)
                     break;
@@ -153,20 +153,15 @@ namespace AAXClean
 
         private void ProcessAudio(Mp4AudioChunkHandler audioHandler, params IChunkHandler[] chunkHandlers)
         {
-            var handlers = new List<IChunkHandler>();
-            handlers.Add(audioHandler);
-            handlers.AddRange(chunkHandlers);
-
             var beginProcess = DateTime.Now;
             var nextUpdate = beginProcess;
 
             isCancelled = false;
 
-
-            foreach (var chunk in new MpegChunkCollection(InputStream, handlers.ToArray()))
+            foreach (var chunk in new MpegChunkCollection(audioHandler, chunkHandlers))
             {
                 if (isCancelled)
-                    return;
+                    break;
 
                 Span<byte> buff = new byte[chunk.Entry.ChunkSize];
                 InputStream.ReadNextChunk(chunk.Entry.ChunkOffset, buff);
@@ -215,7 +210,6 @@ namespace AAXClean
 
             _disposed = true;
             base.Dispose(disposing);
-            GC.Collect();
         }
 
         protected override void Render(Stream file) => throw new NotImplementedException();

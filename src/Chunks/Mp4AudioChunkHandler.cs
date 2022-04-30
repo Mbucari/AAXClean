@@ -10,9 +10,9 @@ namespace AAXClean.Chunks
         public double TimeScale { get; }
         public AudioFilterBase AudioFilter { get; set; }
         public TrakBox Track { get; }
-        public TimeSpan ProcessPosition => FrameToTime(lastFrameProcessed);
+        public TimeSpan ProcessPosition => FrameToTime(LastFrameProcessed);
 
-        private uint lastFrameProcessed { get; set; }
+        private uint LastFrameProcessed { get; set; }
         private SttsBox.SampleEntry[] Samples { get; set; }
 
         public Mp4AudioChunkHandler(uint timeScale, TrakBox trak)
@@ -29,11 +29,11 @@ namespace AAXClean.Chunks
             int framePosition = 0;
             for (uint fIndex = 0; fIndex < chunkEntry.FrameSizes.Length; fIndex++)
             {
-                lastFrameProcessed = chunkEntry.FirstFrameIndex + fIndex;
+                LastFrameProcessed = chunkEntry.FirstFrameIndex + fIndex;
 
                 Span<byte> frame = chunkData.Slice(framePosition, chunkEntry.FrameSizes[fIndex]);
 
-                Success = ValidateFrame(frame) && AudioFilter?.FilterFrame(chunkEntry.ChunkIndex, lastFrameProcessed, frame) == true;
+                Success = ValidateFrame(frame) && AudioFilter?.FilterFrame(chunkEntry.ChunkIndex, LastFrameProcessed, frame) == true;
 
                 if (!Success)
                     return false;

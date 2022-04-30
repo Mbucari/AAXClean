@@ -1,31 +1,25 @@
 ﻿using AAXClean.Boxes;
-using AAXClean.Util;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AAXClean.Chunks
 {
-    class MpegChunkCollection : IEnumerable<TrackChunk>
+    internal class MpegChunkCollection : IEnumerable<TrackChunk>
     {
-        private Stream InputStream { get; }
-        TrackChunkCollection[] trackChunks;
+        private readonly TrackChunkCollection[] trackChunks;
 
-        public MpegChunkCollection(Stream file, params IChunkHandler[] handlers)
+        public MpegChunkCollection(IChunkHandler handler, params IChunkHandler[] handlers)
         {
-            InputStream = file;
-            trackChunks = new TrackChunkCollection[handlers.Length];
-
+            trackChunks = new TrackChunkCollection[handlers.Length + 1];
+            trackChunks[0] = new TrackChunkCollection(handler);
             for (int i = 0; i < handlers.Length; i++)
-                trackChunks[i] = new TrackChunkCollection(handlers[i]);
+                trackChunks[i + 1] = new TrackChunkCollection(handlers[i]);
         }
         public IEnumerator<TrackChunk> GetEnumerator()
         {
-            return new MpegChunkEnumerator(InputStream, trackChunks);
+            return new MpegChunkEnumerator(trackChunks);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -47,11 +41,9 @@ namespace AAXClean.Chunks
         {
             private bool ReachedEnd = false;
             private Tracks[] Tracks;
-            private Stream InputStream { get; }
-            public MpegChunkEnumerator(Stream inputStr, TrackChunkCollection[] trackChunks)
+            public MpegChunkEnumerator(TrackChunkCollection[] trackChunks)
             {
                 Tracks = new Tracks[trackChunks.Length];
-                InputStream = inputStr;
 
                 for (int i = 0; i < trackChunks.Length; i++)
                 {
@@ -118,7 +110,7 @@ namespace AAXClean.Chunks
         /// <summary>
         /// Enumerates Chunks in a <see cref="TrakBox"/>
         /// </summary>
-        class TrackChunkCollection : IEnumerable<ChunkEntry>
+        private class TrackChunkCollection : IEnumerable<ChunkEntry>
         {
             private TrakBox Track => Handler.Track;
             public IChunkHandler Handler { get; }
@@ -143,10 +135,10 @@ namespace AAXClean.Chunks
 
             private class TrachChunkEnumerator : IEnumerator<ChunkEntry>
             {
-                private List<Boxes.ChunkEntry> ChunkTable;
+                private List<ChunkOffsetEntry> ChunkTable;
                 private List<StscBox.ChunkEntry> SamplesToChunks;
                 private List<int> SampleSizes;
-                private uint EntryCount;
+                private readonly uint EntryCount;
                 private uint chunkIndex = 0;
                 public TrachChunkEnumerator(TrakBox track)
                 {
