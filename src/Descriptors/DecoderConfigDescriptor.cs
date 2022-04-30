@@ -7,11 +7,11 @@ namespace AAXClean.Descriptors
     {
         public override uint RenderSize => base.RenderSize + 13;
         public byte ObjectTypeIndication { get; }
-        private byte[] Blob { get; }
+        private readonly byte[] Blob;
         public uint MaxBitrate { get; set; }
         public uint AverageBitrate { get; set; }
-
         public AudioSpecificConfig AudioConfig => GetChild<AudioSpecificConfig>();
+
         public DecoderConfigDescriptor(Stream file) : base(0x4, file)
         {
             ObjectTypeIndication = (byte)file.ReadByte();

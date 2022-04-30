@@ -1,6 +1,7 @@
 ﻿using AAXClean.AudioFilters;
 using AAXClean.Boxes;
 using System;
+using System.Collections.Generic;
 
 namespace AAXClean.Chunks
 {
@@ -12,19 +13,19 @@ namespace AAXClean.Chunks
         public TrakBox Track { get; }
         public TimeSpan ProcessPosition => FrameToTime(LastFrameProcessed);
 
-        private uint LastFrameProcessed { get; set; }
-        private SttsBox.SampleEntry[] Samples { get; set; }
+        private uint LastFrameProcessed;
+        private IEnumerable<SttsBox.SampleEntry> Samples;
 
-        public Mp4AudioChunkHandler(uint timeScale, TrakBox trak)
+        public Mp4AudioChunkHandler(TrakBox trak)
         {
-            TimeScale = timeScale;
             Track = trak;
-            Samples = Track.Mdia.Minf.Stbl.Stts.Samples.ToArray();
+            TimeScale = Track.Mdia.Mdhd.Timescale;
+            Samples = Track.Mdia.Minf.Stbl.Stts.Samples;
         }
 
         protected virtual bool ValidateFrame(Span<byte> frame) => (AV_RB16(frame) & 0xfff0) != 0xfff0;
 
-        public bool ChunkAvailable(Span<byte> chunkData, ChunkEntry chunkEntry)
+        public bool ChunkAvailable(ChunkEntry chunkEntry, Span<byte> chunkData)
         {
             int framePosition = 0;
             for (uint fIndex = 0; fIndex < chunkEntry.FrameSizes.Length; fIndex++)

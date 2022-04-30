@@ -1,7 +1,7 @@
-﻿using System;
+﻿using AAXClean.Util;
+using System;
 using System.IO;
 using System.Text;
-using AAXClean.Util;
 
 namespace AAXClean
 {

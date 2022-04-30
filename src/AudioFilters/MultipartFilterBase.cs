@@ -5,28 +5,27 @@ namespace AAXClean.AudioFilters
 {
     public abstract class MultipartFilterBase : AudioFilterBase
     {
+#pragma warning disable IDE0051 // Remove unused private members
         private new bool Closed { get; set; }
+#pragma warning restore IDE0051 // Remove unused private members
         protected abstract Action<NewSplitCallback> NewFileCallback { get; }
-        private int SampleRate { get; }
-        private IEnumerator<Chapter> SplitChapters { get; }
 
-        private uint StartFrame { get; set; }
-        private long EndFrame { get; set; }
+        private readonly int SampleRate;
+        private readonly IEnumerator<Chapter> SplitChapters;
+        private uint StartFrame;
+        private long EndFrame = -1;
+        private long LastChunkIndex = -1;
 
         private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
-
-        private long lastChunk = -1;
         private static readonly int[] asc_samplerates = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
 
-        public MultipartFilterBase(Span<byte> audioSpecificConfig, ChapterInfo splitChapters)
+        public MultipartFilterBase(byte[] audioSpecificConfig, ChapterInfo splitChapters)
         {
             if (splitChapters is null || splitChapters.Count == 0)
                 throw new ArgumentException($"{nameof(splitChapters)} must contain at least one chapter.");
 
             SampleRate = asc_samplerates[(audioSpecificConfig[0] & 7) << 1 | audioSpecificConfig[1] >> 7];
             SplitChapters = splitChapters.GetEnumerator();
-
-            EndFrame = -1;
         }
 
         protected abstract void CloseCurrentWriter();
@@ -47,18 +46,18 @@ namespace AAXClean.AudioFilters
                 if (!GetNextChapter())
                     return false;
 
-                var callback = new NewSplitCallback(SplitChapters.Current);
+                var callback = new NewSplitCallback { Chapter = SplitChapters.Current };
                 CreateNewWriter(callback);
                 WriteFrameToFile(audioFrame, true);
-                lastChunk = chunkIndex;
+                LastChunkIndex = chunkIndex;
             }
             else if (frameIndex >= StartFrame)
             {
                 bool newChunk = false;
-                if (chunkIndex > lastChunk)
+                if (chunkIndex > LastChunkIndex)
                 {
                     newChunk = true;
-                    lastChunk = chunkIndex;
+                    LastChunkIndex = chunkIndex;
                 }
                 WriteFrameToFile(audioFrame, newChunk);
             }
@@ -80,7 +79,6 @@ namespace AAXClean.AudioFilters
         {
             SplitChapters?.Dispose();
             base.Dispose(disposing);
-            Closed = true;
         }
     }
 }

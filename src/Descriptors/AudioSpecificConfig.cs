@@ -8,50 +8,50 @@ namespace AAXClean.Descriptors
     //and only parses data through the dependsOnCoreCoder flag in GASpecificConfig (Subpart 4)
     internal class AudioSpecificConfig : BaseDescriptor
     {
-        public override uint RenderSize => base.RenderSize + (uint)Blob.Length;
-        public byte[] Blob { get; }
+        public override uint RenderSize => base.RenderSize + (uint)AscBlob.Length;
+        public byte[] AscBlob { get; }
 
         public AudioSpecificConfig(Stream file) : base(0x5, file)
         {
-            Blob = file.ReadBlock(Size);
+            AscBlob = file.ReadBlock(Size);
         }
         public override void Render(Stream file)
         {
-            file.Write(Blob);
+            file.Write(AscBlob);
         }
 
         public int AudioObjectType
         {
             get
             {
-                return Blob[0] >> 3;
+                return AscBlob[0] >> 3;
             }
             set
             {
-                Blob[0] = (byte)(value << 3 | Blob[0] & 7);
+                AscBlob[0] = (byte)(value << 3 | AscBlob[0] & 7);
             }
         }
         public int SamplingFrequencyIndex
         {
             get
             {
-                return (Blob[0] & 7) << 1 | Blob[1] >> 7;
+                return (AscBlob[0] & 7) << 1 | AscBlob[1] >> 7;
             }
             set
             {
-                Blob[0] = (byte)(value >> 1 | Blob[0] & 0xf8);
-                Blob[1] = (byte)(value << 7 | Blob[1] & 0x7f);
+                AscBlob[0] = (byte)(value >> 1 | AscBlob[0] & 0xf8);
+                AscBlob[1] = (byte)(value << 7 | AscBlob[1] & 0x7f);
             }
         }
         public int ChannelConfiguration
         {
             get
             {
-                return (Blob[1] >> 3) & 7;
+                return (AscBlob[1] >> 3) & 7;
             }
             set
             {
-                Blob[1] = (byte)(value << 3 | Blob[0] & 0x87);
+                AscBlob[1] = (byte)(value << 3 | AscBlob[0] & 0x87);
             }
         }
 
@@ -60,22 +60,22 @@ namespace AAXClean.Descriptors
         {
             get
             {
-                return Blob[1] >> 2 & 1;
+                return AscBlob[1] >> 2 & 1;
             }
             set
             {
-                Blob[1] = (byte)(value << 2 | Blob[1] & 0xfb);
+                AscBlob[1] = (byte)(value << 2 | AscBlob[1] & 0xfb);
             }
         }
         public int DependsOnCoreCoder
         {
             get
             {
-                return Blob[1] >> 1 & 1;
+                return AscBlob[1] >> 1 & 1;
             }
             set
             {
-                Blob[1] = (byte)(value << 1 | Blob[1] & 0xfd);
+                AscBlob[1] = (byte)(value << 1 | AscBlob[1] & 0xfd);
             }
         }
     }

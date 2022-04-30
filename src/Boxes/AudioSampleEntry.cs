@@ -13,7 +13,7 @@ namespace AAXClean.Boxes
         public ushort SampleSize { get; }
         public short PreDefined { get; }
         public ushort SampleRate { get; }
-        private ushort SampleRate_loworder { get; }
+        private readonly ushort SampleRate_loworder;
 
         public EsdsBox Esds => GetChild<EsdsBox>();
 

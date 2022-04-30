@@ -3,7 +3,6 @@ using AAXClean.Boxes;
 using AAXClean.Chunks;
 using AAXClean.Util;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -34,9 +33,7 @@ namespace AAXClean
         public uint TimeScale => Moov.AudioTrack.Mdia.Mdhd.Timescale;
         public int AudioChannels => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.ChannelConfiguration;
         public ushort AudioSampleSize => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleSize;
-        public byte[] AscBlob => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.Blob;
-
-        public bool InputStreamCanSeek { get; protected set; }
+        public byte[] AscBlob => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.AscBlob;
 
         internal FtypBox Ftyp { get; set; }
         internal MoovBox Moov { get; }
@@ -62,18 +59,12 @@ namespace AAXClean
             if (Moov.ILst is not null)
                 AppleTags = new AppleTags(Moov.ILst);
         }
-        public Mp4File(Stream file) : this(file, file.Length)
-        {
-            InputStreamCanSeek = file.CanSeek;
-        }
+        public Mp4File(Stream file) : this(file, file.Length) { }
 
-        public Mp4File(string fileName, FileAccess access = FileAccess.Read) : this(File.Open(fileName, FileMode.Open, access))
-        {
-            InputStreamCanSeek = true;
-        }
+        public Mp4File(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read) : this(File.Open(fileName, FileMode.Open, access, share)) { }
 
         internal virtual Mp4AudioChunkHandler GetAudioChunkHandler()
-            => new(TimeScale, Moov.AudioTrack);
+            => new(Moov.AudioTrack);
 
         public void Save()
         {
@@ -121,6 +112,7 @@ namespace AAXClean
             outputStream.Close();
             return result;
         }
+
         public void ConvertToMultiMp4a(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback)
         {
             using var audioFilter = new LosslessMultipartFilter(
@@ -138,14 +130,15 @@ namespace AAXClean
 
             isCancelled = false;
 
+            Span<byte> chunkBuffer = new byte[1024];
             foreach (var chunk in new MpegChunkCollection(chapterHandler))
             {
                 if (isCancelled)
                     break;
 
-                Span<byte> buff = new byte[chunk.Entry.ChunkSize];
-                InputStream.ReadNextChunk(chunk.Entry.ChunkOffset, buff);
-                isCancelled  =!chunk.Handler.ChunkAvailable(buff, chunk.Entry);
+                Span<byte> chunkdata = chunkBuffer.Slice(0, chunk.Entry.ChunkSize);
+                InputStream.ReadNextChunk(chunk.Entry.ChunkOffset, chunkdata);
+                isCancelled = !chunk.Handler.ChunkAvailable(chunk.Entry, chunkdata);
             }
             Chapters ??= chapterHandler.Chapters;
             return chapterHandler.Chapters;
@@ -158,14 +151,15 @@ namespace AAXClean
 
             isCancelled = false;
 
+            Span<byte> chunkBuffer = new byte[4 * 1024 * 1024];
             foreach (var chunk in new MpegChunkCollection(audioHandler, chunkHandlers))
             {
                 if (isCancelled)
                     break;
 
-                Span<byte> buff = new byte[chunk.Entry.ChunkSize];
-                InputStream.ReadNextChunk(chunk.Entry.ChunkOffset, buff);
-                isCancelled = !chunk.Handler.ChunkAvailable(buff, chunk.Entry);
+                Span<byte> chunkdata = chunkBuffer.Slice(0, chunk.Entry.ChunkSize);
+                InputStream.ReadNextChunk(chunk.Entry.ChunkOffset, chunkdata);
+                isCancelled = !chunk.Handler.ChunkAvailable(chunk.Entry, chunkdata);
 
                 //Throttle update so it doesn't bog down UI
                 if (DateTime.Now > nextUpdate)

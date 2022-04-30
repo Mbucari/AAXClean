@@ -12,6 +12,7 @@ namespace AAXClean.Boxes
         public string Type { get; set; }
         public uint HeaderSize { get; private set; }
         public int Version { get; private set; }
+
         internal BoxHeader(Stream file)
         {
             FilePosition = file.Position;
@@ -26,6 +27,7 @@ namespace AAXClean.Boxes
                 HeaderSize += 8;
             }
         }
+
         public BoxHeader(long boxSize, string boxType)
         {
             if (boxSize < 8)
@@ -41,6 +43,7 @@ namespace AAXClean.Boxes
             Type = boxType;
             HeaderSize = (boxSize > uint.MaxValue ? 16u : 8u);
         }
+
         public override string ToString()
         {
             return Type;

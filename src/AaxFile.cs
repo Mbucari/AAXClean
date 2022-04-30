@@ -23,9 +23,6 @@ namespace AAXClean
             if (FileType != FileType.Aax && FileType != FileType.Aaxc)
                 throw new ArgumentException($"This instance of {nameof(Mp4File)} is not an Aax or Aaxc file.");
 
-            InputStreamCanSeek = file.CanSeek;
-
-
             Ftyp = FtypBox.Create(32, null);
             Ftyp.MajorBrand = "isom";
             Ftyp.MajorVersion = 0x200;
@@ -55,17 +52,11 @@ namespace AAXClean
             //Add a btrt box to the audio sample description.
             BtrtBox.Create(0, MaxBitrate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
         }
-        public AaxFile(Stream file) : this(file, file.Length)
-        {
-            InputStreamCanSeek = file.CanSeek;
-        }
-        public AaxFile(string fileName, FileAccess access = FileAccess.Read) : this(File.Open(fileName, FileMode.Open, access))
-        {
-            InputStreamCanSeek = true;
-        }
+        public AaxFile(Stream file) : this(file, file.Length) { }
+        public AaxFile(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read) : this(File.Open(fileName, FileMode.Open, access, share)) { }
 
         internal override Mp4AudioChunkHandler GetAudioChunkHandler()
-            => new AavdChunkHandler(TimeScale, Moov.AudioTrack, Key, IV);
+            => new AavdChunkHandler(Moov.AudioTrack, Key, IV);
 
         #region Aax(c) Keys
 

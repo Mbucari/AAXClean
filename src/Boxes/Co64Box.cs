@@ -20,6 +20,7 @@ namespace AAXClean.Boxes
             parent.Children.Add(co64Box);
             return co64Box;
         }
+
         private Co64Box(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent) { }
 
         internal Co64Box(Stream file, BoxHeader header, Box parent) : base(file, header, parent)

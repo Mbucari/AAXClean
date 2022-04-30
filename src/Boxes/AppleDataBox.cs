@@ -5,46 +5,12 @@ namespace AAXClean.Boxes
 {
     internal class AppleDataBox : Box
     {
-        public enum FlagType : uint
-        {
-            /// <summary>
-            ///    The box contains UTF-8 text.
-            /// </summary>
-            ContainsText = 0x01,
-
-            /// <summary>
-            ///    The box contains binary data.
-            /// </summary>
-            ContainsData = 0x00,
-
-            /// <summary>
-            ///    The box contains data for a tempo box.
-            /// </summary>
-            ForTempo = 0x15,
-
-            /// <summary>
-            ///    The box contains a raw JPEG image.
-            /// </summary>
-            ContainsJpegData = 0x0D,
-
-            /// <summary>
-            ///    The box contains a raw PNG image.
-            /// </summary>
-            ContainsPngData = 0x0E,
-
-            /// <summary>
-            ///    The box contains a raw BMP image.
-            /// </summary>
-            ContainsBmpData = 0x1B
-
-        }
-
         public override long RenderSize => base.RenderSize + 8 + Data.Length;
-        public FlagType DataType { get; }
+        public AppleDataType DataType { get; }
         public uint Flags { get; }
         public byte[] Data { get; set; }
 
-        public static void Create(Box parent, byte[] data, FlagType type)
+        public static void Create(Box parent, byte[] data, AppleDataType type)
         {
             int size = data.Length + 8 /* empty Box size*/;
             var header = new BoxHeader((uint)size, "data");
@@ -53,7 +19,7 @@ namespace AAXClean.Boxes
 
             parent.Children.Add(dataBox);
         }
-        private AppleDataBox(BoxHeader header, Box parent, byte[] data, FlagType type) : base(header, parent)
+        private AppleDataBox(BoxHeader header, Box parent, byte[] data, AppleDataType type) : base(header, parent)
         {
             DataType = type;
             Flags = 0;
@@ -61,7 +27,7 @@ namespace AAXClean.Boxes
         }
         internal AppleDataBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
         {
-            DataType = (FlagType)file.ReadUInt32BE();
+            DataType = (AppleDataType)file.ReadUInt32BE();
             Flags = file.ReadUInt32BE();
             long length = Header.FilePosition + Header.TotalBoxSize - file.Position;
             Data = file.ReadBlock((int)length);

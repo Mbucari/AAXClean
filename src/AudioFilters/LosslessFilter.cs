@@ -7,8 +7,9 @@ namespace AAXClean.AudioFilters
     internal class LosslessFilter : AudioFilterBase
     {
         private readonly Mp4aWriter Mp4writer;
-        internal override ChapterInfo Chapters 
-        { 
+        private long LastChunkIndex = -1;
+        internal override ChapterInfo Chapters
+        {
             get => base.Chapters;
             set
             {
@@ -23,11 +24,10 @@ namespace AAXClean.AudioFilters
             Mp4writer = new Mp4aWriter(outputStream, mp4Audio.Ftyp, mp4Audio.Moov, audioSize > uint.MaxValue);
         }
 
-        private long lastChunk = -1;
         public override bool FilterFrame(uint chunkIndex, uint frameIndex, Span<byte> audioSample)
         {
-            Mp4writer.AddFrame(audioSample, chunkIndex > lastChunk);
-            lastChunk = chunkIndex;
+            Mp4writer.AddFrame(audioSample, chunkIndex > LastChunkIndex);
+            LastChunkIndex = chunkIndex;
             return true;
         }
 

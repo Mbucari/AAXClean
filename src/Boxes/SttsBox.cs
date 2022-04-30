@@ -20,10 +20,8 @@ namespace AAXClean.Boxes
             parent.Children.Add(sttsBox);
             return sttsBox;
         }
-        private SttsBox(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent)
-        {
+        private SttsBox(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent) { }
 
-        }
         internal SttsBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
         {
             EntryCount = file.ReadUInt32BE();

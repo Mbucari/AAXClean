@@ -6,11 +6,12 @@ namespace AAXClean.Boxes
     internal class AdrmBox : Box
     {
         public override long RenderSize => base.RenderSize + beginBlob.Length + DrmBlob.Length + middleBlob.Length + Checksum.Length + endBlob.Length;
-        private byte[] beginBlob { get; }
+        private readonly byte[] beginBlob;
         public byte[] DrmBlob { get; }
-        private byte[] middleBlob { get; }
+        private readonly byte[] middleBlob;
         public byte[] Checksum { get; }
-        private byte[] endBlob { get; }
+        private readonly byte[] endBlob;
+
         public AdrmBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
         {
             beginBlob = file.ReadBlock(8);

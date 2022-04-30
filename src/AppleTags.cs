@@ -6,14 +6,14 @@ using System.Text;
 
 namespace AAXClean
 {
-    public class AppleTags
+    public sealed class AppleTags
     {
-        private AppleListBox iList { get; }
-        internal IEnumerable<AppleTagBox> Tags => iList.GetChildren<AppleTagBox>();
+        private readonly AppleListBox IList;
+        internal IEnumerable<AppleTagBox> Tags => IList.GetChildren<AppleTagBox>();
         public IEnumerable<string> TagNames => Tags.Select(t => t.Header.Type);
         internal AppleTags(AppleListBox appleListBox)
         {
-            iList = appleListBox;
+            IList = appleListBox;
         }
 
         public string FirstAuthor => Performers?.Split(';')?[0];
@@ -37,19 +37,19 @@ namespace AAXClean
         public string Narrator { get => GetTagString("©nrt"); set => EditOrAddTag("©nrt", value); }
         public string Asin { get => GetTagString("CDEK"); set => EditOrAddTag("CDEK", value); }
         public string ReleaseDate { get => GetTagString("rldt"); set => EditOrAddTag("rldt", value); }
-        public byte[] Cover { get => GetTagBytes("covr"); set => EditOrAddTag("covr", value, AppleDataBox.FlagType.ContainsJpegData); }
-
+        public byte[] Cover { get => GetTagBytes("covr"); set => EditOrAddTag("covr", value, AppleDataType.ContainsJpegData); }
 
         public void EditOrAddTag(string name, string data)
         {
-            EditOrAddTag(name, Encoding.UTF8.GetBytes(data), AppleDataBox.FlagType.ContainsText);
+            EditOrAddTag(name, Encoding.UTF8.GetBytes(data), AppleDataType.ContainsText);
         }
 
         public void EditOrAddTag(string name, byte[] data)
         {
-            EditOrAddTag(name, data, AppleDataBox.FlagType.ContainsData);
+            EditOrAddTag(name, data, AppleDataType.ContainsData);
         }
-        private void EditOrAddTag(string name, byte[] data, AppleDataBox.FlagType type)
+
+        private void EditOrAddTag(string name, byte[] data, AppleDataType type)
         {
             var tag = Tags.Where(t => t.Header.Type == name).FirstOrDefault();
 
@@ -62,17 +62,20 @@ namespace AAXClean
                 tag.Data.Data = data;
             }
         }
+
         public void AddTag(string name, string data)
         {
-            AddTag(name, Encoding.UTF8.GetBytes(data), AppleDataBox.FlagType.ContainsText);
+            AddTag(name, Encoding.UTF8.GetBytes(data), AppleDataType.ContainsText);
         }
+
         public void AddTag(string name, byte[] data)
         {
-            AddTag(name, data, AppleDataBox.FlagType.ContainsData);
+            AddTag(name, data, AppleDataType.ContainsData);
         }
-        private void AddTag(string name, byte[] data, AppleDataBox.FlagType type)
+
+        private void AddTag(string name, byte[] data, AppleDataType type)
         {
-            AppleTagBox.Create(iList, name, data, type);
+            AppleTagBox.Create(IList, name, data, type);
         }
 
         public string GetTagString(string name)

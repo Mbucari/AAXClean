@@ -2,7 +2,7 @@
 
 namespace AAXClean.Boxes
 {
-    internal class BoxFactory
+    internal static class BoxFactory
     {
         internal static Box CreateBox(Stream file, Box parent = null)
         {

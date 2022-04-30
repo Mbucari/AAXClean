@@ -6,9 +6,10 @@ namespace AAXClean.Chunks
 {
     internal sealed class AavdChunkHandler : Mp4AudioChunkHandler
     {
+        private bool disposed = false;
         private AesCryptoTransform Aes { get; }
 
-        public AavdChunkHandler(uint timeScale, TrakBox trak, byte[] key, byte[] iv) : base(timeScale, trak)
+        public AavdChunkHandler(TrakBox trak, byte[] key, byte[] iv) : base(trak)
         {
             if (key is null || key.Length != 16)
                 throw new ArgumentException($"{nameof(key)} must be 16 bytes long.");
@@ -27,7 +28,6 @@ namespace AAXClean.Chunks
             return base.ValidateFrame(audioFrame);
         }
 
-        private bool disposed = false;
         protected override void Dispose(bool disposing)
         {
             if (disposing && !disposed)

@@ -7,6 +7,7 @@ namespace AAXClean.Boxes
     {
         public override long RenderSize => base.RenderSize + 4;
         public uint EntryCount { get; }
+
         internal StsdBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
         {
             EntryCount = file.ReadUInt32BE();
@@ -30,6 +31,7 @@ namespace AAXClean.Boxes
         }
 
         public AudioSampleEntry AudioSampleEntry => GetChild<AudioSampleEntry>();
+
         protected override void Render(Stream file)
         {
             base.Render(file);

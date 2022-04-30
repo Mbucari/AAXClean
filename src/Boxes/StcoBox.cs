@@ -31,9 +31,9 @@ namespace AAXClean.Boxes
                 long chunkOffset = file.ReadUInt32BE();
 
                 //Seems some files incorrectly use stco box with offsets > uint.MAXVALUE (e.g. 50 Self Help Books).
-                //This causes the offsets to wrap around. Unfottnately, somtimes chapters are out of order and
+                //This causes the offsets to uint to overflow. Unfottnately, somtimes chapters are out of order and
                 //chunkOffset is supposed to be less than lastChunkOffset (e.g. Altered Carbon). To attempt to
-                //detect this, only assume it's a wrap around if lastChunkOffset - chunkOffset > uint.MaxValue / 2
+                //detect this, only assume it's an overflow if lastChunkOffset - chunkOffset > uint.MaxValue / 2
                 if (chunkOffset < lastChunkOffset && lastChunkOffset - chunkOffset > uint.MaxValue / 2)
                 {
                     chunkOffset += 1L << 32;

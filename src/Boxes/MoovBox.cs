@@ -14,7 +14,6 @@ namespace AAXClean.Boxes
         public MvhdBox Mvhd => GetChild<MvhdBox>();
         public TrakBox AudioTrack => Tracks.Where(t => t.GetChild<MdiaBox>()?.GetChild<HdlrBox>()?.HandlerType == "soun").FirstOrDefault();
         public TrakBox TextTrack => Tracks.Where(t => t.GetChild<MdiaBox>()?.GetChild<HdlrBox>()?.HandlerType == "text").FirstOrDefault();
-
         public AppleListBox ILst => GetChild<UdtaBox>().GetChild<MetaBox>().GetChild<AppleListBox>();
         public IEnumerable<TrakBox> Tracks => GetChildren<TrakBox>();
 

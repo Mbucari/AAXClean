@@ -5,7 +5,7 @@ namespace AAXClean.Boxes
 {
     internal class MvhdBox : FullBox
     {
-        public override long RenderSize => base.RenderSize + 3 * (Header.Version == 0 ? 4 : 8) + 4 + 4 + 2 + 2 + 8 + Matrix.Length + pre_defined.Length + 4;
+        public override long RenderSize => base.RenderSize + 3 * (Header.Version == 0 ? 4 : 8) + 4 + 4 + 2 + 2 + 8 + Matrix.Length + Pre_defined.Length + 4;
         internal ulong CreationTime { get; }
         internal ulong ModificationTime { get; }
         internal uint Timescale { get; set; }
@@ -15,7 +15,7 @@ namespace AAXClean.Boxes
         internal ushort Reserved { get; }
         internal ulong Reserved2 { get; }
         internal byte[] Matrix { get; }
-        internal byte[] pre_defined { get; }
+        internal byte[] Pre_defined { get; }
         internal uint NextTrackID { get; set; }
 
         public MvhdBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
@@ -39,7 +39,7 @@ namespace AAXClean.Boxes
             Reserved = file.ReadUInt16BE();
             Reserved2 = file.ReadUInt64BE();
             Matrix = file.ReadBlock(4 * 9);
-            pre_defined = file.ReadBlock(4 * 6);
+            Pre_defined = file.ReadBlock(4 * 6);
             NextTrackID = file.ReadUInt32BE();
         }
         protected override void Render(Stream file)
@@ -64,7 +64,7 @@ namespace AAXClean.Boxes
             file.WriteUInt16BE(Reserved);
             file.WriteUInt64BE(Reserved2);
             file.Write(Matrix);
-            file.Write(pre_defined);
+            file.Write(Pre_defined);
             file.WriteUInt32BE(NextTrackID);
         }
     }

@@ -20,10 +20,9 @@ namespace AAXClean.Boxes
             parent.Children.Add(stscBox);
             return stscBox;
         }
-        private StscBox(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent)
-        {
 
-        }
+        private StscBox(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent) { }
+
         internal StscBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
         {
             EntryCount = file.ReadUInt32BE();
@@ -33,6 +32,7 @@ namespace AAXClean.Boxes
                 Samples.Add(new ChunkEntry(file));
             }
         }
+
         protected override void Render(Stream file)
         {
             base.Render(file);
@@ -44,6 +44,7 @@ namespace AAXClean.Boxes
                 file.WriteUInt32BE(sample.SampleDescriptionIndex);
             }
         }
+
         private bool _disposed = false;
         protected override void Dispose(bool disposing)
         {

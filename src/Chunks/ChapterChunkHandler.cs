@@ -6,26 +6,27 @@ using System.Text;
 
 namespace AAXClean.Chunks
 {
-    internal class ChapterChunkHandler : IChunkHandler
+    internal sealed class ChapterChunkHandler : IChunkHandler
     {
         public ChapterInfo Chapters => Builder.ToChapterInfo();
         public double TimeScale { get; }
         public TrakBox Track { get; }
-        private uint LastFrameProcessed { get; set; }
-        private SttsBox.SampleEntry[] Samples { get; set; }
-        private ChapterBuilder Builder { get; set; }
+        private int LastFrameProcessed;
+        private readonly IReadOnlyList<SttsBox.SampleEntry> Samples;
+        private readonly ChapterBuilder Builder;
+        private bool disposed = false;
 
         public ChapterChunkHandler(uint timeScale, TrakBox trak)
         {
             TimeScale = timeScale;
             Track = trak;
-            Samples = Track.Mdia.Minf.Stbl.Stts.Samples.ToArray();
+            Samples = Track.Mdia.Minf.Stbl.Stts.Samples;
             Builder = new ChapterBuilder(TimeScale);
         }
 
-        public bool ChunkAvailable(Span<byte> chunkData, ChunkEntry chunkEntry)
+        public bool ChunkAvailable(ChunkEntry chunkEntry, Span<byte> chunkData)
         {
-            if (chunkEntry.ChunkIndex < 0 || chunkEntry.ChunkIndex >= Samples.Length)
+            if (chunkEntry.ChunkIndex < 0 || chunkEntry.ChunkIndex >= Samples.Count)
                 return false;
 
             for (int start = 0, i = 0; i < chunkEntry.FrameSizes.Length; start += chunkEntry.FrameSizes[i], i++, LastFrameProcessed++)
@@ -41,28 +42,24 @@ namespace AAXClean.Chunks
             return true;
         }
 
-        private bool disposed = false;
         public void Dispose() => Dispose(true);
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
             if (!disposed)
             {
                 if (disposing)
                 {
-                    // Dispose managed resources.
-                    Builder = null;
-                    Samples = null;
+                    Builder.Dispose();
                 }
 
-                // Call the appropriate methods to clean up
-                // unmanaged resources here.
                 disposed = true;
             }
         }
 
-        private class ChapterBuilder
+        private class ChapterBuilder : IDisposable
         {
             public double TimeScale { get; }
+            private bool disposed = false;
             private readonly List<(uint chunkIndex, string title, int frameDelta)> Chapters = new();
             public ChapterBuilder(double timeScale)
             {
@@ -80,7 +77,7 @@ namespace AAXClean.Chunks
             /// </summary>
             public ChapterInfo ToChapterInfo()
             {
-                checked                
+                checked
                 {
                     var orderedChapters = Chapters.OrderBy(c => c.chunkIndex).ToList();
                     List<(string title, long frameEnd)> list = new();
@@ -101,13 +98,26 @@ namespace AAXClean.Chunks
                     var cInfo = new ChapterInfo();
 
                     //Create ChapterInfo by calculating each chapter's duration.
-                    foreach (var c in sortedEnds)
+                    foreach (var (title, frameEnd) in sortedEnds)
                     {
-                        cInfo.AddChapter(c.title, TimeSpan.FromSeconds((c.frameEnd - last) / TimeScale));
-                        last = c.frameEnd;
+                        cInfo.AddChapter(title, TimeSpan.FromSeconds((frameEnd - last) / TimeScale));
+                        last = frameEnd;
                     }
 
                     return cInfo;
+                }
+            }
+            public void Dispose() => Dispose(true);
+            private void Dispose(bool disposing)
+            {
+                if (!disposed)
+                {
+                    if (disposing)
+                    {
+                        Chapters.Clear();
+                    }
+
+                    disposed = true;
                 }
             }
         }

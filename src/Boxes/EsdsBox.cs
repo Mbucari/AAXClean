@@ -9,13 +9,14 @@ namespace AAXClean.Boxes
     internal class EsdsBox : FullBox
     {
         public override long RenderSize => base.RenderSize + ES_Descriptor.RenderSize;
-
         public ES_Descriptor ES_Descriptor { get; }
+
         internal EsdsBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
         {
 
             ES_Descriptor = DescriptorFactory.CreateDescriptor(file) as ES_Descriptor;
         }
+
         protected override void Render(Stream file)
         {
             base.Render(file);

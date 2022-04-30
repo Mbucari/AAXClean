@@ -14,7 +14,7 @@ namespace AAXClean.Descriptors
         protected long FilePosition { get; }
         public byte TagID { get; }
         public int Size { get; }
-        private int SizeBytes { get; }
+        private readonly int SizeBytes;
         public BaseDescriptor(byte tagID, Stream file)
         {
             FilePosition = file.Position - 1;

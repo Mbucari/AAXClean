@@ -8,16 +8,15 @@ namespace AAXClean.AudioFilters
     internal sealed class LosslessMultipartFilter : MultipartFilterBase
     {
         protected override Action<NewSplitCallback> NewFileCallback { get; }
-        private FtypBox Ftyp { get; }
-        private MoovBox Moov { get; }
 
-        private Mp4aWriter writer;
-
-        private BlockingCollection<(bool newFrame, byte[] audioFrame)> waveFrameQueue;
-        private Task encoderLoopTask;
+        private readonly FtypBox Ftyp;
+        private readonly MoovBox Moov;
+        private Mp4aWriter Writer;
+        private Task EncoderLoopTask;
+        private BlockingCollection<(bool newFrame, byte[] audioFrame)> WaveFrameQueue;
 
         public LosslessMultipartFilter(ChapterInfo splitChapters, Action<NewSplitCallback> newFileCallback, FtypBox ftyp, MoovBox moov)
-            : base(moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.Blob, splitChapters)
+            : base(moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.AscBlob, splitChapters)
         {
             NewFileCallback = newFileCallback;
             Ftyp = ftyp;
@@ -26,38 +25,36 @@ namespace AAXClean.AudioFilters
 
         private void EncoderLoop()
         {
-            while (waveFrameQueue.TryTake(out (bool newFrame, byte[] audioFrame) aacFrame, -1))
+            while (WaveFrameQueue.TryTake(out (bool newFrame, byte[] audioFrame) aacFrame, -1))
             {
-                writer.AddFrame(aacFrame.audioFrame, aacFrame.newFrame);
+                Writer.AddFrame(aacFrame.audioFrame, aacFrame.newFrame);
             }
 
-            writer.Close();
-            writer.OutputFile.Close();
+            Writer.Close();
+            Writer.OutputFile.Close();
         }
 
         protected override void CloseCurrentWriter()
         {
-            waveFrameQueue?.CompleteAdding();
-            encoderLoopTask?.Wait();
+            WaveFrameQueue?.CompleteAdding();
+            EncoderLoopTask?.Wait();
         }
-        protected override void WriteFrameToFile(Span<byte> audioFrame, bool newChunk) => waveFrameQueue.Add((newChunk, audioFrame.ToArray()));
+        protected override void WriteFrameToFile(Span<byte> audioFrame, bool newChunk) => WaveFrameQueue.Add((newChunk, audioFrame.ToArray()));
         protected override void CreateNewWriter(NewSplitCallback callback)
         {
             NewFileCallback(callback);
 
-            writer = new Mp4aWriter(callback.OutputFile, Ftyp, Moov, false);
-            writer.RemoveTextTrack();
+            Writer = new Mp4aWriter(callback.OutputFile, Ftyp, Moov, false);
+            Writer.RemoveTextTrack();
 
-            waveFrameQueue = new BlockingCollection<(bool newFrame, byte[] audioFrame)>();
-            encoderLoopTask = new Task(EncoderLoop);
-            encoderLoopTask.Start();
+            WaveFrameQueue = new BlockingCollection<(bool newFrame, byte[] audioFrame)>();
+            EncoderLoopTask = new Task(EncoderLoop);
+            EncoderLoopTask.Start();
         }
 
         protected override void Dispose(bool disposing)
         {
             CloseCurrentWriter();
-            Ftyp.Dispose();
-            Moov.Dispose();
             base.Dispose(disposing);
         }
     }

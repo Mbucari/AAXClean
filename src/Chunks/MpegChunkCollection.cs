@@ -2,11 +2,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace AAXClean.Chunks
 {
-    internal class MpegChunkCollection : IEnumerable<TrackChunk>
+    internal sealed class MpegChunkCollection : IEnumerable<TrackChunk>
     {
         private readonly TrackChunkCollection[] trackChunks;
 

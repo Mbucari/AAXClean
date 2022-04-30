@@ -9,15 +9,16 @@ namespace AAXClean.Descriptors
     {
         public override uint RenderSize => base.RenderSize + GetLength();
         public ushort ES_ID { get; }
-        private byte EsFlags { get; }
+        private readonly byte EsFlags;
 
         private int StreamDependenceFlag => EsFlags >> 7;
         private int URL_Flag => (EsFlags >> 6) & 1;
         private int OCRstreamFlag => (EsFlags >> 6) & 1;
-        private ushort DependsOn_ES_ID { get; }
-        private byte URLlength { get; }
-        private byte[] URLstring { get; }
-        private ushort OCR_ES_Id { get; }
+
+        private readonly ushort DependsOn_ES_ID;
+        private readonly byte URLlength;
+        private readonly byte[] URLstring;
+        private readonly ushort OCR_ES_Id;
 
         public DecoderConfigDescriptor DecoderConfig => GetChild<DecoderConfigDescriptor>();
 

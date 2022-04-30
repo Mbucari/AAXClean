@@ -8,27 +8,28 @@ namespace AAXClean.AudioFilters
     internal class Mp4aWriter
     {
         internal Stream OutputFile { get; }
-        private MoovBox Moov;
-        private readonly long mdatStart = 0;
-        private readonly SttsBox Stts;
-        private StscBox Stsc;
-        private readonly StszBox Stsz;
-        private StcoBox Stco;
-        private readonly Co64Box Co64;
 
         private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
 
-        private long lastSamplesPerChunk = -1;
-        private uint samplesPerChunk = 0;
-        private uint currentChunk = 0;
+        private readonly long mdatStart;
+        private readonly MoovBox Moov;
+        private readonly SttsBox Stts;
+        private readonly StscBox Stsc;
+        private readonly StszBox Stsz;
+        private readonly StcoBox Stco;
+        private readonly Co64Box Co64;
+        private readonly bool IsCo64;
 
-        private readonly bool isCo64;
-        public bool Closed { get; private set; }
+        private long LastSamplesPerChunk = -1;
+        private uint SamplesPerChunk = 0;
+        private uint CurrentChunk = 0;
+        private bool Closed;
+
         public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov, bool co64)
         {
             OutputFile = outputFile;
-            isCo64 = co64;
-            Moov = MakeBlankMoov(moov, isCo64);
+            IsCo64 = co64;
+            Moov = MakeBlankMoov(moov, IsCo64);
 
             Stts = Moov.AudioTrack.Mdia.Minf.Stbl.Stts;
             Stsc = Moov.AudioTrack.Mdia.Minf.Stbl.Stsc;
@@ -42,9 +43,10 @@ namespace AAXClean.AudioFilters
             //Placeholder mdat header
             OutputFile.WriteUInt32BE(0);
             OutputFile.WriteType("mdat");
-            if (isCo64)
+            if (IsCo64)
                 outputFile.WriteInt64BE(0);
         }
+
         public void Close()
         {
             if (Closed) return;
@@ -70,7 +72,7 @@ namespace AAXClean.AudioFilters
             OutputFile.Position = mdatEnd;
 
 
-            Stsc.Samples.Add(new StscBox.ChunkEntry(currentChunk, samplesPerChunk, 1));
+            Stsc.Samples.Add(new StscBox.ChunkEntry(CurrentChunk, SamplesPerChunk, 1));
 
             Stts.EntryCount = 1;
             Stts.Samples.Add(new SttsBox.SampleEntry((uint)Stsz.SampleSizes.Count, AAC_TIME_DOMAIN_SAMPLES));
@@ -78,7 +80,7 @@ namespace AAXClean.AudioFilters
             Stsz.SampleCount = (uint)Stsz.SampleSizes.Count;
             Stsc.EntryCount = (uint)Stsc.Samples.Count;
 
-            if (isCo64)
+            if (IsCo64)
                 Co64.EntryCount = (uint)Co64.ChunkOffsets.Count;
             else
                 Stco.EntryCount = (uint)Stco.ChunkOffsets.Count;
@@ -106,7 +108,7 @@ namespace AAXClean.AudioFilters
                 Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(sampleCount: 1, sampleDelta));
                 Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Add(c.RenderSize);
 
-                if (isCo64)
+                if (IsCo64)
                     Moov.TextTrack.Mdia.Minf.Stbl.Co64.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = entIndex++, ChunkOffset = OutputFile.Position });
                 else
                     Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = entIndex++, ChunkOffset = (uint)OutputFile.Position });
@@ -115,7 +117,7 @@ namespace AAXClean.AudioFilters
             }
             Moov.TextTrack.Mdia.Minf.Stbl.Stts.EntryCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Count;
             Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Count;
-            if (isCo64)
+            if (IsCo64)
                 Moov.TextTrack.Mdia.Minf.Stbl.Co64.EntryCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Co64.ChunkOffsets.Count;
             else
                 Moov.TextTrack.Mdia.Minf.Stbl.Stco.EntryCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Count;
@@ -134,23 +136,23 @@ namespace AAXClean.AudioFilters
             if (newChunk)
             {
 
-                if (isCo64)
-                    Co64.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = currentChunk, ChunkOffset = OutputFile.Position });
+                if (IsCo64)
+                    Co64.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = CurrentChunk, ChunkOffset = OutputFile.Position });
                 else
-                    Stco.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = currentChunk, ChunkOffset = (uint)OutputFile.Position });
+                    Stco.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = CurrentChunk, ChunkOffset = (uint)OutputFile.Position });
 
-                if (samplesPerChunk > 0 && samplesPerChunk != lastSamplesPerChunk)
+                if (SamplesPerChunk > 0 && SamplesPerChunk != LastSamplesPerChunk)
                 {
-                    Stsc.Samples.Add(new StscBox.ChunkEntry(currentChunk, samplesPerChunk, 1));
+                    Stsc.Samples.Add(new StscBox.ChunkEntry(CurrentChunk, SamplesPerChunk, 1));
 
-                    lastSamplesPerChunk = samplesPerChunk;
+                    LastSamplesPerChunk = SamplesPerChunk;
                 }
-                samplesPerChunk = 0;
-                currentChunk++;
+                SamplesPerChunk = 0;
+                CurrentChunk++;
             }
 
             Stsz.SampleSizes.Add(frame.Length);
-            samplesPerChunk++;
+            SamplesPerChunk++;
 
             OutputFile.Write(frame);
         }
@@ -159,12 +161,9 @@ namespace AAXClean.AudioFilters
         {
             Close();
             Stsc?.Samples.Clear();
-            Stsc = null;
             Stsz?.SampleSizes.Clear();
-            Stsc = null;
             Stco?.ChunkOffsets.Clear();
-            Stco = null;
-            Moov = null;
+            Co64?.ChunkOffsets.Clear();
         }
 
         private static MoovBox MakeBlankMoov(MoovBox moov, bool co64)
@@ -206,7 +205,7 @@ namespace AAXClean.AudioFilters
             moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a2);
             moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a3);
             moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a4);
-            moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a5);         
+            moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a5);
 
             MemoryStream ms = new();
 

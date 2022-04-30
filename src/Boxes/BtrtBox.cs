@@ -9,12 +9,14 @@ namespace AAXClean.Boxes
         public uint BufferSizeDB { get; }
         public uint MaxBitrate { get; }
         public uint AvgBitrate { get; }
+
         internal BtrtBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
         {
             BufferSizeDB = file.ReadUInt32BE();
             MaxBitrate = file.ReadUInt32BE();
             AvgBitrate = file.ReadUInt32BE();
         }
+
         public static BtrtBox Create(uint bufferSizeDB, uint maxBitrate, uint avgBitrate, Box parent)
         {
             var header = new BoxHeader(20, "btrt");
