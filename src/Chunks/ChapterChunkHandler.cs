@@ -66,9 +66,9 @@ namespace AAXClean.Chunks
 				TimeScale = timeScale;
 			}
 
-			public void AddChapter(string title, int frameDelta, uint index)
+			public void AddChapter(string title, int frameDelta, uint chunkIndex)
 			{
-				Chapters.Add((index, title, frameDelta));
+				Chapters.Add((chunkIndex, title, frameDelta));
 			}
 
 			/// <summary>
