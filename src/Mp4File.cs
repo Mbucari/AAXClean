@@ -176,6 +176,8 @@ namespace AAXClean
 					nextUpdate = DateTime.Now.AddMilliseconds(200);
 				}
 			}
+
+			ConversionProgressUpdate?.Invoke(this, new ConversionProgressEventArgs { TotalDuration = Duration, ProcessPosition = Duration, ProcessSpeed = Duration / (DateTime.Now - beginProcess) });
 		}
 
 		protected (long audioSize, uint avgBitrate) CalculateAudioSizeAndBitrate()
