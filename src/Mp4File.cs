@@ -25,7 +25,7 @@ namespace AAXClean
 
 		public event EventHandler<ConversionProgressEventArgs> ConversionProgressUpdate;
 		public AppleTags AppleTags { get; }
-		public Stream InputStream { get; }
+		public Stream InputStream => inputStream;
 		public FileType FileType { get; }
 		public TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.AudioTrack.Mdia.Mdhd.Duration / TimeScale);
 		public uint MaxBitrate => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate;
@@ -39,12 +39,13 @@ namespace AAXClean
 		internal MoovBox Moov { get; }
 		internal MdatBox Mdat { get; }
 
+		private TrackedReadStream inputStream;
 		private bool isCancelled = false;
 
 		public Mp4File(Stream file, long fileSize) : base(new BoxHeader(fileSize, "MPEG"), null)
 		{
-			LoadChildren(file);
-			InputStream = file;
+			inputStream = new TrackedReadStream(file, fileSize);
+			LoadChildren(InputStream);
 			Ftyp = GetChild<FtypBox>();
 			Moov = GetChild<MoovBox>();
 			Mdat = GetChild<MdatBox>();
@@ -160,13 +161,17 @@ namespace AAXClean
 				Span<byte> chunkdata = chunkBuffer.Slice(0, chunk.Entry.ChunkSize);
 				InputStream.ReadNextChunk(chunk.Entry.ChunkOffset, chunkdata);
 				isCancelled = !chunk.Handler.ChunkAvailable(chunk.Entry, chunkdata);
+				if (isCancelled)
+				{
+
+				}
 
 				//Throttle update so it doesn't bog down UI
 				if (DateTime.Now > nextUpdate)
 				{
 					TimeSpan position = audioHandler.ProcessPosition;
 					double speed = position / (DateTime.Now - beginProcess);
-					ConversionProgressUpdate?.Invoke(this, new ConversionProgressEventArgs(position, speed));
+					ConversionProgressUpdate?.Invoke(this, new ConversionProgressEventArgs { TotalDuration = Duration, ProcessPosition = position, ProcessSpeed = speed });
 
 					nextUpdate = DateTime.Now.AddMilliseconds(200);
 				}
