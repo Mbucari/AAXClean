@@ -8,13 +8,13 @@ namespace AAXClean.Chunks
 	internal class Mp4AudioChunkHandler : IChunkHandler
 	{
 		public bool Success { get; private set; } = true;
-		public double TimeScale { get; }
 		public AudioFilterBase AudioFilter { get; set; }
 		public TrakBox Track { get; }
 		public TimeSpan ProcessPosition => FrameToTime(LastFrameProcessed);
 
 		private uint LastFrameProcessed;
-		private IEnumerable<SttsBox.SampleEntry> Samples;
+		private readonly double TimeScale;
+		private readonly IEnumerable<SttsBox.SampleEntry> Samples;
 
 		public Mp4AudioChunkHandler(TrakBox trak)
 		{
@@ -84,7 +84,6 @@ namespace AAXClean.Chunks
 				{
 					// Dispose managed resources.
 					AudioFilter?.Dispose();
-					Samples = null;
 				}
 
 				// Call the appropriate methods to clean up

@@ -93,7 +93,7 @@ namespace AAXClean
 			}
 			else
 			{
-				ChapterChunkHandler chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack);
+				ChapterChunkHandler chapterHandler = new ChapterChunkHandler(Moov.TextTrack);
 				ProcessAudio(audioHandler, chapterHandler);
 				Chapters = userChapters ?? chapterHandler.Chapters;
 			}
@@ -126,7 +126,7 @@ namespace AAXClean
 
 		public ChapterInfo GetChapterInfo()
 		{
-			ChapterChunkHandler chapterHandler = new ChapterChunkHandler(TimeScale, Moov.TextTrack);
+			ChapterChunkHandler chapterHandler = new ChapterChunkHandler(Moov.TextTrack);
 
 			isCancelled = false;
 

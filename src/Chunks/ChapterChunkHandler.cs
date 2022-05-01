@@ -9,17 +9,17 @@ namespace AAXClean.Chunks
 	internal sealed class ChapterChunkHandler : IChunkHandler
 	{
 		public ChapterInfo Chapters => Builder.ToChapterInfo();
-		public double TimeScale { get; }
 		public TrakBox Track { get; }
 		private int LastFrameProcessed;
+		private readonly double TimeScale;
 		private readonly IReadOnlyList<SttsBox.SampleEntry> Samples;
 		private readonly ChapterBuilder Builder;
 		private bool disposed = false;
 
-		public ChapterChunkHandler(uint timeScale, TrakBox trak)
+		public ChapterChunkHandler(TrakBox trak)
 		{
-			TimeScale = timeScale;
 			Track = trak;
+			TimeScale = Track.Mdia.Mdhd.Timescale;
 			Samples = Track.Mdia.Minf.Stbl.Stts.Samples;
 			Builder = new ChapterBuilder(TimeScale);
 		}
