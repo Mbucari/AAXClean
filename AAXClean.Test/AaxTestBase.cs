@@ -93,7 +93,7 @@ namespace AAXClean.Test
 				Assert.IsNull(Aax.Chapters);
 				ChapterInfo chapters = Aax.GetChapterInfo();
 #if DEBUG
-                var chs = new StringBuilder();
+                var chs = new System.Text.StringBuilder();
 
                 foreach (var ch in chapters.Chapters)
                 {
@@ -175,7 +175,7 @@ namespace AAXClean.Test
 					hashes.Add(string.Join("", sha.Hash.Select(b => b.ToString("x2"))));
 				}
 #if DEBUG
-                var hs = new StringBuilder();
+                var hs = new System.Text.StringBuilder();
 
                 foreach (var h in hashes)
                 {
