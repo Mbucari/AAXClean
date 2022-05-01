@@ -5,257 +5,257 @@ using System.IO;
 
 namespace AAXClean.AudioFilters
 {
-    internal class Mp4aWriter
-    {
-        internal Stream OutputFile { get; }
+	internal class Mp4aWriter
+	{
+		internal Stream OutputFile { get; }
 
-        private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
+		private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
 
-        private readonly long mdatStart;
-        private readonly MoovBox Moov;
-        private readonly SttsBox Stts;
-        private readonly StscBox Stsc;
-        private readonly StszBox Stsz;
-        private readonly StcoBox Stco;
-        private readonly Co64Box Co64;
-        private readonly bool IsCo64;
+		private readonly long mdatStart;
+		private readonly MoovBox Moov;
+		private readonly SttsBox Stts;
+		private readonly StscBox Stsc;
+		private readonly StszBox Stsz;
+		private readonly StcoBox Stco;
+		private readonly Co64Box Co64;
+		private readonly bool IsCo64;
 
-        private long LastSamplesPerChunk = -1;
-        private uint SamplesPerChunk = 0;
-        private uint CurrentChunk = 0;
-        private bool Closed;
+		private long LastSamplesPerChunk = -1;
+		private uint SamplesPerChunk = 0;
+		private uint CurrentChunk = 0;
+		private bool Closed;
 
-        public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov, bool co64)
-        {
-            OutputFile = outputFile;
-            IsCo64 = co64;
-            Moov = MakeBlankMoov(moov, IsCo64);
+		public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov, bool co64)
+		{
+			OutputFile = outputFile;
+			IsCo64 = co64;
+			Moov = MakeBlankMoov(moov, IsCo64);
 
-            Stts = Moov.AudioTrack.Mdia.Minf.Stbl.Stts;
-            Stsc = Moov.AudioTrack.Mdia.Minf.Stbl.Stsc;
-            Stco = Moov.AudioTrack.Mdia.Minf.Stbl.Stco;
-            Stsz = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz;
-            Co64 = Moov.AudioTrack.Mdia.Minf.Stbl.Co64;
+			Stts = Moov.AudioTrack.Mdia.Minf.Stbl.Stts;
+			Stsc = Moov.AudioTrack.Mdia.Minf.Stbl.Stsc;
+			Stco = Moov.AudioTrack.Mdia.Minf.Stbl.Stco;
+			Stsz = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz;
+			Co64 = Moov.AudioTrack.Mdia.Minf.Stbl.Co64;
 
-            ftyp.Save(OutputFile);
-            mdatStart = OutputFile.Position;
+			ftyp.Save(OutputFile);
+			mdatStart = OutputFile.Position;
 
-            //Placeholder mdat header
-            OutputFile.WriteUInt32BE(0);
-            OutputFile.WriteType("mdat");
-            if (IsCo64)
-                outputFile.WriteInt64BE(0);
-        }
+			//Placeholder mdat header
+			OutputFile.WriteUInt32BE(0);
+			OutputFile.WriteType("mdat");
+			if (IsCo64)
+				outputFile.WriteInt64BE(0);
+		}
 
-        public void Close()
-        {
-            if (Closed) return;
+		public void Close()
+		{
+			if (Closed) return;
 
-            long mdatEnd = OutputFile.Position;
+			long mdatEnd = OutputFile.Position;
 
-            long mdatSize = mdatEnd - mdatStart;
+			long mdatSize = mdatEnd - mdatStart;
 
-            OutputFile.Position = mdatStart;
+			OutputFile.Position = mdatStart;
 
-            if (mdatSize <= uint.MaxValue)
-                OutputFile.WriteUInt32BE((uint)mdatSize);
-            else
-            {
-                OutputFile.WriteUInt32BE(1);
-            }
-            OutputFile.WriteType("mdat");
+			if (mdatSize <= uint.MaxValue)
+				OutputFile.WriteUInt32BE((uint)mdatSize);
+			else
+			{
+				OutputFile.WriteUInt32BE(1);
+			}
+			OutputFile.WriteType("mdat");
 
-            if (mdatSize > uint.MaxValue)
-                OutputFile.WriteInt64BE(mdatSize);
-
-
-            OutputFile.Position = mdatEnd;
+			if (mdatSize > uint.MaxValue)
+				OutputFile.WriteInt64BE(mdatSize);
 
 
-            Stsc.Samples.Add(new StscBox.ChunkEntry(CurrentChunk, SamplesPerChunk, 1));
+			OutputFile.Position = mdatEnd;
 
-            Stts.EntryCount = 1;
-            Stts.Samples.Add(new SttsBox.SampleEntry((uint)Stsz.SampleSizes.Count, AAC_TIME_DOMAIN_SAMPLES));
 
-            Stsz.SampleCount = (uint)Stsz.SampleSizes.Count;
-            Stsc.EntryCount = (uint)Stsc.Samples.Count;
+			Stsc.Samples.Add(new StscBox.ChunkEntry(CurrentChunk, SamplesPerChunk, 1));
 
-            if (IsCo64)
-                Co64.EntryCount = (uint)Co64.ChunkOffsets.Count;
-            else
-                Stco.EntryCount = (uint)Stco.ChunkOffsets.Count;
+			Stts.EntryCount = 1;
+			Stts.Samples.Add(new SttsBox.SampleEntry((uint)Stsz.SampleSizes.Count, AAC_TIME_DOMAIN_SAMPLES));
 
-            Moov.AudioTrack.Mdia.Mdhd.Duration = (ulong)Stsz.SampleCount * AAC_TIME_DOMAIN_SAMPLES;
-            Moov.Mvhd.Duration = Moov.AudioTrack.Mdia.Mdhd.Duration * Moov.Mvhd.Timescale / Moov.AudioTrack.Mdia.Mdhd.Timescale;
-            Moov.AudioTrack.Tkhd.Duration = Moov.Mvhd.Duration;
+			Stsz.SampleCount = (uint)Stsz.SampleSizes.Count;
+			Stsc.EntryCount = (uint)Stsc.Samples.Count;
 
-            Moov.Save(OutputFile);
-            Closed = true;
-        }
+			if (IsCo64)
+				Co64.EntryCount = (uint)Co64.ChunkOffsets.Count;
+			else
+				Stco.EntryCount = (uint)Stco.ChunkOffsets.Count;
 
-        public void WriteChapters(ChapterInfo chapters)
-        {
-            if (Moov.TextTrack is null) return;
+			Moov.AudioTrack.Mdia.Mdhd.Duration = (ulong)Stsz.SampleCount * AAC_TIME_DOMAIN_SAMPLES;
+			Moov.Mvhd.Duration = Moov.AudioTrack.Mdia.Mdhd.Duration * Moov.Mvhd.Timescale / Moov.AudioTrack.Mdia.Mdhd.Timescale;
+			Moov.AudioTrack.Tkhd.Duration = Moov.Mvhd.Duration;
 
-            Moov.TextTrack.Mdia.Minf.Stbl.Stsc.EntryCount = 1;
-            Moov.TextTrack.Mdia.Minf.Stbl.Stsc.Samples.Add(new StscBox.ChunkEntry(1, 1, 1));
+			Moov.Save(OutputFile);
+			Closed = true;
+		}
 
-            uint entIndex = 0;
-            foreach (var c in chapters)
-            {
-                uint sampleDelta = (uint)(c.Duration.TotalSeconds * Moov.AudioTrack.Mdia.Mdhd.Timescale);
+		public void WriteChapters(ChapterInfo chapters)
+		{
+			if (Moov.TextTrack is null) return;
 
-                Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(sampleCount: 1, sampleDelta));
-                Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Add(c.RenderSize);
+			Moov.TextTrack.Mdia.Minf.Stbl.Stsc.EntryCount = 1;
+			Moov.TextTrack.Mdia.Minf.Stbl.Stsc.Samples.Add(new StscBox.ChunkEntry(1, 1, 1));
 
-                if (IsCo64)
-                    Moov.TextTrack.Mdia.Minf.Stbl.Co64.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = entIndex++, ChunkOffset = OutputFile.Position });
-                else
-                    Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = entIndex++, ChunkOffset = (uint)OutputFile.Position });
+			uint entIndex = 0;
+			foreach (Chapter c in chapters)
+			{
+				uint sampleDelta = (uint)(c.Duration.TotalSeconds * Moov.AudioTrack.Mdia.Mdhd.Timescale);
 
-                c.WriteChapter(OutputFile);
-            }
-            Moov.TextTrack.Mdia.Minf.Stbl.Stts.EntryCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Count;
-            Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Count;
-            if (IsCo64)
-                Moov.TextTrack.Mdia.Minf.Stbl.Co64.EntryCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Co64.ChunkOffsets.Count;
-            else
-                Moov.TextTrack.Mdia.Minf.Stbl.Stco.EntryCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Count;
+				Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(sampleCount: 1, sampleDelta));
+				Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Add(c.RenderSize);
 
-        }
+				if (IsCo64)
+					Moov.TextTrack.Mdia.Minf.Stbl.Co64.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = entIndex++, ChunkOffset = OutputFile.Position });
+				else
+					Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = entIndex++, ChunkOffset = (uint)OutputFile.Position });
 
-        public void RemoveTextTrack()
-        {
-            Moov.Children.Remove(Moov.TextTrack);
+				c.WriteChapter(OutputFile);
+			}
+			Moov.TextTrack.Mdia.Minf.Stbl.Stts.EntryCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Count;
+			Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Count;
+			if (IsCo64)
+				Moov.TextTrack.Mdia.Minf.Stbl.Co64.EntryCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Co64.ChunkOffsets.Count;
+			else
+				Moov.TextTrack.Mdia.Minf.Stbl.Stco.EntryCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Count;
 
-            Moov.Mvhd.NextTrackID--;
-        }
+		}
 
-        public void AddFrame(Span<byte> frame, bool newChunk)
-        {
-            if (newChunk)
-            {
+		public void RemoveTextTrack()
+		{
+			Moov.Children.Remove(Moov.TextTrack);
 
-                if (IsCo64)
-                    Co64.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = CurrentChunk, ChunkOffset = OutputFile.Position });
-                else
-                    Stco.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = CurrentChunk, ChunkOffset = (uint)OutputFile.Position });
+			Moov.Mvhd.NextTrackID--;
+		}
 
-                if (SamplesPerChunk > 0 && SamplesPerChunk != LastSamplesPerChunk)
-                {
-                    Stsc.Samples.Add(new StscBox.ChunkEntry(CurrentChunk, SamplesPerChunk, 1));
+		public void AddFrame(Span<byte> frame, bool newChunk)
+		{
+			if (newChunk)
+			{
 
-                    LastSamplesPerChunk = SamplesPerChunk;
-                }
-                SamplesPerChunk = 0;
-                CurrentChunk++;
-            }
+				if (IsCo64)
+					Co64.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = CurrentChunk, ChunkOffset = OutputFile.Position });
+				else
+					Stco.ChunkOffsets.Add(new ChunkOffsetEntry { EntryIndex = CurrentChunk, ChunkOffset = (uint)OutputFile.Position });
 
-            Stsz.SampleSizes.Add(frame.Length);
-            SamplesPerChunk++;
+				if (SamplesPerChunk > 0 && SamplesPerChunk != LastSamplesPerChunk)
+				{
+					Stsc.Samples.Add(new StscBox.ChunkEntry(CurrentChunk, SamplesPerChunk, 1));
 
-            OutputFile.Write(frame);
-        }
+					LastSamplesPerChunk = SamplesPerChunk;
+				}
+				SamplesPerChunk = 0;
+				CurrentChunk++;
+			}
 
-        public void Dispose()
-        {
-            Close();
-            Stsc?.Samples.Clear();
-            Stsz?.SampleSizes.Clear();
-            Stco?.ChunkOffsets.Clear();
-            Co64?.ChunkOffsets.Clear();
-        }
+			Stsz.SampleSizes.Add(frame.Length);
+			SamplesPerChunk++;
 
-        private static MoovBox MakeBlankMoov(MoovBox moov, bool co64)
-        {
-            SttsBox t1 = null;
-            StscBox t2 = null;
-            StszBox t3 = null;
-            StcoBox t4 = null;
-            Co64Box t5 = null;
-            UdtaBox ttUdata = null;
+			OutputFile.Write(frame);
+		}
 
-            bool hasTextTrack = false;
-            if (moov.TextTrack != null)
-            {
-                hasTextTrack = true;
-                t1 = moov.TextTrack.Mdia.Minf.Stbl.Stts;
-                t2 = moov.TextTrack.Mdia.Minf.Stbl.Stsc;
-                t3 = moov.TextTrack.Mdia.Minf.Stbl.Stsz;
-                t4 = moov.TextTrack.Mdia.Minf.Stbl.Stco;
-                t5 = moov.TextTrack.Mdia.Minf.Stbl.Co64;
+		public void Dispose()
+		{
+			Close();
+			Stsc?.Samples.Clear();
+			Stsz?.SampleSizes.Clear();
+			Stco?.ChunkOffsets.Clear();
+			Co64?.ChunkOffsets.Clear();
+		}
 
-                moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t1);
-                moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t2);
-                moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t3);
-                moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t4);
-                moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t5);
+		private static MoovBox MakeBlankMoov(MoovBox moov, bool co64)
+		{
+			SttsBox t1 = null;
+			StscBox t2 = null;
+			StszBox t3 = null;
+			StcoBox t4 = null;
+			Co64Box t5 = null;
+			UdtaBox ttUdata = null;
 
-                ttUdata = moov.TextTrack.GetChild<UdtaBox>();
-                moov.TextTrack.Children.Remove(ttUdata);
-            }
+			bool hasTextTrack = false;
+			if (moov.TextTrack != null)
+			{
+				hasTextTrack = true;
+				t1 = moov.TextTrack.Mdia.Minf.Stbl.Stts;
+				t2 = moov.TextTrack.Mdia.Minf.Stbl.Stsc;
+				t3 = moov.TextTrack.Mdia.Minf.Stbl.Stsz;
+				t4 = moov.TextTrack.Mdia.Minf.Stbl.Stco;
+				t5 = moov.TextTrack.Mdia.Minf.Stbl.Co64;
 
-            var a1 = moov.AudioTrack.Mdia.Minf.Stbl.Stts;
-            var a2 = moov.AudioTrack.Mdia.Minf.Stbl.Stsc;
-            var a3 = moov.AudioTrack.Mdia.Minf.Stbl.Stsz;
-            var a4 = moov.AudioTrack.Mdia.Minf.Stbl.Stco;
-            var a5 = moov.AudioTrack.Mdia.Minf.Stbl.Co64;
+				moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t1);
+				moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t2);
+				moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t3);
+				moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t4);
+				moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t5);
 
-            moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a1);
-            moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a2);
-            moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a3);
-            moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a4);
-            moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a5);
+				ttUdata = moov.TextTrack.GetChild<UdtaBox>();
+				moov.TextTrack.Children.Remove(ttUdata);
+			}
 
-            MemoryStream ms = new();
+			SttsBox a1 = moov.AudioTrack.Mdia.Minf.Stbl.Stts;
+			StscBox a2 = moov.AudioTrack.Mdia.Minf.Stbl.Stsc;
+			StszBox a3 = moov.AudioTrack.Mdia.Minf.Stbl.Stsz;
+			StcoBox a4 = moov.AudioTrack.Mdia.Minf.Stbl.Stco;
+			Co64Box a5 = moov.AudioTrack.Mdia.Minf.Stbl.Co64;
 
-            moov.Save(ms);
+			moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a1);
+			moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a2);
+			moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a3);
+			moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a4);
+			moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a5);
 
-            moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a1);
-            moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a2);
-            moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a3);
-            moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a4);
-            moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a5);
+			MemoryStream ms = new();
 
-            if (hasTextTrack)
-            {
-                moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t1);
-                moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t2);
-                moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t3);
-                moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t4);
-                moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t5);
-                moov.TextTrack.Children.Add(ttUdata);
-            }
+			moov.Save(ms);
 
-            ms.Position = 0;
+			moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a1);
+			moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a2);
+			moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a3);
+			moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a4);
+			moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a5);
 
-            MoovBox newMoov = new(ms, new BoxHeader(ms), null);
+			if (hasTextTrack)
+			{
+				moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t1);
+				moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t2);
+				moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t3);
+				moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t4);
+				moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t5);
+				moov.TextTrack.Children.Add(ttUdata);
+			}
 
-            SttsBox.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
-            StscBox.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
-            StszBox.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
+			ms.Position = 0;
 
-            if (hasTextTrack)
-            {
-                SttsBox.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);
-                StscBox.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);
-                StszBox.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);
-            }
+			MoovBox newMoov = new(ms, new BoxHeader(ms), null);
 
-            if (co64)
-            {
-                Co64Box.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
-                if (hasTextTrack)
-                    Co64Box.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);
-            }
-            else
-            {
-                StcoBox.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
-                if (hasTextTrack)
-                    StcoBox.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);
-            }
+			SttsBox.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
+			StscBox.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
+			StszBox.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
 
-            return newMoov;
-        }
-    }
+			if (hasTextTrack)
+			{
+				SttsBox.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);
+				StscBox.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);
+				StszBox.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);
+			}
+
+			if (co64)
+			{
+				Co64Box.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
+				if (hasTextTrack)
+					Co64Box.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);
+			}
+			else
+			{
+				StcoBox.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
+				if (hasTextTrack)
+					StcoBox.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);
+			}
+
+			return newMoov;
+		}
+	}
 }
