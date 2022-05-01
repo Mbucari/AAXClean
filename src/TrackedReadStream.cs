@@ -54,6 +54,10 @@ namespace AAXClean
 			
 			return count;
 		}
+		public override void Close()
+		{
+			BaseStream.Close();
+		}
 
 		public override long Seek(long offset, SeekOrigin origin)
 		{
