@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AAXClean.Chunks
 {
@@ -34,7 +35,6 @@ namespace AAXClean.Chunks
 		/// </summary>
 		private class MpegChunkEnumerator : IEnumerator<TrackChunk>
 		{
-			private bool ReachedEnd = false;
 			private TrackEnums[] Tracks;
 			public MpegChunkEnumerator(TrackChunkCollection[] trackChunks)
 			{
@@ -66,7 +66,8 @@ namespace AAXClean.Chunks
 
 			public bool MoveNext()
 			{
-				if (ReachedEnd) return false;
+				//Exit the enumerator after all tracks have reached the end
+				if (Tracks.All(t => t.TrackEnded)) return false;
 
 				TrackEnums nextTrack = Tracks[0];
 
@@ -92,11 +93,6 @@ namespace AAXClean.Chunks
 				//Once we have the next chuk offset, move to the next chunk in the track where we found it
 				nextTrack.TrackEnded = !nextTrack.ChunkEnumerator.MoveNext();
 
-				//Exit the enumerator after all tracks have reached the end
-				ReachedEnd = true;
-				foreach (TrackEnums t in Tracks)
-					ReachedEnd &= t.TrackEnded;
-
 				return true;
 			}
 
@@ -105,6 +101,7 @@ namespace AAXClean.Chunks
 				for (int i = 0; i < Tracks.Length; i++)
 					Tracks[i].ChunkEnumerator.Reset();
 			}
+
 			private class TrackEnums
 			{
 				/// <summary>
