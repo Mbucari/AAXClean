@@ -29,36 +29,20 @@ namespace AAXClean.Chunks
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
 
-		private class Tracks
-		{
-			/// <summary>
-			/// The Track's Chunk enumerator
-			/// </summary>
-			public IEnumerator<ChunkEntry> ChunkEnumerator { get; init; }
-			/// <summary>
-			/// The handler of the track tha is being enumerated
-			/// </summary>
-			public IChunkHandler Handler { get; init; }
-			/// <summary>
-			/// If true, the last chunk in the track has already been enumerated
-			/// </summary>
-			public bool TrackEnded { get; set; }
-		}
-
 		/// <summary>
 		/// Enumerates Chunks in one or more <see cref="TrakBox"/> in order of the chunk offset.
 		/// </summary>
 		private class MpegChunkEnumerator : IEnumerator<TrackChunk>
 		{
 			private bool ReachedEnd = false;
-			private Tracks[] Tracks;
+			private TrackEnums[] Tracks;
 			public MpegChunkEnumerator(TrackChunkCollection[] trackChunks)
 			{
-				Tracks = new Tracks[trackChunks.Length];
+				Tracks = new TrackEnums[trackChunks.Length];
 
 				for (int i = 0; i < trackChunks.Length; i++)
 				{
-					Tracks[i] = new Tracks
+					Tracks[i] = new TrackEnums
 					{
 						Handler = trackChunks[i].Handler,
 						ChunkEnumerator = trackChunks[i].GetEnumerator(),
@@ -84,29 +68,28 @@ namespace AAXClean.Chunks
 			{
 				if (ReachedEnd) return false;
 
-				//Find the next chunk offset across all Tracks
-				Tracks t = Tracks[0];
+				TrackEnums nextTrack = Tracks[0];
 
+				//Find the next chunk offset across all Tracks
 				for (int i = 1; i < Tracks.Length; i++)
 				{
-					if (Tracks[i].ChunkEnumerator.Current.ChunkOffset < t.ChunkEnumerator.Current.ChunkOffset && !Tracks[i].TrackEnded)
-						t = Tracks[i];
+					if (Tracks[i].ChunkEnumerator.Current.ChunkOffset < nextTrack.ChunkEnumerator.Current.ChunkOffset && !Tracks[i].TrackEnded)
+						nextTrack = Tracks[i];
 				}
 
 				Current = new TrackChunk
 				{
-					Entry = t.ChunkEnumerator.Current,
-					Handler = t.Handler
+					Entry = nextTrack.ChunkEnumerator.Current,
+					Handler = nextTrack.Handler
 				};
 
 				//Once we have the next chuk offset, move to the next chunk in the track where we found it
-				t.TrackEnded = !t.ChunkEnumerator.MoveNext();
+				nextTrack.TrackEnded = !nextTrack.ChunkEnumerator.MoveNext();
 
-				bool theend = true;
-				for (int i = 0; i < Tracks.Length; i++)
-					theend &= Tracks[i].TrackEnded;
 				//Exit the enumerator after all tracks have reached the end
-				ReachedEnd = theend;
+				ReachedEnd = true;
+				foreach (TrackEnums t in Tracks)
+					ReachedEnd &= t.TrackEnded;
 
 				return true;
 			}
@@ -115,6 +98,21 @@ namespace AAXClean.Chunks
 			{
 				for (int i = 0; i < Tracks.Length; i++)
 					Tracks[i].ChunkEnumerator.Reset();
+			}
+			private class TrackEnums
+			{
+				/// <summary>
+				/// The Track's Chunk enumerator
+				/// </summary>
+				public IEnumerator<ChunkEntry> ChunkEnumerator { get; init; }
+				/// <summary>
+				/// The handler of the track tha is being enumerated
+				/// </summary>
+				public IChunkHandler Handler { get; init; }
+				/// <summary>
+				/// If true, the last chunk in the track has already been enumerated
+				/// </summary>
+				public bool TrackEnded { get; set; }
 			}
 		}
 
@@ -144,7 +142,7 @@ namespace AAXClean.Chunks
 				private IReadOnlyList<int> SampleSizes;
 				private readonly uint EntryCount;
 				private readonly (uint firstFrameIndex, uint numFrames)[] ChunkFrameTable;
-				private uint CurrentChunkIndex = 0;
+				private int CurrentChunkIndex = 0;
 				public TrachChunkEnumerator(TrakBox track)
 				{
 					SampleSizes = track.Mdia.Minf.Stbl.Stsz.SampleSizes;
@@ -177,7 +175,7 @@ namespace AAXClean.Chunks
 				{
 					if (CurrentChunkIndex >= EntryCount) return false;
 
-					ChunkOffsetEntry cEntry = ChunkTable[(int)CurrentChunkIndex];
+					ChunkOffsetEntry cEntry = ChunkTable[CurrentChunkIndex];
 
 					(uint firstFrameIndex, uint numFrames) = ChunkFrameTable[cEntry.EntryIndex];
 
