@@ -16,7 +16,7 @@ namespace AAXClean.AudioFilters
 		private BlockingCollection<(bool newFrame, byte[] audioFrame)> WaveFrameQueue;
 
 		public LosslessMultipartFilter(ChapterInfo splitChapters, Action<NewSplitCallback> newFileCallback, FtypBox ftyp, MoovBox moov)
-			: base(moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.AscBlob, splitChapters)
+			: base(moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.AscBlob, splitChapters)
 		{
 			NewFileCallback = newFileCallback;
 			Ftyp = ftyp;

@@ -10,7 +10,7 @@ namespace AAXClean.Descriptors
 		private readonly byte[] Blob;
 		public uint MaxBitrate { get; set; }
 		public uint AverageBitrate { get; set; }
-		public AudioSpecificConfig AudioConfig => GetChild<AudioSpecificConfig>();
+		public AudioSpecificConfig AudioSpecificConfig => GetChild<AudioSpecificConfig>();
 
 		public DecoderConfigDescriptor(Stream file) : base(0x4, file)
 		{

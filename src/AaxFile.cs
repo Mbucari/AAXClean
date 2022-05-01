@@ -36,7 +36,7 @@ namespace AAXClean
 			(_, uint avgBitrate) = CalculateAudioSizeAndBitrate();
 
 			//This is the flag that, if set, prevents cover art from loading on android.
-			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioConfig.DependsOnCoreCoder = 0;
+			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.DependsOnCoreCoder = 0;
 			//Must change the audio type from aavd to mp4a
 			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Header.Type = "mp4a";
 			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
