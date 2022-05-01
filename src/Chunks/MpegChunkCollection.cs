@@ -215,7 +215,7 @@ namespace AAXClean.Chunks
 							//This is only necessary to correct for an early error in AAXClean when
 							//decrypting to m4b. This bug was introduced to Libation in 5.1.9 and was
 							//fixed in 5.4.4. All m4b files created in affected versions will fail to
-							//convert to mp3.
+							//convert to mp3 without this check.
 							int[] correctFrameSizes = new int[i];
 							Array.Copy(frameSizes, 0, correctFrameSizes, 0, i);
 							return (frameSizes, totalChunkSize);
@@ -229,9 +229,9 @@ namespace AAXClean.Chunks
 				}
 
 				/// <summary>
-				/// Effectively expand the Stsc table to one entry for every chunk. Table size is 8 * <paramref name="numChunks"/> bytes.
+				/// Effectively expand the Stsc table to one entry per chunk. Table size is 8 * <paramref name="numChunks"/> bytes.
 				/// </summary>
-				/// <returns>A zero-base table of frame indices and sizes for each chunk</returns>
+				/// <returns>A zero-base table of frame indices and sizes for each chunk index</returns>
 				private static (uint firstFrameIndex, uint numFrames)[] CalculateChunkFrameTable(uint numChunks, IReadOnlyList<StscBox.ChunkEntry> stscSamples)
 				{
 					(uint firstFrameIndex, uint numFrames)[] table = new (uint, uint)[numChunks];
