@@ -73,6 +73,12 @@ namespace AAXClean.Chunks
 				//Find the next chunk offset across all Tracks
 				for (int i = 1; i < Tracks.Length; i++)
 				{
+					if (nextTrack.TrackEnded)
+					{
+						nextTrack = Tracks[i];
+						continue;
+					}
+
 					if (Tracks[i].ChunkEnumerator.Current.ChunkOffset < nextTrack.ChunkEnumerator.Current.ChunkOffset && !Tracks[i].TrackEnded)
 						nextTrack = Tracks[i];
 				}
