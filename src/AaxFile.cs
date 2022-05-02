@@ -86,16 +86,16 @@ namespace AAXClean
 
 			if (sampleTimes.Count != chapterNames.Count) return null;
 
-			ChunkEntryList centList = new(textTrak);
+			ChunkEntryList cEntryList = new(textTrak);
 
-			if (centList.Count != chapterNames.Count) return null;
+			if (cEntryList.Count != chapterNames.Count) return null;
 
 			ChapterBuilder builder = new(TimeScale);
 
 			for (int i = 0; i < chapterNames.Count; i++)
 			{
-				ChunkEntry centry = centList[i];
-				builder.AddChapter(chapterNames[(int)centry.ChunkIndex], (int)sampleTimes[i].FrameDelta, centry.ChunkIndex);
+				ChunkEntry cEntry = cEntryList[i];
+				builder.AddChapter(cEntry.ChunkIndex, chapterNames[(int)cEntry.ChunkIndex], (int)sampleTimes[i].FrameDelta);
 			}
 
 			ChapterInfo chlist = builder.ToChapterInfo();

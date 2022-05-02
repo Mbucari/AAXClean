@@ -1,15 +1,14 @@
 ﻿using AAXClean.Boxes;
 using System;
-using System.Collections.Generic;
 
 namespace AAXClean.Chunks
 {
 	internal abstract class ChunkHandlerBase :IDisposable
 	{
 		public TrakBox Track { get; }
-		public TimeSpan ProcessPosition => FrameToTime(LastFrameProcessed);
+		public TimeSpan ProcessPosition => Stts.FrameToTime(TimeScale, LastFrameProcessed);
 
-		protected readonly IReadOnlyList<SttsBox.SampleEntry> Samples;
+		protected readonly SttsBox Stts;
 		protected readonly double TimeScale;
 		protected uint LastFrameProcessed;
 		protected bool Disposed = false;
@@ -18,33 +17,10 @@ namespace AAXClean.Chunks
 		{
 			Track = trak;
 			TimeScale = Track.Mdia.Mdhd.Timescale;
-			Samples = Track.Mdia.Minf.Stbl.Stts.Samples;
+			Stts = Track.Mdia.Minf.Stbl.Stts;
 		}
 
 		public abstract bool HandleChunk(ChunkEntry chunkEntry, Span<byte> chunkData);
-
-		/// <summary>
-		/// Gets the playback timestamp of an audio frame.
-		/// </summary>
-		private TimeSpan FrameToTime(uint frameIndex)
-		{
-			double beginDelta = 0;
-
-			foreach (SttsBox.SampleEntry entry in Samples)
-			{
-				if (frameIndex > entry.FrameCount)
-				{
-					beginDelta += (ulong)entry.FrameCount * entry.FrameDelta;
-					frameIndex -= entry.FrameCount;
-				}
-				else
-				{
-					beginDelta += (ulong)frameIndex * entry.FrameDelta;
-					break;
-				}
-			}
-			return TimeSpan.FromSeconds(beginDelta / TimeScale);
-		}
 
 		public void Dispose() => Dispose(true);
 		protected virtual void Dispose(bool disposing)

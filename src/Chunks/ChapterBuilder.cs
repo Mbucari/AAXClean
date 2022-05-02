@@ -14,7 +14,7 @@ namespace AAXClean.Chunks
 			TimeScale = timeScale;
 		}
 
-		public void AddChapter(string title, int frameDelta, uint chunkIndex)
+		public void AddChapter(uint chunkIndex, string title, int frameDelta)
 		{
 			Chapters.Add((chunkIndex, title, frameDelta));
 		}
@@ -43,7 +43,7 @@ namespace AAXClean.Chunks
 				List<(string title, long frameEnd)> sortedEnds = list.OrderBy(c => c.frameEnd).ToList();
 
 				last = 0;
-				ChapterInfo cInfo = new ChapterInfo();
+				ChapterInfo cInfo = new();
 
 				//Create ChapterInfo by calculating each chapter's duration.
 				foreach ((string title, long frameEnd) in sortedEnds)

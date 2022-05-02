@@ -3,24 +3,25 @@ using System.IO;
 
 namespace AAXClean
 {
+	/// <summary>
+	/// A read-only stream that tracks the stream position based on the number of bytes read. 
+	/// </summary>
 	internal class TrackedReadStream : Stream
 	{
-		private Stream BaseStream { get; }
-		private long BaseStreamLength { get; }
+		private readonly Stream BaseStream;
+		private readonly long BaseStreamLength;
 		private long ReadPosition = 0;
+
 		public TrackedReadStream(Stream baseStream, long streamLength)
 		{
 			BaseStream = baseStream;
 			BaseStreamLength = streamLength;
 		}
+
 		public override bool CanRead => BaseStream.CanRead;
-
 		public override bool CanSeek => BaseStream.CanSeek;
-
 		public override long Length => BaseStreamLength;
-
 		public override bool CanWrite => false;
-
 		public override long Position
 		{
 			get => CanSeek ? BaseStream.Position : ReadPosition;

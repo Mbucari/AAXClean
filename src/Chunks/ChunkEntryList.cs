@@ -17,7 +17,7 @@ namespace AAXClean.Chunks
 		private delegate ChunkEntry ChunkEntryDelegate(int chunkIndex);
 
 		public TrakBox Track { get; }
-		public int Count => ChunkFrameTable.Length;
+		public int Count => EntryCount;
 		public ChunkEntry this[int chunkIndex] => GetChunkEntry(chunkIndex);
 
 		public ChunkEntryList(TrakBox track)

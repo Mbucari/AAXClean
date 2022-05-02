@@ -31,6 +31,30 @@ namespace AAXClean.Boxes
 				Samples.Add(new SampleEntry(file));
 			}
 		}
+
+		/// <summary>
+		/// Gets the playback timestamp of an audio frame.
+		/// </summary>
+		public System.TimeSpan FrameToTime(double timeScale, uint frameIndex)
+		{
+			double beginDelta = 0;
+
+			foreach (SampleEntry entry in Samples)
+			{
+				if (frameIndex > entry.FrameCount)
+				{
+					beginDelta += (ulong)entry.FrameCount * entry.FrameDelta;
+					frameIndex -= entry.FrameCount;
+				}
+				else
+				{
+					beginDelta += (ulong)frameIndex * entry.FrameDelta;
+					break;
+				}
+			}
+			return System.TimeSpan.FromSeconds(beginDelta / timeScale);
+		}
+
 		protected override void Render(Stream file)
 		{
 			base.Render(file);

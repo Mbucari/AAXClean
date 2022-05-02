@@ -10,21 +10,26 @@ namespace AAXClean.Chunks
 	/// </summary>
 	internal sealed class MpegChunkEnumerable : IEnumerable<TrackChunk>
 	{
-		private readonly (ChunkEntryList trackChunks, ChunkHandlerBase handler)[] TrackHandlers;
+		private readonly TrackEnum[] Tracks;
 		/// <summary>
 		/// Enumerates over all chunks in all Mpeg tracks in order of the cunk offset
 		/// </summary>
-		/// <param name="handler">A track chunk handler</param>
-		/// <param name="handlers">Additional track chunk handlers</param>
+		/// <param name="handlers">Track chunk handlers</param>
 		public MpegChunkEnumerable(params ChunkHandlerBase[] handlers)
 		{
-			TrackHandlers = new (ChunkEntryList trackChunks, ChunkHandlerBase handler)[handlers.Length];
+			Tracks = new TrackEnum[handlers.Length];
 
 			for (int i = 0; i < handlers.Length; i++)
-				TrackHandlers[i] = (new ChunkEntryList(handlers[i].Track), handlers[i]);
+			{
+				Tracks[i] = new TrackEnum
+				{
+					ChunkEntryList = new ChunkEntryList(handlers[i].Track),
+					Handler = handlers[i]
+				};
+			}
 		}
 		public IEnumerator<TrackChunk> GetEnumerator()
-			=> new MpegChunkEnumerator(TrackHandlers);
+			=> new MpegChunkEnumerator(Tracks);
 		IEnumerator IEnumerable.GetEnumerator()
 			=> GetEnumerator();
 
@@ -33,18 +38,14 @@ namespace AAXClean.Chunks
 		/// </summary>
 		private class MpegChunkEnumerator : IEnumerator<TrackChunk>
 		{
-			private TrackEnums[] Tracks;
-			public MpegChunkEnumerator(params (ChunkEntryList trackChunks, ChunkHandlerBase handler)[] trackHandlers)
+			private readonly TrackEnum[] Tracks;
+			public MpegChunkEnumerator(TrackEnum[] tracks)
 			{
-				Tracks = new TrackEnums[trackHandlers.Length];
+				Tracks = tracks;
 
-				for (int i = 0; i < trackHandlers.Length; i++)
+				for (int i = 0; i < tracks.Length; i++)
 				{
-					Tracks[i] = new TrackEnums
-					{
-						Handler = trackHandlers[i].handler,
-						ChunkEnumerator = trackHandlers[i].trackChunks.GetEnumerator(),
-					};
+					Tracks[i].ChunkEnumerator = Tracks[i].ChunkEntryList.GetEnumerator();
 					Tracks[i].TrackEnded = !Tracks[i].ChunkEnumerator.MoveNext();
 				}
 			}
@@ -57,9 +58,9 @@ namespace AAXClean.Chunks
 				for (int i = 0; i < Tracks.Length; i++)
 				{
 					Tracks[i].ChunkEnumerator.Dispose();
-					//Do not dispose of Tracks[i].Handler. It is still used after the MpegChunkCollection
+					//Do not dispose of Tracks[i].Handler or Tracks[i].ChunkEntryList.
+					//They are still used after the MpegChunkEnumerator disposes
 				}
-				Tracks = null;
 			}
 
 			public bool MoveNext()
@@ -67,7 +68,7 @@ namespace AAXClean.Chunks
 				//Exit the enumerator after all tracks have reached the end
 				if (Tracks.All(t => t.TrackEnded)) return false;
 
-				TrackEnums nextTrack = Tracks[0];
+				TrackEnum nextTrack = Tracks[0];
 
 				//Find the next chunk offset across all Tracks
 				for (int i = 1; i < Tracks.Length; i++)
@@ -99,22 +100,22 @@ namespace AAXClean.Chunks
 				for (int i = 0; i < Tracks.Length; i++)
 					Tracks[i].ChunkEnumerator.Reset();
 			}
-
-			private class TrackEnums
-			{
-				/// <summary>
-				/// The Track's Chunk enumerator
-				/// </summary>
-				public IEnumerator<ChunkEntry> ChunkEnumerator { get; init; }
-				/// <summary>
-				/// The handler of the track tha is being enumerated
-				/// </summary>
-				public ChunkHandlerBase Handler { get; init; }
-				/// <summary>
-				/// If true, the last chunk in the track has already been enumerated
-				/// </summary>
-				public bool TrackEnded { get; set; }
-			}
+		}
+		private class TrackEnum
+		{
+			public ChunkEntryList ChunkEntryList { get; init; }
+			/// <summary>
+			/// The handler of the track tha is being enumerated
+			/// </summary>
+			public ChunkHandlerBase Handler { get; init; }
+			/// <summary>
+			/// The <see cref="ChunkEntryList"/> enumerator
+			/// </summary>
+			public IEnumerator<ChunkEntry> ChunkEnumerator { get; set; }
+			/// <summary>
+			/// If true, the last chunk in the track has already been enumerated
+			/// </summary>
+			public bool TrackEnded { get; set; }
 		}
 	}
 }

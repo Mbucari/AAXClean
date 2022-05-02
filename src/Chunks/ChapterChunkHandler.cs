@@ -1,6 +1,5 @@
 ﻿using AAXClean.Boxes;
 using System;
-using System.Collections.Generic;
 using System.Text;
 
 namespace AAXClean.Chunks
@@ -17,7 +16,7 @@ namespace AAXClean.Chunks
 
 		public override bool HandleChunk(ChunkEntry chunkEntry, Span<byte> chunkData)
 		{
-			if (chunkEntry.ChunkIndex < 0 || chunkEntry.ChunkIndex >= Samples.Count)
+			if (chunkEntry.ChunkIndex < 0 || chunkEntry.ChunkIndex >= Stts.EntryCount)
 				return false;
 
 			for (int start = 0, i = 0; i < chunkEntry.FrameSizes.Length; start += chunkEntry.FrameSizes[i], i++, LastFrameProcessed++)
@@ -27,7 +26,7 @@ namespace AAXClean.Chunks
 
 				string title = Encoding.UTF8.GetString(chunki.Slice(2, size));
 
-				Builder.AddChapter(title, (int)Samples[(int)LastFrameProcessed].FrameDelta, chunkEntry.ChunkIndex);
+				Builder.AddChapter(chunkEntry.ChunkIndex, title, (int)Stts.Samples[(int)LastFrameProcessed].FrameDelta);
 			}
 
 			return true;
