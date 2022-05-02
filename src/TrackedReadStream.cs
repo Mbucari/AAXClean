@@ -46,7 +46,7 @@ namespace AAXClean
 
 			ReadPosition += btsRead;
 
-			return count;
+			return btsRead;
 		}
 
 		protected override void Dispose(bool disposing)
