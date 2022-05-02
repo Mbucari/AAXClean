@@ -1,15 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AAXClean
 {
 	internal class TrackedReadStream : Stream
 	{
-		private  Stream BaseStream { get; }
+		private Stream BaseStream { get; }
 		private long BaseStreamLength { get; }
 		private long ReadPosition = 0;
 		public TrackedReadStream(Stream baseStream, long streamLength)
@@ -25,8 +21,8 @@ namespace AAXClean
 
 		public override bool CanWrite => false;
 
-		public override long Position 
-		{ 
+		public override long Position
+		{
 			get => CanSeek ? BaseStream.Position : ReadPosition;
 			set
 			{
@@ -49,7 +45,7 @@ namespace AAXClean
 			} while (btsRead < count);
 
 			ReadPosition += btsRead;
-			
+
 			return count;
 		}
 

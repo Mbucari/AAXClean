@@ -66,10 +66,10 @@ namespace AAXClean
 
 		public ChapterInfo GetChaptersFromMetadata()
 		{
-			var textTrak = Moov.TextTrack;
+			TrakBox textTrak = Moov.TextTrack;
 
 			//Get chapter names from metadata box in chapter track
-			var chapterNames =
+			List<string> chapterNames =
 				textTrak
 				?.GetChild<UdtaBox>()
 				?.GetChild<MetaBox>()
@@ -82,23 +82,23 @@ namespace AAXClean
 
 			if (chapterNames is null) return null;
 
-			var sampleTimes = textTrak.Mdia.Minf.Stbl.Stts.Samples;
+			List<SttsBox.SampleEntry> sampleTimes = textTrak.Mdia.Minf.Stbl.Stts.Samples;
 
 			if (sampleTimes.Count != chapterNames.Count) return null;
 
-			var centList = new ChunkEntryList(textTrak);
+			ChunkEntryList centList = new(textTrak);
 
 			if (centList.Count != chapterNames.Count) return null;
 
-			var builder = new ChapterBuilder(TimeScale);
+			ChapterBuilder builder = new(TimeScale);
 
 			for (int i = 0; i < chapterNames.Count; i++)
 			{
-				var centry = centList[i];
+				ChunkEntry centry = centList[i];
 				builder.AddChapter(chapterNames[(int)centry.ChunkIndex], (int)sampleTimes[i].FrameDelta, centry.ChunkIndex);
 			}
 
-			var chlist = builder.ToChapterInfo();
+			ChapterInfo chlist = builder.ToChapterInfo();
 
 			Chapters ??= chlist;
 

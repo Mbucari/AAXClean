@@ -39,7 +39,7 @@ namespace AAXClean
 		internal MoovBox Moov { get; }
 		internal MdatBox Mdat { get; }
 
-		private TrackedReadStream inputStream;
+		private readonly TrackedReadStream inputStream;
 		private bool isCancelled = false;
 
 		public Mp4File(Stream file, long fileSize) : base(new BoxHeader(fileSize, "MPEG"), null)

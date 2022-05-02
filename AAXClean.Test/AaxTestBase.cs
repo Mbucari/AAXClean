@@ -92,7 +92,7 @@ namespace AAXClean.Test
 			{
 				Assert.IsNull(Aax.Chapters);
 				ChapterInfo chapters = Aax.GetChapterInfo();
-				
+
 #if DEBUG
                 var chs = new System.Text.StringBuilder();
 
@@ -104,7 +104,7 @@ namespace AAXClean.Test
 				Assert.IsNotNull(Aax.Chapters);
 				Assert.AreEqual(Chapters.Count, chapters.Count);
 				List<Chapter> ch_1 = Chapters.Chapters.ToList();
-				List<Chapter> ch_2 = chapters.Chapters.ToList(); 
+				List<Chapter> ch_2 = chapters.Chapters.ToList();
 
 				for (int i = 0; i < chapters.Count; i++)
 				{
