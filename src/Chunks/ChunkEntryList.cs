@@ -50,7 +50,7 @@ namespace AAXClean.Chunks
 
 			(uint firstFrameIndex, uint numFrames) = ChunkFrameTable[cEntry.EntryIndex];
 
-			(int[] frameSizes, int totalChunkSize) = Stsz.GetChunkFrameSizes(firstFrameIndex, numFrames);
+			(int[] frameSizes, int totalChunkSize) = Stsz.GetFrameSizes(firstFrameIndex, numFrames);
 
 			return new ChunkEntry
 			{

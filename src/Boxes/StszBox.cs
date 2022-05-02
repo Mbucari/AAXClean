@@ -41,10 +41,16 @@ namespace AAXClean.Boxes
 			}
 		}
 
-		public (int[] frameSizes, int totalChunkSize) GetChunkFrameSizes(uint firstFrameIndex, uint numFrames)
+		/// <summary>
+		/// Retrieves the frame sizes for <paramref name="numFrames"/> frames starting at <paramref name="firstFrameIndex"/>
+		/// </summary>
+		/// <param name="firstFrameIndex">The first frame to retrieve the size of</param>
+		/// <param name="numFrames">The number of frames to retrieve sizes of</param>
+		/// <returns>A tuple containing the size of each frame in an int[] and the total size of all the frames. </returns>
+		public (int[] frameSizes, int framesSizeTotal) GetFrameSizes(uint firstFrameIndex, uint numFrames)
 		{
 			int[] frameSizes = new int[numFrames];
-			int totalChunkSize = 0;
+			int framesSizeTotal = 0;
 
 			for (uint i = 0; i < numFrames; i++)
 			{
@@ -57,14 +63,14 @@ namespace AAXClean.Boxes
 					//convert to mp3 without this check.
 					int[] correctFrameSizes = new int[i];
 					Array.Copy(frameSizes, 0, correctFrameSizes, 0, i);
-					return (frameSizes, totalChunkSize);
+					return (frameSizes, framesSizeTotal);
 				}
 
 				frameSizes[i] = SampleSizes[(int)(i + firstFrameIndex)];
-				totalChunkSize += frameSizes[i];
+				framesSizeTotal += frameSizes[i];
 			}
 
-			return (frameSizes, totalChunkSize);
+			return (frameSizes, framesSizeTotal);
 		}
 
 
