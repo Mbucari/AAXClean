@@ -19,6 +19,8 @@ namespace AAXClean.Chunks
 			if (chunkEntry.ChunkIndex < 0 || chunkEntry.ChunkIndex >= Stts.EntryCount)
 				return false;
 
+			bool success = true;
+
 			for (int start = 0, i = 0; i < chunkEntry.FrameSizes.Length; start += chunkEntry.FrameSizes[i], i++, LastFrameProcessed++)
 			{
 				Span<byte> chunki = chunkData.Slice(start, chunkEntry.FrameSizes[i]);
@@ -27,9 +29,15 @@ namespace AAXClean.Chunks
 				string title = Encoding.UTF8.GetString(chunki.Slice(2, size));
 
 				Builder.AddChapter(chunkEntry.ChunkIndex, title, (int)Stts.Samples[(int)LastFrameProcessed].FrameDelta);
+
+				if (FrameFilter is not null)
+				{
+					success = FrameFilter.FilterFrame(chunkEntry, LastFrameProcessed, chunki);
+					if (!success) break;
+				}
 			}
 
-			return true;
+			return success;
 		}
 
 		protected override void Dispose(bool disposing)
