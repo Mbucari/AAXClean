@@ -6,12 +6,12 @@ using System.Collections.Generic;
 namespace AAXClean.Chunks
 {
 	/// <summary>
-	/// A readonly list of <see cref="ChunkEntry"/> from a <see cref="TrakBox"/> in order of the chunk offset.
+	/// A readonly list of <see cref="ChunkEntry"/> from a <see cref="TrakBox"/>
 	/// </summary>
 	internal class ChunkEntryList : IReadOnlyList<ChunkEntry>
 	{
 		private readonly IReadOnlyList<ChunkOffsetEntry> ChunkTable;
-		private readonly StszBox Stsz;
+		private readonly IReadOnlyList<int> SampleSizes;
 		private readonly int EntryCount;
 		private readonly (uint firstFrameIndex, uint numFrames)[] ChunkFrameTable;
 		private delegate ChunkEntry ChunkEntryDelegate(int chunkIndex);
@@ -23,7 +23,7 @@ namespace AAXClean.Chunks
 		public ChunkEntryList(TrakBox track)
 		{
 			Track = track;
-			Stsz = Track.Mdia.Minf.Stbl.Stsz;
+			SampleSizes = Track.Mdia.Minf.Stbl.Stsz.SampleSizes;
 
 			if (Track.Mdia.Minf.Stbl.Stco is not null)
 			{
@@ -36,7 +36,7 @@ namespace AAXClean.Chunks
 				EntryCount = (int)Track.Mdia.Minf.Stbl.Co64.EntryCount;
 			}
 
-			ChunkFrameTable = Track.Mdia.Minf.Stbl.Stsc.CalculateChunkFrameTable();
+			ChunkFrameTable = CalculateChunkFrameTable(EntryCount, Track.Mdia.Minf.Stbl.Stsc.Samples);
 		}
 
 		public IEnumerator<ChunkEntry> GetEnumerator()
@@ -50,7 +50,7 @@ namespace AAXClean.Chunks
 
 			(uint firstFrameIndex, uint numFrames) = ChunkFrameTable[cEntry.EntryIndex];
 
-			(int[] frameSizes, int totalChunkSize) = Stsz.GetChunkFrameSizes(firstFrameIndex, numFrames);
+			(int[] frameSizes, int totalChunkSize) = GetChunkFrameSizes(SampleSizes, firstFrameIndex, numFrames);
 
 			return new ChunkEntry
 			{
@@ -60,6 +60,55 @@ namespace AAXClean.Chunks
 				ChunkSize = totalChunkSize,
 				ChunkOffset = cEntry.ChunkOffset
 			};
+		}
+
+		private static (int[] frameSizes, int totalChunkSize) GetChunkFrameSizes(IReadOnlyList<int> sampleSizes, uint firstFrameIndex, uint numFrames)
+		{
+			int[] frameSizes = new int[numFrames];
+			int totalChunkSize = 0;
+
+			for (uint i = 0; i < numFrames; i++)
+			{
+				if (i + firstFrameIndex >= sampleSizes.Count)
+				{
+					//This handels a case where the last Stsc entry was not written correctly.
+					//This is only necessary to correct for an early error in AAXClean when
+					//decrypting to m4b. This bug was introduced to Libation in 5.1.9 and was
+					//fixed in 5.4.4. All m4b files created in affected versions will fail to
+					//convert to mp3 without this check.
+					int[] correctFrameSizes = new int[i];
+					Array.Copy(frameSizes, 0, correctFrameSizes, 0, i);
+					return (frameSizes, totalChunkSize);
+				}
+
+				frameSizes[i] = sampleSizes[(int)(i + firstFrameIndex)];
+				totalChunkSize += frameSizes[i];
+			}
+
+			return (frameSizes, totalChunkSize);
+		}
+
+		/// <summary>
+		/// Effectively expand the Stsc table to one entry per chunk. Table size is 8 * <paramref name="numChunks"/> bytes.
+		/// </summary>
+		/// <returns>A zero-base table of frame indices and sizes for each chunk index</returns>
+		private static (uint firstFrameIndex, uint numFrames)[] CalculateChunkFrameTable(int numChunks, IReadOnlyList<StscBox.ChunkEntry> stscSamples)
+		{
+			(uint firstFrameIndex, uint numFrames)[] table = new (uint, uint)[numChunks];
+
+			uint firstFrameIndex = 0;
+			int lastStscIndex = 0;
+
+			for (uint chunk = 1; chunk <= numChunks; chunk++)
+			{
+				if (lastStscIndex + 1 < stscSamples.Count && chunk == stscSamples[lastStscIndex + 1].FirstChunk)
+					lastStscIndex++;
+
+				table[chunk - 1] = (firstFrameIndex, stscSamples[lastStscIndex].SamplesPerChunk);
+				firstFrameIndex += stscSamples[lastStscIndex].SamplesPerChunk;
+			}
+
+			return table;
 		}
 
 		/// <summary>
