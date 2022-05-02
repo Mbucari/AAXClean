@@ -18,20 +18,10 @@ namespace AAXClean
 		public byte[] Key { get; private set; }
 		public byte[] IV { get; private set; }
 
-		public AaxFile(Stream file, long fileSize) : base(file, fileSize)
+		public AaxFile(Stream file, long fileSize, bool additionalFixups = true) : base(file, fileSize)
 		{
 			if (FileType != FileType.Aax && FileType != FileType.Aaxc)
 				throw new ArgumentException($"This instance of {nameof(Mp4File)} is not an Aax or Aaxc file.");
-
-			Ftyp = FtypBox.Create(32, null);
-			Ftyp.MajorBrand = "isom";
-			Ftyp.MajorVersion = 0x200;
-			Ftyp.CompatibleBrands.Clear();
-			Ftyp.CompatibleBrands.Add("iso2");
-			Ftyp.CompatibleBrands.Add("mp41");
-			Ftyp.CompatibleBrands.Add("M4A ");
-			Ftyp.CompatibleBrands.Add("M4B ");
-
 
 			(_, uint avgBitrate) = CalculateAudioSizeAndBitrate();
 
@@ -41,16 +31,31 @@ namespace AAXClean
 			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Header.Type = "mp4a";
 			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
 
-			//Remove extra Free boxes
-			List<Box> children = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children;
-			for (int i = children.Count - 1; i >= 0; i--)
+			//These actions will alter the mpeg-4 size and should not
+			//be performed unless re-writing the entire mpeg-4 file.
+			if (additionalFixups)
 			{
-				if (children[i] is FreeBox)
-					children.RemoveAt(i);
+				//Remove extra Free boxes
+				List<Box> children = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children;
+				for (int i = children.Count - 1; i >= 0; i--)
+				{
+					if (children[i] is FreeBox)
+						children.RemoveAt(i);
+				}
+
+				//Add a btrt box to the audio sample description.
+				BtrtBox.Create(0, MaxBitrate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
+
+				Ftyp = FtypBox.Create(32, null);
+				Ftyp.CompatibleBrands.Clear();
+				Ftyp.CompatibleBrands.Add("iso2");
+				Ftyp.CompatibleBrands.Add("mp41");
+				Ftyp.CompatibleBrands.Add("M4A ");
+				Ftyp.CompatibleBrands.Add("M4B ");
 			}
 
-			//Add a btrt box to the audio sample description.
-			BtrtBox.Create(0, MaxBitrate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
+			Ftyp.MajorBrand = "isom";
+			Ftyp.MajorVersion = 0x200;
 		}
 		public AaxFile(Stream file) : this(file, file.Length) { }
 		public AaxFile(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read) : this(File.Open(fileName, FileMode.Open, access, share)) { }
