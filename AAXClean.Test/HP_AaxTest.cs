@@ -105,7 +105,7 @@ namespace AAXClean.Test
 		}
 
 		[TestMethod]
-		public void _5_WriteTags()
+		public void _6_WriteTags()
 		{
 			string tagstring = "this is a tag string";
 			Mp4File mp4File = null;
@@ -136,29 +136,29 @@ namespace AAXClean.Test
 				ConversionResult result = Aax.ConvertToMp4a(tempfile);
 				Aax.Close();
 
-				Assert.AreEqual(result, ConversionResult.NoErrorsDetected);
+				Assert.AreEqual(ConversionResult.NoErrorsDetected, result);
 
 				mp4File = new Mp4File(tempfile.Name);
 
-				Assert.AreEqual(mp4File.AppleTags.Album, tagstring);
-				Assert.AreEqual(mp4File.AppleTags.AlbumArtists, tagstring);
-				Assert.AreEqual(mp4File.AppleTags.Asin, tagstring);
-				Assert.AreEqual(mp4File.AppleTags.Comment, tagstring);
-				Assert.AreEqual(mp4File.AppleTags.Copyright, tagstring);
-				Assert.AreEqual(mp4File.AppleTags.Generes, tagstring);
-				Assert.AreEqual(mp4File.AppleTags.LongDescription, tagstring);
-				Assert.AreEqual(mp4File.AppleTags.Narrator, tagstring);
-				Assert.AreEqual(mp4File.AppleTags.Performers, tagstring);
-				Assert.AreEqual(mp4File.AppleTags.ProductID, tagstring);
-				Assert.AreEqual(mp4File.AppleTags.Publisher, tagstring);
-				Assert.AreEqual(mp4File.AppleTags.ReleaseDate, tagstring);
-				Assert.AreEqual(mp4File.AppleTags.Title, tagstring);
-				Assert.AreEqual(mp4File.AppleTags.Year, tagstring);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.Album);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.AlbumArtists);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.Asin);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.Comment);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.Copyright);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.Generes);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.LongDescription);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.Narrator);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.Performers);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.ProductID);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.Publisher);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.ReleaseDate);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.Title);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.Year);
 
 				sha.ComputeHash(mp4File.AppleTags.Cover);
 
 				string coverHash = string.Join("", sha.Hash.Select(b => b.ToString("x2")));
-				Assert.AreEqual(coverHash, newPicHash);
+				Assert.AreEqual(newPicHash, coverHash);
 			}
 			finally
 			{

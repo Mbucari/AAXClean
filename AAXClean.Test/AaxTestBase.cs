@@ -92,6 +92,7 @@ namespace AAXClean.Test
 			{
 				Assert.IsNull(Aax.Chapters);
 				ChapterInfo chapters = Aax.GetChapterInfo();
+				
 #if DEBUG
                 var chs = new System.Text.StringBuilder();
 
@@ -101,13 +102,15 @@ namespace AAXClean.Test
                 }
 #endif
 				Assert.IsNotNull(Aax.Chapters);
-				Assert.AreEqual(chapters.Count, Chapters.Count);
-				List<Chapter> ch_1 = chapters.Chapters.ToList();
-				List<Chapter> ch_2 = Chapters.Chapters.ToList();
+				Assert.AreEqual(Chapters.Count, chapters.Count);
+				List<Chapter> ch_1 = Chapters.Chapters.ToList();
+				List<Chapter> ch_2 = chapters.Chapters.ToList(); 
 
 				for (int i = 0; i < chapters.Count; i++)
 				{
 					Assert.AreEqual(ch_1[i].Duration, ch_2[i].Duration);
+					Assert.AreEqual(ch_1[i].StartOffset, ch_2[i].StartOffset);
+					Assert.AreEqual(ch_1[i].EndOffset, ch_2[i].EndOffset);
 					Assert.AreEqual(ch_1[i].Title, ch_2[i].Title);
 				}
 			}
@@ -118,14 +121,41 @@ namespace AAXClean.Test
 		}
 
 		[TestMethod]
-		public void _3_ConvertSingle()
+		public void _3_ReadChaptersFromMetadata()
+		{
+			try
+			{
+				Assert.IsNull(Aax.Chapters);
+				ChapterInfo chapters = Aax.GetChaptersFromMetadata();
+
+				Assert.IsNotNull(Aax.Chapters);
+				Assert.AreEqual(Chapters.Count, chapters.Count);
+				List<Chapter> ch_1 = Chapters.Chapters.ToList();
+				List<Chapter> ch_2 = chapters.Chapters.ToList();
+
+				for (int i = 0; i < chapters.Count; i++)
+				{
+					Assert.AreEqual(ch_1[i].Duration, ch_2[i].Duration);
+					Assert.AreEqual(ch_1[i].StartOffset, ch_2[i].StartOffset);
+					Assert.AreEqual(ch_1[i].EndOffset, ch_2[i].EndOffset);
+					Assert.AreEqual(ch_1[i].Title, ch_2[i].Title);
+				}
+			}
+			finally
+			{
+				Aax.Close();
+			}
+		}
+
+		[TestMethod]
+		public void _4_ConvertSingle()
 		{
 			try
 			{
 				FileStream tempfile = TestFiles.NewTempFile();
 				ConversionResult result = Aax.ConvertToMp4a(tempfile);
 
-				Assert.AreEqual(result, ConversionResult.NoErrorsDetected);
+				Assert.AreEqual(ConversionResult.NoErrorsDetected, result);
 
 				using SHA1 sha = SHA1.Create();
 
@@ -151,7 +181,7 @@ namespace AAXClean.Test
 		}
 
 		[TestMethod]
-		public void _4_ConvertMultiple()
+		public void _5_ConvertMultiple()
 		{
 			try
 			{

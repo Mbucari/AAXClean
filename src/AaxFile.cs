@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace AAXClean
 {
@@ -62,6 +63,47 @@ namespace AAXClean
 
 		internal override Mp4AudioChunkHandler GetAudioChunkHandler()
 			=> new AavdChunkHandler(Moov.AudioTrack, Key, IV);
+
+		public ChapterInfo GetChaptersFromMetadata()
+		{
+			var textTrak = Moov.TextTrack;
+
+			//Get chapter names from metadata box in chapter track
+			var chapterNames =
+				textTrak
+				?.GetChild<UdtaBox>()
+				?.GetChild<MetaBox>()
+				?.GetChild<AppleListBox>()
+				?.Children
+				?.Cast<AppleTagBox>()
+				?.Where(b => b.Header.Type == "©nam")
+				?.Select(b => Encoding.UTF8.GetString(b.Data.Data))
+				?.ToList();
+
+			if (chapterNames is null) return null;
+
+			var sampleTimes = textTrak.Mdia.Minf.Stbl.Stts.Samples;
+
+			if (sampleTimes.Count != chapterNames.Count) return null;
+
+			var centList = new ChunkEntryList(textTrak);
+
+			if (centList.Count != chapterNames.Count) return null;
+
+			var builder = new ChapterBuilder(TimeScale);
+
+			for (int i = 0; i < chapterNames.Count; i++)
+			{
+				var centry = centList[i];
+				builder.AddChapter(chapterNames[(int)centry.ChunkIndex], (int)sampleTimes[i].FrameDelta, centry.ChunkIndex);
+			}
+
+			var chlist = builder.ToChapterInfo();
+
+			Chapters ??= chlist;
+
+			return chlist;
+		}
 
 		#region Aax(c) Keys
 

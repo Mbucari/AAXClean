@@ -2,9 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AAXClean.Chunks
 {
@@ -17,10 +14,11 @@ namespace AAXClean.Chunks
 		private readonly IReadOnlyList<int> SampleSizes;
 		private readonly int EntryCount;
 		private readonly (uint firstFrameIndex, uint numFrames)[] ChunkFrameTable;
+		private delegate ChunkEntry ChunkEntryDelegate(int chunkIndex);
+
 		public TrakBox Track { get; }
 		public int Count => ChunkFrameTable.Length;
-		public ChunkEntry this[int chunkIndex]
-			=> GetChunkEntry(ChunkTable, SampleSizes, ChunkFrameTable, chunkIndex);
+		public ChunkEntry this[int chunkIndex] => GetChunkEntry(chunkIndex);
 
 		public ChunkEntryList(TrakBox track)
 		{
@@ -42,22 +40,17 @@ namespace AAXClean.Chunks
 		}
 
 		public IEnumerator<ChunkEntry> GetEnumerator()
-			=> new TrachChunkEnumerator(ChunkTable, SampleSizes, ChunkFrameTable);
+			=> new TrachChunkEnumerator(EntryCount, i => GetChunkEntry(i));
 
-		IEnumerator IEnumerable.GetEnumerator()
-			=> GetEnumerator();
+		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-		private static ChunkEntry GetChunkEntry(
-			IReadOnlyList<ChunkOffsetEntry> chunkTable,
-			IReadOnlyList<int> sampleSizes,
-			(uint firstFrameIndex, uint numFrames)[] chunkFrameTable,
-			int chunkIndex)
+		private ChunkEntry GetChunkEntry(int chunkIndex)
 		{
-			ChunkOffsetEntry cEntry = chunkTable[chunkIndex];
+			ChunkOffsetEntry cEntry = ChunkTable[chunkIndex];
 
-			(uint firstFrameIndex, uint numFrames) = chunkFrameTable[cEntry.EntryIndex];
+			(uint firstFrameIndex, uint numFrames) = ChunkFrameTable[cEntry.EntryIndex];
 
-			(int[] frameSizes, int totalChunkSize) = GetChunkFrameSizes(sampleSizes, firstFrameIndex, numFrames);
+			(int[] frameSizes, int totalChunkSize) = GetChunkFrameSizes(SampleSizes, firstFrameIndex, numFrames);
 
 			return new ChunkEntry
 			{
@@ -118,27 +111,19 @@ namespace AAXClean.Chunks
 			return table;
 		}
 
-
 		/// <summary>
 		/// Enumerate over all track chunks in a track, and retrieve all information about that chunk.
 		/// </summary>
 		private class TrachChunkEnumerator : IEnumerator<ChunkEntry>
 		{
-			private readonly IReadOnlyList<ChunkOffsetEntry> ChunkTable;
-			private readonly IReadOnlyList<int> SampleSizes;
-			private readonly (uint firstFrameIndex, uint numFrames)[] ChunkFrameTable;
 			private readonly int EntryCount;
-
+			private readonly ChunkEntryDelegate GetChunkEntryDelegate;
 			private int CurrentChunkIndex = 0;
-			public TrachChunkEnumerator(
-				IReadOnlyList<ChunkOffsetEntry> chunkTable,
-				IReadOnlyList<int> sampleSizes,
-				(uint firstFrameIndex, uint numFrames)[] chunkFrameTable)
+
+			public TrachChunkEnumerator(int entryCount, ChunkEntryDelegate chunkEntryDelegate)
 			{
-				ChunkTable = chunkTable;
-				SampleSizes = sampleSizes;
-				ChunkFrameTable = chunkFrameTable;
-				EntryCount = ChunkFrameTable.Length;
+				EntryCount = entryCount;
+				GetChunkEntryDelegate = chunkEntryDelegate;
 			}
 
 			public ChunkEntry Current { get; private set; }
@@ -151,9 +136,8 @@ namespace AAXClean.Chunks
 			{
 				if (CurrentChunkIndex >= EntryCount) return false;
 
-				Current = GetChunkEntry(ChunkTable, SampleSizes, ChunkFrameTable, CurrentChunkIndex);
+				Current = GetChunkEntryDelegate(CurrentChunkIndex++);
 
-				CurrentChunkIndex++;
 				return true;
 			}
 
