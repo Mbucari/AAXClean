@@ -92,27 +92,16 @@ namespace AAXClean.Test
 			{
 				Assert.IsNull(Aax.Chapters);
 				ChapterInfo chapters = Aax.GetChapterInfo();
-				
+
 #if DEBUG
-                var chs = new System.Text.StringBuilder();
+				var chs = new System.Text.StringBuilder();
 
-                foreach (var ch in chapters.Chapters)
-                {
-                    chs.AppendLine($"_chapters.AddChapter(\"{ch.Title}\", TimeSpan.FromTicks({ch.Duration.Ticks}));");
-                }
-#endif
-				Assert.IsNotNull(Aax.Chapters);
-				Assert.AreEqual(Chapters.Count, chapters.Count);
-				List<Chapter> ch_1 = Chapters.Chapters.ToList();
-				List<Chapter> ch_2 = chapters.Chapters.ToList(); 
-
-				for (int i = 0; i < chapters.Count; i++)
+				foreach (var ch in chapters.Chapters)
 				{
-					Assert.AreEqual(ch_1[i].Duration, ch_2[i].Duration);
-					Assert.AreEqual(ch_1[i].StartOffset, ch_2[i].StartOffset);
-					Assert.AreEqual(ch_1[i].EndOffset, ch_2[i].EndOffset);
-					Assert.AreEqual(ch_1[i].Title, ch_2[i].Title);
+					chs.AppendLine($"_chapters.AddChapter(\"{ch.Title}\", TimeSpan.FromTicks({ch.Duration.Ticks}));");
 				}
+#endif
+				VerifyChapters(chapters);
 			}
 			finally
 			{
@@ -127,23 +116,27 @@ namespace AAXClean.Test
 			{
 				Assert.IsNull(Aax.Chapters);
 				ChapterInfo chapters = Aax.GetChaptersFromMetadata();
-
-				Assert.IsNotNull(Aax.Chapters);
-				Assert.AreEqual(Chapters.Count, chapters.Count);
-				List<Chapter> ch_1 = Chapters.Chapters.ToList();
-				List<Chapter> ch_2 = chapters.Chapters.ToList();
-
-				for (int i = 0; i < chapters.Count; i++)
-				{
-					Assert.AreEqual(ch_1[i].Duration, ch_2[i].Duration);
-					Assert.AreEqual(ch_1[i].StartOffset, ch_2[i].StartOffset);
-					Assert.AreEqual(ch_1[i].EndOffset, ch_2[i].EndOffset);
-					Assert.AreEqual(ch_1[i].Title, ch_2[i].Title);
-				}
+				VerifyChapters(chapters);
 			}
 			finally
 			{
 				Aax.Close();
+			}
+		}
+
+		private void VerifyChapters(ChapterInfo chapters)
+		{
+			Assert.IsNotNull(Aax.Chapters);
+			Assert.AreEqual(Chapters.Count, chapters.Count);
+			List<Chapter> ch_1 = Chapters.Chapters.ToList();
+			List<Chapter> ch_2 = chapters.Chapters.ToList();
+
+			for (int i = 0; i < chapters.Count; i++)
+			{
+				Assert.AreEqual(ch_1[i].Duration, ch_2[i].Duration);
+				Assert.AreEqual(ch_1[i].StartOffset, ch_2[i].StartOffset);
+				Assert.AreEqual(ch_1[i].EndOffset, ch_2[i].EndOffset);
+				Assert.AreEqual(ch_1[i].Title, ch_2[i].Title);
 			}
 		}
 
@@ -205,12 +198,12 @@ namespace AAXClean.Test
 					hashes.Add(string.Join("", sha.Hash.Select(b => b.ToString("x2"))));
 				}
 #if DEBUG
-                var hs = new System.Text.StringBuilder();
+				var hs = new System.Text.StringBuilder();
 
-                foreach (var h in hashes)
-                {
-                    hs.AppendLine($"\"{h}\",");
-                }
+				foreach (var h in hashes)
+				{
+					hs.AppendLine($"\"{h}\",");
+				}
 #endif
 
 				for (int i = 0; i < tempFiles.Count; i++)
