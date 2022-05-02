@@ -61,6 +61,29 @@ namespace AAXClean.Boxes
 			base.Dispose(disposing);
 		}
 
+		/// <summary>
+		/// Effectively expand the Stsc table to one entry per chunk. Table size is 8 * <paramref name="numChunks"/> bytes.
+		/// </summary>
+		/// <returns>A zero-base table of frame indices and sizes for each chunk index</returns>
+		public (uint firstFrameIndex, uint numFrames)[] CalculateChunkFrameTable()
+		{
+			(uint firstFrameIndex, uint numFrames)[] table = new (uint, uint)[EntryCount];
+
+			uint firstFrameIndex = 0;
+			int lastStscIndex = 0;
+
+			for (uint chunk = 1; chunk <= EntryCount; chunk++)
+			{
+				if (lastStscIndex + 1 < Samples.Count && chunk == Samples[lastStscIndex + 1].FirstChunk)
+					lastStscIndex++;
+
+				table[chunk - 1] = (firstFrameIndex, Samples[lastStscIndex].SamplesPerChunk);
+				firstFrameIndex += Samples[lastStscIndex].SamplesPerChunk;
+			}
+
+			return table;
+		}
+
 		public class ChunkEntry
 		{
 			public ChunkEntry(Stream file)
