@@ -21,7 +21,7 @@ namespace AAXClean.Boxes
 			HandlerType = Encoding.ASCII.GetString(file.ReadBlock(4));
 			Reserved = file.ReadBlock(12);
 
-			List<byte> blist = new List<byte>();
+			List<byte> blist = new();
 			while (file.Position < endPos)
 			{
 				byte lastByte = (byte)file.ReadByte();

@@ -18,32 +18,32 @@ namespace AAXClean.Test
 		public override uint TimeScale => 22050;
 		public override uint AverageBitrate => 62794u;
 		public override uint MaxBitrate => 64004u;
-		public override long RenderSize => 2876635L;
+		public override long RenderSize => 2876633L;
 		public override TimeSpan Duration => TimeSpan.FromTicks(299221159183);
-		public override string SingleM4bHash => "5645220c03cceb40315bb089e35eda0ba68548dd";
+		public override string SingleM4bHash => "1c659ebbc126c497a49cb7817fa9d3427bcaba35";
 		public override List<string> MultiM4bHashes => new()
 		{
-			"c902a186cba4f48489e4a7b86a92c1f30117ee0d",
-			"3aed773601a3616e26fa3d5b9b335244dda3b064",
-			"a6996dfa0a82e15f41c1294a4df9b6264c71fd3f",
-			"57f2715991555ec915b18dcc8fd64c99f00eddde",
-			"cb593a52d9f0f9dea2964deec6bea160d9e2a877",
-			"04295c7021592ab09bed73800f3474d74e77a672",
-			"fb85d39dbbb69a92e565c897af6d54f7e48dac2b",
-			"b5317fa568d2194be97230b23b97a69cd997d236",
-			"6e42daae059355abeef5219c70b852abf16f6f78",
-			"ac9d8eba914d02b19050ec12fd9d7c5d82dd9468",
-			"8bd4408329a73a0f374c34f03abca65b32856f71",
-			"4c59ba2cfa3c49516ece3c8efcf620d12b3b4ffb",
-			"378fc09c2f98565b6545ceb15c3492d8179acfb7",
-			"783f78f2431983b8ec22b20c04233d0c9444ed71",
-			"be78f33011b96d283a9773940e4b78ec37472bd6",
-			"c660207b791ddec7455af543e9cabb9730499206",
-			"530ca392378822398a72d42dc6567619e9aad78e",
-			"d238452f3d0d669c64e094be5a1a6d1dd93eb884",
-			"0e70481506b6b1b5299900a2854bf3c179b01f11",
-			"01cbc54db5c5ffe2e1f2fcd590de73c168232d78",
-			"85244dcf7e66d61220c42759807de652d8061a47"
+			"922603def2bb7dc73a2d51d3f4db85d41fdf4611",
+			"b688ac7720b9471a7bf1f1b5e8395c43e6c623b7",
+			"ed994c6bfcd315171ff67fe68d913f1b99827a49",
+			"61fcc07e0ee4dae6bfea0b7e7e885065e1e89855",
+			"94129c14d0087f87d6662ff6d503e9a78101364b",
+			"afd4cab923a4e5f5b558feac8d8bb950df818797",
+			"1b9ed4337470e70b4af1a48fb0e20f27b304de3e",
+			"817802dfc22aa5e0ed2016e5e7999d689bed11f1",
+			"695237516b7f14706171782b3c90216e5d093407",
+			"dea663df21bacac296f5378e17ff4f1930678f1c",
+			"f1061a9025bf8b0e8761e4d6e4e71e404eba7665",
+			"ffc6429c136542d7e26c15ab5a5d2f758b71e02e",
+			"d9dafe3f211e38d60c5c57d343cf13b62ceab837",
+			"f44f20b03799abe4836f392e931f47a54f82ad17",
+			"c45650f19cb6ef79cfb3e3a5c2ae40f4bed916a5",
+			"d68b70537dc4d46fbd76e375e1aa891a98480919",
+			"7209caae2666664e9bbc0cf3557622c716abed47",
+			"a470890ec65f2d990e87cec93954c685aabc27da",
+			"b1e508be9884cdbdb6b38c37a9e936446ec05a03",
+			"55bc1db600e2ed4731134b15226bd4ff2ccd5444",
+			"563a863f0d3cf72ef65d66fec482a5225549ced1",
 		};
 		public override ChapterInfo Chapters
 		{
