@@ -25,8 +25,14 @@ namespace AAXClean.Boxes
 			while (file.Position < endPos)
 			{
 				byte lastByte = (byte)file.ReadByte();
+
+				if (lastByte == 0)
+				{
+					HasNullTerminator = true;
+					break;
+				}
+
 				blist.Add(lastByte);
-				HasNullTerminator = lastByte == 0;
 			}
 			HandlerName = Encoding.ASCII.GetString(blist.ToArray());
 		}
