@@ -132,7 +132,7 @@ namespace AAXClean
 			isCancelled = false;
 
 			Span<byte> chunkBuffer = new byte[1024];
-			foreach (TrackChunk chunk in new MpegChunkCollection(chapterHandler))
+			foreach (TrackChunk chunk in new MpegChunkEnumerable(chapterHandler))
 			{
 				if (isCancelled)
 					break;
@@ -153,7 +153,7 @@ namespace AAXClean
 			isCancelled = false;
 
 			Span<byte> chunkBuffer = new byte[4 * 1024 * 1024];
-			foreach (TrackChunk chunk in new MpegChunkCollection(audioHandler, chunkHandlers))
+			foreach (TrackChunk chunk in new MpegChunkEnumerable(audioHandler, chunkHandlers))
 			{
 				if (isCancelled)
 					break;
