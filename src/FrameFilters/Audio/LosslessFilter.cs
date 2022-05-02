@@ -25,10 +25,10 @@ namespace AAXClean.FrameFilters.Audio
 			Mp4writer = new Mp4aWriter(outputStream, mp4Audio.Ftyp, mp4Audio.Moov, audioSize > uint.MaxValue);
 		}
 
-		public override bool FilterFrame(ChunkEntry eEntry, uint frameIndex, Span<byte> audioSample)
+		public override bool FilterFrame(ChunkEntry cEntry, uint frameIndex, Span<byte> audioSample)
 		{
-			Mp4writer.AddFrame(audioSample, eEntry.ChunkIndex > LastChunkIndex);
-			LastChunkIndex = eEntry.ChunkIndex;
+			Mp4writer.AddFrame(audioSample, cEntry.ChunkIndex > LastChunkIndex);
+			LastChunkIndex = cEntry.ChunkIndex;
 			return true;
 		}
 

@@ -38,7 +38,7 @@ namespace AAXClean.FrameFilters.Audio
 			CloseCurrentWriter();
 		}
 
-		public override bool FilterFrame(ChunkEntry eEntry, uint frameIndex, Span<byte> audioFrame)
+		public override bool FilterFrame(ChunkEntry cEntry, uint frameIndex, Span<byte> audioFrame)
 		{
 			if (frameIndex > EndFrame)
 			{
@@ -50,15 +50,15 @@ namespace AAXClean.FrameFilters.Audio
 				NewSplitCallback callback = new() { Chapter = SplitChapters.Current };
 				CreateNewWriter(callback);
 				WriteFrameToFile(audioFrame, true);
-				LastChunkIndex = eEntry.ChunkIndex;
+				LastChunkIndex = cEntry.ChunkIndex;
 			}
 			else if (frameIndex >= StartFrame)
 			{
 				bool newChunk = false;
-				if (eEntry.ChunkIndex > LastChunkIndex)
+				if (cEntry.ChunkIndex > LastChunkIndex)
 				{
 					newChunk = true;
-					LastChunkIndex = eEntry.ChunkIndex;
+					LastChunkIndex = cEntry.ChunkIndex;
 				}
 				WriteFrameToFile(audioFrame, newChunk);
 			}

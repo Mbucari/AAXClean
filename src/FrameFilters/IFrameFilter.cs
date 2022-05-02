@@ -7,6 +7,6 @@ namespace AAXClean.FrameFilters
 	{
 		bool Closed { get; }
 		void Close();
-		bool FilterFrame(ChunkEntry eEntry, uint frameIndex, Span<byte> audioFrame);
+		bool FilterFrame(ChunkEntry cEntry, uint frameIndex, Span<byte> audioFrame);
 	}
 }

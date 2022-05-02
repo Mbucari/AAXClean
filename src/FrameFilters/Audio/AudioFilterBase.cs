@@ -6,7 +6,7 @@ namespace AAXClean.FrameFilters.Audio
 	public abstract class AudioFilterBase : IFrameFilter
 	{
 		public bool Closed { get; protected set; }
-		public abstract bool FilterFrame(ChunkEntry eEntry, uint frameIndex, Span<byte> audioFrame);
+		public abstract bool FilterFrame(ChunkEntry cEntry, uint frameIndex, Span<byte> audioFrame);
 		public abstract void Close();
 		public void Dispose() => Dispose(true);
 
