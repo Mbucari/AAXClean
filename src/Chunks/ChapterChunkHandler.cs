@@ -19,8 +19,6 @@ namespace AAXClean.Chunks
 			if (chunkEntry.ChunkIndex < 0 || chunkEntry.ChunkIndex >= Stts.EntryCount)
 				return false;
 
-			bool success = true;
-
 			for (int start = 0, i = 0; i < chunkEntry.FrameSizes.Length; start += chunkEntry.FrameSizes[i], i++, LastFrameProcessed++)
 			{
 				Span<byte> chunki = chunkData.Slice(start, chunkEntry.FrameSizes[i]);
@@ -32,12 +30,12 @@ namespace AAXClean.Chunks
 
 				if (FrameFilter is not null)
 				{
-					success = FrameFilter.FilterFrame(chunkEntry, LastFrameProcessed, chunki);
-					if (!success) break;
+					Success = FrameFilter.FilterFrame(chunkEntry, LastFrameProcessed, chunki);
+					if (!Success) break;
 				}
 			}
 
-			return success;
+			return Success;
 		}
 
 		protected override void Dispose(bool disposing)

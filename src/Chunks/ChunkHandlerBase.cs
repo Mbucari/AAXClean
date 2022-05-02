@@ -9,6 +9,7 @@ namespace AAXClean.Chunks
 		public TrakBox Track { get; }
 		public TimeSpan ProcessPosition => Stts.FrameToTime(TimeScale, LastFrameProcessed);
 		public IFrameFilter FrameFilter { get; set; }
+		public bool Success { get; protected set; } = true;
 
 		protected readonly SttsBox Stts;
 		protected readonly double TimeScale;

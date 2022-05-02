@@ -5,7 +5,6 @@ namespace AAXClean.Chunks
 {
 	internal class Mp4AudioChunkHandler : ChunkHandlerBase
 	{
-		public bool Success { get; private set; } = true;
 		public Mp4AudioChunkHandler(TrakBox trak) : base(trak) { }
 
 		protected virtual bool ValidateFrame(Span<byte> frame) => (AV_RB16(frame) & 0xfff0) != 0xfff0;
