@@ -1,4 +1,4 @@
-﻿using AAXClean.AudioFilters;
+﻿using AAXClean.FrameFilters.Audio;
 using AAXClean.Boxes;
 using AAXClean.Chunks;
 using AAXClean.Util;
@@ -86,7 +86,7 @@ namespace AAXClean
 		public ConversionResult FilterAudio(AudioFilterBase audioFilter, ChapterInfo userChapters = null)
 		{
 			using Mp4AudioChunkHandler audioHandler = GetAudioChunkHandler();
-			audioHandler.AudioFilter = audioFilter;
+			audioHandler.FrameFilter = audioFilter;
 			if (Moov.TextTrack is null)
 			{
 				ProcessAudio(audioHandler);

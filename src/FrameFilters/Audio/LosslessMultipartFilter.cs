@@ -3,7 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 
-namespace AAXClean.AudioFilters
+namespace AAXClean.FrameFilters.Audio
 {
 	internal sealed class LosslessMultipartFilter : MultipartFilterBase
 	{

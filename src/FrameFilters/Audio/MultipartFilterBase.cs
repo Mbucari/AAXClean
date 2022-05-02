@@ -1,7 +1,8 @@
-﻿using System;
+﻿using AAXClean.Chunks;
+using System;
 using System.Collections.Generic;
 
-namespace AAXClean.AudioFilters
+namespace AAXClean.FrameFilters.Audio
 {
 	public abstract class MultipartFilterBase : AudioFilterBase
 	{
@@ -37,7 +38,7 @@ namespace AAXClean.AudioFilters
 			CloseCurrentWriter();
 		}
 
-		public override bool FilterFrame(uint chunkIndex, uint frameIndex, Span<byte> audioFrame)
+		public override bool FilterFrame(ChunkEntry eEntry, uint frameIndex, Span<byte> audioFrame)
 		{
 			if (frameIndex > EndFrame)
 			{
@@ -46,18 +47,18 @@ namespace AAXClean.AudioFilters
 				if (!GetNextChapter())
 					return false;
 
-				NewSplitCallback callback = new NewSplitCallback { Chapter = SplitChapters.Current };
+				NewSplitCallback callback = new() { Chapter = SplitChapters.Current };
 				CreateNewWriter(callback);
 				WriteFrameToFile(audioFrame, true);
-				LastChunkIndex = chunkIndex;
+				LastChunkIndex = eEntry.ChunkIndex;
 			}
 			else if (frameIndex >= StartFrame)
 			{
 				bool newChunk = false;
-				if (chunkIndex > LastChunkIndex)
+				if (eEntry.ChunkIndex > LastChunkIndex)
 				{
 					newChunk = true;
-					LastChunkIndex = chunkIndex;
+					LastChunkIndex = eEntry.ChunkIndex;
 				}
 				WriteFrameToFile(audioFrame, newChunk);
 			}

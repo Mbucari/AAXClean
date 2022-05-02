@@ -1,11 +1,12 @@
+using AAXClean.Chunks;
 using System;
 
-namespace AAXClean.AudioFilters
+namespace AAXClean.FrameFilters.Audio
 {
-	public abstract class AudioFilterBase : IDisposable
+	public abstract class AudioFilterBase : IFrameFilter
 	{
 		public bool Closed { get; protected set; }
-		public abstract bool FilterFrame(uint chunkIndex, uint frameIndex, Span<byte> audioFrame);
+		public abstract bool FilterFrame(ChunkEntry eEntry, uint frameIndex, Span<byte> audioFrame);
 		public abstract void Close();
 		public void Dispose() => Dispose(true);
 
@@ -17,7 +18,6 @@ namespace AAXClean.AudioFilters
 			{
 				return;
 			}
-
 			Disposed = true;
 		}
 	}

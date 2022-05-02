@@ -1,8 +1,9 @@
-﻿using System;
+﻿using AAXClean.Chunks;
+using System;
 using System.IO;
 using System.Linq;
 
-namespace AAXClean.AudioFilters
+namespace AAXClean.FrameFilters.Audio
 {
 	internal class LosslessFilter : AudioFilterBase
 	{
@@ -24,10 +25,10 @@ namespace AAXClean.AudioFilters
 			Mp4writer = new Mp4aWriter(outputStream, mp4Audio.Ftyp, mp4Audio.Moov, audioSize > uint.MaxValue);
 		}
 
-		public override bool FilterFrame(uint chunkIndex, uint frameIndex, Span<byte> audioSample)
+		public override bool FilterFrame(ChunkEntry eEntry, uint frameIndex, Span<byte> audioSample)
 		{
-			Mp4writer.AddFrame(audioSample, chunkIndex > LastChunkIndex);
-			LastChunkIndex = chunkIndex;
+			Mp4writer.AddFrame(audioSample, eEntry.ChunkIndex > LastChunkIndex);
+			LastChunkIndex = eEntry.ChunkIndex;
 			return true;
 		}
 

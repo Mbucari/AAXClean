@@ -3,7 +3,7 @@ using AAXClean.Util;
 using System;
 using System.IO;
 
-namespace AAXClean.AudioFilters
+namespace AAXClean.FrameFilters.Audio
 {
 	internal class Mp4aWriter
 	{

@@ -1,5 +1,4 @@
-﻿using AAXClean.AudioFilters;
-using AAXClean.Boxes;
+﻿using AAXClean.Boxes;
 using System;
 
 namespace AAXClean.Chunks
@@ -7,7 +6,6 @@ namespace AAXClean.Chunks
 	internal class Mp4AudioChunkHandler : ChunkHandlerBase
 	{
 		public bool Success { get; private set; } = true;
-		public AudioFilterBase AudioFilter { get; set; }
 		public Mp4AudioChunkHandler(TrakBox trak) : base(trak) { }
 
 		protected virtual bool ValidateFrame(Span<byte> frame) => (AV_RB16(frame) & 0xfff0) != 0xfff0;
@@ -21,7 +19,7 @@ namespace AAXClean.Chunks
 
 				Span<byte> frame = chunkData.Slice(framePosition, chunkEntry.FrameSizes[fIndex]);
 
-				Success = ValidateFrame(frame) && AudioFilter?.FilterFrame(chunkEntry.ChunkIndex, LastFrameProcessed, frame) == true;
+				Success = ValidateFrame(frame) && FrameFilter?.FilterFrame(chunkEntry, LastFrameProcessed, frame) == true;
 
 				if (!Success)
 					return false;
@@ -40,11 +38,6 @@ namespace AAXClean.Chunks
 
 		protected override void Dispose(bool disposing)
 		{
-			if (!Disposed && disposing)
-			{
-				AudioFilter?.Dispose();
-			}
-
 			base.Dispose(disposing);
 		}
 	}

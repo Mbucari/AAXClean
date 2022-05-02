@@ -1,4 +1,5 @@
 ﻿using AAXClean.Boxes;
+using AAXClean.FrameFilters;
 using System;
 
 namespace AAXClean.Chunks
@@ -7,6 +8,7 @@ namespace AAXClean.Chunks
 	{
 		public TrakBox Track { get; }
 		public TimeSpan ProcessPosition => Stts.FrameToTime(TimeScale, LastFrameProcessed);
+		public IFrameFilter FrameFilter { get; set; }
 
 		protected readonly SttsBox Stts;
 		protected readonly double TimeScale;
@@ -25,7 +27,14 @@ namespace AAXClean.Chunks
 		public void Dispose() => Dispose(true);
 		protected virtual void Dispose(bool disposing)
 		{
-			Disposed = true;
+			if (!Disposed)
+			{
+				if (disposing)
+				{
+					FrameFilter?.Dispose();
+				}
+				Disposed = true;
+			}
 		}
 	}
 }

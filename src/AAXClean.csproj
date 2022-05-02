@@ -20,7 +20,6 @@
   </PropertyGroup>
 
   <PropertyGroup>
-	  <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	  <PublishReadyToRun>true</PublishReadyToRun>
 	  <PackageReleaseNotes>Added GetChaptersFromMetadata() to AaxFile</PackageReleaseNotes>
   </PropertyGroup>

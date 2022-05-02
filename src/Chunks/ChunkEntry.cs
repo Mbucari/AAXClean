@@ -1,9 +1,9 @@
 ﻿namespace AAXClean.Chunks
 {
-	internal class ChunkEntry
+	public class ChunkEntry
 	{
 		/// <summary>
-		/// Index of the chunk in <see cref="AAXClean.Boxes.StcoBox.ChunkOffsets"/> or <see cref="AAXClean.Boxes.Co64Box.ChunkOffsets"/>
+		/// Index of the chunk in <see cref="Boxes.StcoBox.ChunkOffsets"/> or <see cref="Boxes.Co64Box.ChunkOffsets"/>
 		/// </summary>
 		public uint ChunkIndex { get; init; }
 		/// <summary>
