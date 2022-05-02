@@ -22,7 +22,12 @@ namespace AAXClean.Boxes
 		}
 
 		private StscBox(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent) { }
-
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="file"></param>
+		/// <param name="header"></param>
+		/// <param name="parent"></param>
 		internal StscBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
 		{
 			EntryCount = file.ReadUInt32BE();
@@ -32,6 +37,31 @@ namespace AAXClean.Boxes
 				Samples.Add(new ChunkEntry(file));
 			}
 		}
+
+		/// <summary>
+		/// Effectively expand the Stsc table to one entry per chunk. Table size is 8 * <paramref name="numChunks"/> bytes.
+		/// </summary>
+		/// <param name="numChunks">The number of chunks in the track</param>
+		/// <returns>A zero-base table of frame indices and sizes for each chunk index</returns>
+		public (uint firstFrameIndex, uint numFrames)[] CalculateChunkFrameTable(int numChunks)
+		{
+			(uint firstFrameIndex, uint numFrames)[] table = new (uint, uint)[numChunks];
+
+			uint firstFrameIndex = 0;
+			int lastStscIndex = 0;
+
+			for (uint chunk = 1; chunk <= numChunks; chunk++)
+			{
+				if (lastStscIndex + 1 < Samples.Count && chunk == Samples[lastStscIndex + 1].FirstChunk)
+					lastStscIndex++;
+
+				table[chunk - 1] = (firstFrameIndex, Samples[lastStscIndex].SamplesPerChunk);
+				firstFrameIndex += Samples[lastStscIndex].SamplesPerChunk;
+			}
+
+			return table;
+		}
+
 
 		protected override void Render(Stream file)
 		{

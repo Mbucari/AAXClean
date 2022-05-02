@@ -40,6 +40,39 @@ namespace AAXClean.Boxes
 				SampleSizes.Add(sampleSize);
 			}
 		}
+
+		/// <summary>
+		/// Retrieves the frame sizes for <paramref name="numFrames"/> frames starting at <paramref name="firstFrameIndex"/>
+		/// </summary>
+		/// <param name="firstFrameIndex">The first frame to retrieve the size of</param>
+		/// <param name="numFrames">The number of frames to retrieve sizes of</param>
+		/// <returns>A tuple containing the size of each frame in an int[] and the total size of all the frames. </returns>
+		public (int[] frameSizes, int framesSizeTotal) GetFrameSizes(uint firstFrameIndex, uint numFrames)
+		{
+			int[] frameSizes = new int[numFrames];
+			int framesSizeTotal = 0;
+
+			for (uint i = 0; i < numFrames; i++)
+			{
+				if (i + firstFrameIndex >= SampleSizes.Count)
+				{
+					//This handels a case where the last Stsc entry was not written correctly.
+					//This is only necessary to correct for an early error in AAXClean when
+					//decrypting to m4b. This bug was introduced to Libation in 5.1.9 and was
+					//fixed in 5.4.4. All m4b files created in affected versions will fail to
+					//convert to mp3 without this check.
+					int[] correctFrameSizes = new int[i];
+					Array.Copy(frameSizes, 0, correctFrameSizes, 0, i);
+					return (frameSizes, framesSizeTotal);
+				}
+
+				frameSizes[i] = SampleSizes[(int)(i + firstFrameIndex)];
+				framesSizeTotal += frameSizes[i];
+			}
+
+			return (frameSizes, framesSizeTotal);
+		}
+
 		protected override void Render(Stream file)
 		{
 			base.Render(file);
