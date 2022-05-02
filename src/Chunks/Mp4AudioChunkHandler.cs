@@ -1,31 +1,18 @@
 ﻿using AAXClean.AudioFilters;
 using AAXClean.Boxes;
 using System;
-using System.Collections.Generic;
 
 namespace AAXClean.Chunks
 {
-	internal class Mp4AudioChunkHandler : IChunkHandler
+	internal class Mp4AudioChunkHandler : ChunkHandlerBase
 	{
 		public bool Success { get; private set; } = true;
 		public AudioFilterBase AudioFilter { get; set; }
-		public TrakBox Track { get; }
-		public TimeSpan ProcessPosition => FrameToTime(LastFrameProcessed);
-
-		private uint LastFrameProcessed;
-		private readonly double TimeScale;
-		private readonly IEnumerable<SttsBox.SampleEntry> Samples;
-
-		public Mp4AudioChunkHandler(TrakBox trak)
-		{
-			Track = trak;
-			TimeScale = Track.Mdia.Mdhd.Timescale;
-			Samples = Track.Mdia.Minf.Stbl.Stts.Samples;
-		}
+		public Mp4AudioChunkHandler(TrakBox trak) : base(trak) { }
 
 		protected virtual bool ValidateFrame(Span<byte> frame) => (AV_RB16(frame) & 0xfff0) != 0xfff0;
 
-		public bool ChunkAvailable(ChunkEntry chunkEntry, Span<byte> chunkData)
+		public override bool HandleChunk(ChunkEntry chunkEntry, Span<byte> chunkData)
 		{
 			int framePosition = 0;
 			for (uint fIndex = 0; fIndex < chunkEntry.FrameSizes.Length; fIndex++)
@@ -44,29 +31,6 @@ namespace AAXClean.Chunks
 			return true;
 		}
 
-		/// <summary>
-		/// Gets the playback timestamp of an audio frame.
-		/// </summary>
-		internal TimeSpan FrameToTime(uint frameIndex)
-		{
-			double beginDelta = 0;
-
-			foreach (SttsBox.SampleEntry entry in Samples)
-			{
-				if (frameIndex > entry.FrameCount)
-				{
-					beginDelta += (ulong)entry.FrameCount * entry.FrameDelta;
-					frameIndex -= entry.FrameCount;
-				}
-				else
-				{
-					beginDelta += (ulong)frameIndex * entry.FrameDelta;
-					break;
-				}
-			}
-			return TimeSpan.FromSeconds(beginDelta / TimeScale);
-		}
-
 		//Defined at
 		//http://man.hubwiz.com/docset/FFmpeg.docset/Contents/Resources/Documents/api/intreadwrite_8h_source.html
 		private static ushort AV_RB16(Span<byte> frame)
@@ -74,22 +38,14 @@ namespace AAXClean.Chunks
 			return (ushort)(frame[0] << 8 | frame[1]);
 		}
 
-		private bool disposed = false;
-		public void Dispose() => Dispose(true);
-		protected virtual void Dispose(bool disposing)
+		protected override void Dispose(bool disposing)
 		{
-			if (!disposed)
+			if (!Disposed && disposing)
 			{
-				if (disposing)
-				{
-					// Dispose managed resources.
-					AudioFilter?.Dispose();
-				}
-
-				// Call the appropriate methods to clean up
-				// unmanaged resources here.
-				disposed = true;
+				AudioFilter?.Dispose();
 			}
+
+			base.Dispose(disposing);
 		}
 	}
 }

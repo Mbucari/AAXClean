@@ -68,13 +68,13 @@ namespace AAXClean.Chunks
 		private class TrachChunkEnumerator : IEnumerator<ChunkEntry>
 		{
 			private readonly int EntryCount;
-			private readonly ChunkEntryDelegate GetChunkEntryDelegate;
+			private readonly ChunkEntryDelegate GetChunkEntry;
 			private int CurrentChunkIndex = 0;
 
 			public TrachChunkEnumerator(int entryCount, ChunkEntryDelegate chunkEntryDelegate)
 			{
 				EntryCount = entryCount;
-				GetChunkEntryDelegate = chunkEntryDelegate;
+				GetChunkEntry = chunkEntryDelegate;
 			}
 
 			public ChunkEntry Current { get; private set; }
@@ -87,7 +87,7 @@ namespace AAXClean.Chunks
 			{
 				if (CurrentChunkIndex >= EntryCount) return false;
 
-				Current = GetChunkEntryDelegate(CurrentChunkIndex++);
+				Current = GetChunkEntry(CurrentChunkIndex++);
 
 				return true;
 			}

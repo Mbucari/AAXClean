@@ -10,19 +10,18 @@ namespace AAXClean.Chunks
 	/// </summary>
 	internal sealed class MpegChunkEnumerable : IEnumerable<TrackChunk>
 	{
-		private readonly (ChunkEntryList trackChunks, IChunkHandler handler)[] TrackHandlers;
+		private readonly (ChunkEntryList trackChunks, ChunkHandlerBase handler)[] TrackHandlers;
 		/// <summary>
 		/// Enumerates over all chunks in all Mpeg tracks in order of the cunk offset
 		/// </summary>
 		/// <param name="handler">A track chunk handler</param>
 		/// <param name="handlers">Additional track chunk handlers</param>
-		public MpegChunkEnumerable(IChunkHandler handler, params IChunkHandler[] handlers)
+		public MpegChunkEnumerable(params ChunkHandlerBase[] handlers)
 		{
-			TrackHandlers = new (ChunkEntryList trackChunks, IChunkHandler handler)[handlers.Length + 1];
+			TrackHandlers = new (ChunkEntryList trackChunks, ChunkHandlerBase handler)[handlers.Length];
 
-			TrackHandlers[0] = (new ChunkEntryList(handler.Track), handler);
 			for (int i = 0; i < handlers.Length; i++)
-				TrackHandlers[i + 1] = (new ChunkEntryList(handlers[i].Track), handlers[i]);
+				TrackHandlers[i] = (new ChunkEntryList(handlers[i].Track), handlers[i]);
 		}
 		public IEnumerator<TrackChunk> GetEnumerator()
 			=> new MpegChunkEnumerator(TrackHandlers);
@@ -35,7 +34,7 @@ namespace AAXClean.Chunks
 		private class MpegChunkEnumerator : IEnumerator<TrackChunk>
 		{
 			private TrackEnums[] Tracks;
-			public MpegChunkEnumerator(params (ChunkEntryList trackChunks, IChunkHandler handler)[] trackHandlers)
+			public MpegChunkEnumerator(params (ChunkEntryList trackChunks, ChunkHandlerBase handler)[] trackHandlers)
 			{
 				Tracks = new TrackEnums[trackHandlers.Length];
 
@@ -110,7 +109,7 @@ namespace AAXClean.Chunks
 				/// <summary>
 				/// The handler of the track tha is being enumerated
 				/// </summary>
-				public IChunkHandler Handler { get; init; }
+				public ChunkHandlerBase Handler { get; init; }
 				/// <summary>
 				/// If true, the last chunk in the track has already been enumerated
 				/// </summary>

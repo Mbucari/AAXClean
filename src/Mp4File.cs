@@ -139,13 +139,13 @@ namespace AAXClean
 
 				Span<byte> chunkdata = chunkBuffer.Slice(0, chunk.Entry.ChunkSize);
 				InputStream.ReadNextChunk(chunk.Entry.ChunkOffset, chunkdata);
-				isCancelled = !chunk.Handler.ChunkAvailable(chunk.Entry, chunkdata);
+				isCancelled = !chunk.Handler.HandleChunk(chunk.Entry, chunkdata);
 			}
 			Chapters ??= chapterHandler.Chapters;
 			return chapterHandler.Chapters;
 		}
 
-		private void ProcessAudio(Mp4AudioChunkHandler audioHandler, params IChunkHandler[] chunkHandlers)
+		private void ProcessAudio(params ChunkHandlerBase[] chunkHandlers)
 		{
 			DateTime beginProcess = DateTime.Now;
 			DateTime nextUpdate = beginProcess;
@@ -153,23 +153,19 @@ namespace AAXClean
 			isCancelled = false;
 
 			Span<byte> chunkBuffer = new byte[4 * 1024 * 1024];
-			foreach (TrackChunk chunk in new MpegChunkEnumerable(audioHandler, chunkHandlers))
+			foreach (TrackChunk chunk in new MpegChunkEnumerable(chunkHandlers))
 			{
 				if (isCancelled)
 					break;
 
 				Span<byte> chunkdata = chunkBuffer.Slice(0, chunk.Entry.ChunkSize);
 				InputStream.ReadNextChunk(chunk.Entry.ChunkOffset, chunkdata);
-				isCancelled = !chunk.Handler.ChunkAvailable(chunk.Entry, chunkdata);
-				if (isCancelled)
-				{
-
-				}
+				isCancelled = !chunk.Handler.HandleChunk(chunk.Entry, chunkdata);
 
 				//Throttle update so it doesn't bog down UI
 				if (DateTime.Now > nextUpdate)
 				{
-					TimeSpan position = audioHandler.ProcessPosition;
+					TimeSpan position = chunk.Handler.ProcessPosition;
 					double speed = position / (DateTime.Now - beginProcess);
 					ConversionProgressUpdate?.Invoke(this, new ConversionProgressEventArgs { TotalDuration = Duration, ProcessPosition = position, ProcessSpeed = speed });
 

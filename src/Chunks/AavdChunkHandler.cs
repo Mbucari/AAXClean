@@ -6,7 +6,6 @@ namespace AAXClean.Chunks
 {
 	internal sealed class AavdChunkHandler : Mp4AudioChunkHandler
 	{
-		private bool disposed = false;
 		private AesCryptoTransform Aes { get; }
 
 		public AavdChunkHandler(TrakBox trak, byte[] key, byte[] iv) : base(trak)
@@ -30,10 +29,9 @@ namespace AAXClean.Chunks
 
 		protected override void Dispose(bool disposing)
 		{
-			if (disposing && !disposed)
+			if (!Disposed && disposing)
 			{
 				Aes.Dispose();
-				disposed = true;
 			}
 
 			base.Dispose(disposing);

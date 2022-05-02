@@ -82,7 +82,7 @@ namespace AAXClean
 
 			if (chapterNames is null) return null;
 
-			List<SttsBox.SampleEntry> sampleTimes = textTrak.Mdia.Minf.Stbl.Stts.Samples;
+			IReadOnlyList<SttsBox.SampleEntry> sampleTimes = textTrak.Mdia.Minf.Stbl.Stts.Samples;
 
 			if (sampleTimes.Count != chapterNames.Count) return null;
 

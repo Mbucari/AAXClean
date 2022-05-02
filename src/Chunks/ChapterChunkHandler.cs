@@ -5,25 +5,17 @@ using System.Text;
 
 namespace AAXClean.Chunks
 {
-	internal sealed class ChapterChunkHandler : IChunkHandler
+	internal sealed class ChapterChunkHandler : ChunkHandlerBase
 	{
 		public ChapterInfo Chapters => Builder.ToChapterInfo();
-		public TrakBox Track { get; }
-		private int LastFrameProcessed;
-		private readonly double TimeScale;
-		private readonly IReadOnlyList<SttsBox.SampleEntry> Samples;
 		private readonly ChapterBuilder Builder;
-		private bool disposed = false;
 
-		public ChapterChunkHandler(TrakBox trak)
+		public ChapterChunkHandler(TrakBox trak) : base(trak)
 		{
-			Track = trak;
-			TimeScale = Track.Mdia.Mdhd.Timescale;
-			Samples = Track.Mdia.Minf.Stbl.Stts.Samples;
 			Builder = new ChapterBuilder(TimeScale);
 		}
 
-		public bool ChunkAvailable(ChunkEntry chunkEntry, Span<byte> chunkData)
+		public override bool HandleChunk(ChunkEntry chunkEntry, Span<byte> chunkData)
 		{
 			if (chunkEntry.ChunkIndex < 0 || chunkEntry.ChunkIndex >= Samples.Count)
 				return false;
@@ -35,24 +27,20 @@ namespace AAXClean.Chunks
 
 				string title = Encoding.UTF8.GetString(chunki.Slice(2, size));
 
-				Builder.AddChapter(title, (int)Samples[LastFrameProcessed].FrameDelta, chunkEntry.ChunkIndex);
+				Builder.AddChapter(title, (int)Samples[(int)LastFrameProcessed].FrameDelta, chunkEntry.ChunkIndex);
 			}
 
 			return true;
 		}
 
-		public void Dispose() => Dispose(true);
-		private void Dispose(bool disposing)
+		protected override void Dispose(bool disposing)
 		{
-			if (!disposed)
+			if (!Disposed && disposing)
 			{
-				if (disposing)
-				{
-					Builder.Dispose();
-				}
-
-				disposed = true;
+				Builder.Dispose();
 			}
+
+			base.Dispose(disposing);
 		}
 	}
 }
