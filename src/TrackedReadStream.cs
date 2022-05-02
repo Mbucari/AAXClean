@@ -37,9 +37,7 @@ namespace AAXClean
 		}
 
 		public override void Flush()
-		{
-			throw new NotImplementedException();
-		}
+			=> throw new NotImplementedException();
 
 		public override int Read(byte[] buffer, int offset, int count)
 		{
@@ -54,10 +52,17 @@ namespace AAXClean
 			
 			return count;
 		}
-		public override void Close()
+
+		protected override void Dispose(bool disposing)
 		{
-			BaseStream.Close();
+			if (disposing)
+				BaseStream.Dispose();
+
+			base.Dispose(disposing);
 		}
+
+		public override void Close()
+			=> BaseStream.Close();
 
 		public override long Seek(long offset, SeekOrigin origin)
 		{
@@ -68,13 +73,9 @@ namespace AAXClean
 		}
 
 		public override void SetLength(long value)
-		{
-			throw new NotImplementedException();
-		}
+			=> throw new NotImplementedException();
 
 		public override void Write(byte[] buffer, int offset, int count)
-		{
-			throw new NotImplementedException();
-		}
+			=> throw new NotImplementedException();
 	}
 }
