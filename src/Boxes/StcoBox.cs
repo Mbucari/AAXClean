@@ -1,6 +1,7 @@
 ﻿using AAXClean.Util;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace AAXClean.Boxes
 {
@@ -52,9 +53,9 @@ namespace AAXClean.Boxes
 		{
 			base.Render(file);
 			file.WriteUInt32BE((uint)ChunkOffsets.Count);
-			//Write ChunkOffsets sorted by the chunk index
-			ChunkOffsets.Sort((c1, c2) => c1.EntryIndex.CompareTo(c2.EntryIndex));
-			foreach (ChunkOffsetEntry chunkOffset in ChunkOffsets)
+			//Write ChunkOffsets sorted by the chunk index, leaving ChunkOffsets unsorted
+			var orderedChunkOffsets = ChunkOffsets.OrderBy(co => co.EntryIndex);
+			foreach (ChunkOffsetEntry chunkOffset in orderedChunkOffsets)
 			{
 				file.WriteUInt32BE((uint)chunkOffset.ChunkOffset);
 			}
