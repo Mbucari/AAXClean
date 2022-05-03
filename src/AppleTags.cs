@@ -2,15 +2,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace AAXClean
 {
 	public sealed class AppleTags
 	{
+
 		private readonly AppleListBox IList;
-		internal IEnumerable<AppleTagBox> Tags => IList.GetChildren<AppleTagBox>();
-		public IEnumerable<string> TagNames => Tags.Select(t => t.Header.Type);
+		public IEnumerable<string> TagNames => IList.Tags.Select(t => t.Header.Type);
 		internal AppleTags(AppleListBox appleListBox)
 		{
 			IList = appleListBox;
@@ -23,82 +22,30 @@ namespace AAXClean
 		public string RecordingCopyright => _copyright is not null && _copyright.Length > 1 ? _copyright[1] : default;
 		private string[] _copyright => Copyright?.Replace("&#169;", "©")?.Split(';');
 
-		public string Title { get => GetTagString("©nam"); set => EditOrAddTag("©nam", value); }
-		public string Performers { get => GetTagString("©ART"); set => EditOrAddTag("©ART", value); }
-		public string AlbumArtists { get => GetTagString("aART"); set => EditOrAddTag("aART", value); }
-		public string Album { get => GetTagString("©alb"); set => EditOrAddTag("©alb", value); }
-		public string Generes { get => GetTagString("©gen"); set => EditOrAddTag("©gen", value); }
-		public string ProductID { get => GetTagString("prID"); set => EditOrAddTag("prID", value); }
-		public string Comment { get => GetTagString("©cmt"); set => EditOrAddTag("©cmt", value); }
-		public string LongDescription { get => GetTagString("©des"); set => EditOrAddTag("©des", value); }
-		public string Copyright { get => GetTagString("cprt"); set => EditOrAddTag("cprt", value); }
-		public string Publisher { get => GetTagString("©pub"); set => EditOrAddTag("©pub", value); }
-		public string Year { get => GetTagString("©day"); set => EditOrAddTag("©day", value); }
-		public string Narrator { get => GetTagString("©nrt"); set => EditOrAddTag("©nrt", value); }
-		public string Asin { get => GetTagString("CDEK"); set => EditOrAddTag("CDEK", value); }
-		public string ReleaseDate { get => GetTagString("rldt"); set => EditOrAddTag("rldt", value); }
-		public string Acr { get => GetTagString("AACR"); set => EditOrAddTag("AACR", value); }
-		public byte[] Cover { get => GetTagBytes("covr"); set => EditOrAddTag("covr", value, AppleDataType.ContainsJpegData); }
+		public string Title { get => IList.GetTagString("©nam"); set => IList.EditOrAddTag("©nam", value); }
+		public string Performers { get => IList.GetTagString("©ART"); set => IList.EditOrAddTag("©ART", value); }
+		public string AlbumArtists { get => IList.GetTagString("aART"); set => IList.EditOrAddTag("aART", value); }
+		public string Album { get => IList.GetTagString("©alb"); set => IList.EditOrAddTag("©alb", value); }
+		public string Generes { get => IList.GetTagString("©gen"); set => IList.EditOrAddTag("©gen", value); }
+		public string ProductID { get => IList.GetTagString("prID"); set => IList.EditOrAddTag("prID", value); }
+		public string Comment { get => IList.GetTagString("©cmt"); set => IList.EditOrAddTag("©cmt", value); }
+		public string LongDescription { get => IList.GetTagString("©des"); set => IList.EditOrAddTag("©des", value); }
+		public string Copyright { get => IList.GetTagString("cprt"); set => IList.EditOrAddTag("cprt", value); }
+		public string Publisher { get => IList.GetTagString("©pub"); set => IList.EditOrAddTag("©pub", value); }
+		public string Year { get => IList.GetTagString("©day"); set => IList.EditOrAddTag("©day", value); }
+		public string Narrator { get => IList.GetTagString("©nrt"); set => IList.EditOrAddTag("©nrt", value); }
+		public string Asin { get => IList.GetTagString("CDEK"); set => IList.EditOrAddTag("CDEK", value); }
+		public string ReleaseDate { get => IList.GetTagString("rldt"); set => IList.EditOrAddTag("rldt", value); }
+		public string Acr { get => IList.GetTagString("AACR"); set => IList.EditOrAddTag("AACR", value); }
+		public byte[] Cover { get => IList.GetTagBytes("covr"); set => IList.EditOrAddTag("covr", value, AppleDataType.ContainsJpegData); }
 
-		public void EditOrAddTag(string name, string data)
-		{
-			EditOrAddTag(name, Encoding.UTF8.GetBytes(data), AppleDataType.ContainsText);
-		}
+		public void EditOrAddTag(string name, string data) => IList.EditOrAddTag(name, data);
+		public void EditOrAddTag(string name, byte[] data) => IList.EditOrAddTag(name, data);
+		public void AddTag(string name, string data) => IList.AddTag(name, data);
+		public void AddTag(string name, byte[] data) => IList.AddTag(name, data);
+		public string GetTagString(string name) => IList.GetTagString(name);
+		public byte[] GetTagBytes(string name) => IList.GetTagBytes(name);
 
-		public void EditOrAddTag(string name, byte[] data)
-		{
-			EditOrAddTag(name, data, AppleDataType.ContainsData);
-		}
-
-		private void EditOrAddTag(string name, byte[] data, AppleDataType type)
-		{
-			AppleTagBox tag = Tags.Where(t => t.Header.Type == name).FirstOrDefault();
-
-			if (tag is null)
-			{
-				AddTag(name, data, type);
-			}
-			else if (tag.Data.DataType == type)
-			{
-				tag.Data.Data = data;
-			}
-		}
-
-		public void AddTag(string name, string data)
-		{
-			AddTag(name, Encoding.UTF8.GetBytes(data), AppleDataType.ContainsText);
-		}
-
-		public void AddTag(string name, byte[] data)
-		{
-			AddTag(name, data, AppleDataType.ContainsData);
-		}
-
-		private void AddTag(string name, byte[] data, AppleDataType type)
-		{
-			AppleTagBox.Create(IList, name, data, type);
-		}
-
-		public string GetTagString(string name)
-		{
-			byte[] tag = GetTagBytes(name);
-			if (tag is null) return null;
-
-			return Encoding.UTF8.GetString(tag);
-		}
-
-		public byte[] GetTagBytes(string name)
-		{
-			AppleTagBox tag = Tags.Where(t => t.Header.Type == name).FirstOrDefault();
-
-			if (tag is null) return null;
-
-			AppleDataBox tagData = tag.GetChild<AppleDataBox>();
-
-			if (tagData is null) return null;
-
-			return tagData.Data;
-		}
 
 		[Obsolete("This method has been deprecated. Please use the Cover property.")]
 		public void SetCoverArt(byte[] coverArt)
