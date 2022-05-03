@@ -10,6 +10,7 @@ namespace AAXClean.Test
 	public abstract class AaxTestBase
 	{
 		private AaxFile _aax;
+		private AaxFile _aaxNoFix;
 		public AaxFile Aax
 		{
 			get
@@ -20,6 +21,19 @@ namespace AAXClean.Test
 					_aax.SetDecryptionKey(new byte[16], new byte[16]);
 				}
 				return _aax;
+			}
+		}
+		public AaxFile AaxNoFixup
+		{
+			get
+			{
+				if (_aaxNoFix is null)
+				{
+					var fs = File.Open(AaxFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+					_aaxNoFix = new AaxFile(fs, fs.Length, false);
+					_aaxNoFix.SetDecryptionKey(new byte[16], new byte[16]);
+				}
+				return _aaxNoFix;
 			}
 		}
 		public abstract string AaxFile { get; }
@@ -33,6 +47,7 @@ namespace AAXClean.Test
 		public abstract ChapterInfo Chapters { get; }
 		public abstract TestBookTags Tags { get; }
 		public abstract string SingleM4bHash { get; }
+		public abstract string PassthroughM4bHash { get; }
 		public abstract List<string> MultiM4bHashes { get; }
 
 		[TestMethod]
@@ -217,5 +232,32 @@ namespace AAXClean.Test
 				Aax.Close();
 			}
 		}
+		[TestMethod]
+		public void _6_ConvertPassthrough()
+		{
+			try
+			{
+				FileStream tempfile = TestFiles.NewTempFile();
+
+				//Use Sha1Managed if you really want sha1
+				using var shaForStream = SHA1.Create();
+				using Stream sourceStream = new CryptoStream(tempfile, shaForStream, CryptoStreamMode.Write);
+
+				ConversionResult result = AaxNoFixup.ConvertPassThrough(sourceStream);
+
+				Assert.AreEqual(ConversionResult.NoErrorsDetected, result);
+
+				string fileHash1 = string.Join("", shaForStream.Hash.Select(b => b.ToString("x2")));
+
+				Assert.AreEqual(AaxNoFixup.InputStream.Length, new FileInfo(tempfile.Name).Length);
+				Assert.AreEqual(PassthroughM4bHash, fileHash1);
+			}
+			finally
+			{
+				TestFiles.CloseAllFiles();
+				Aax.Close();
+			}
+		}
+
 	}
 }

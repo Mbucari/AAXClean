@@ -19,6 +19,7 @@ namespace AAXClean.Test
 		public override long RenderSize => 64416191;
 		public override TimeSpan Duration => TimeSpan.FromTicks(3421559002267);
 		public override string SingleM4bHash => "b66e927d76427114b53e958657453f847e65f22c";
+		public override string PassthroughM4bHash => "958dc38cbb682099da0dad06b55dc37727db499b";
 		public override List<string> MultiM4bHashes => new()
 		{
 			"ebc1098695bd6773689ceaee32ecea0164d36286",

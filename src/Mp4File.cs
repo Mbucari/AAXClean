@@ -40,7 +40,7 @@ namespace AAXClean
 		internal MdatBox Mdat { get; }
 
 		private readonly TrackedReadStream inputStream;
-		private bool isCancelled = false;
+		protected bool ProcessAudioCanceled { get; private set; } = false;
 
 		public Mp4File(Stream file, long fileSize) : base(new BoxHeader(fileSize, "MPEG"), null)
 		{
@@ -100,7 +100,7 @@ namespace AAXClean
 			}
 			audioFilter.Chapters = Chapters;
 
-			return audioHandler.Success && !isCancelled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
+			return audioHandler.Success && !ProcessAudioCanceled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
 		}
 
 		public ConversionResult ConvertToMp4a(Stream outputStream, ChapterInfo userChapters = null)
@@ -129,38 +129,38 @@ namespace AAXClean
 		{
 			ChapterChunkHandler chapterHandler = new ChapterChunkHandler(Moov.TextTrack);
 
-			isCancelled = false;
+			ProcessAudioCanceled = false;
 
 			Span<byte> chunkBuffer = new byte[1024];
 			foreach (TrackChunk chunk in new MpegChunkEnumerable(chapterHandler))
 			{
-				if (isCancelled)
+				if (ProcessAudioCanceled)
 					break;
 
 				Span<byte> chunkdata = chunkBuffer.Slice(0, chunk.Entry.ChunkSize);
 				InputStream.ReadNextChunk(chunk.Entry.ChunkOffset, chunkdata);
-				isCancelled = !chunk.Handler.HandleChunk(chunk.Entry, chunkdata);
+				ProcessAudioCanceled = !chunk.Handler.HandleChunk(chunk.Entry, chunkdata);
 			}
 			Chapters ??= chapterHandler.Chapters;
 			return chapterHandler.Chapters;
 		}
 
-		private void ProcessAudio(params ChunkHandlerBase[] chunkHandlers)
+		internal void ProcessAudio(params ChunkHandlerBase[] chunkHandlers)
 		{
 			DateTime beginProcess = DateTime.Now;
 			DateTime nextUpdate = beginProcess;
 
-			isCancelled = false;
+			ProcessAudioCanceled = false;
 
 			Span<byte> chunkBuffer = new byte[4 * 1024 * 1024];
 			foreach (TrackChunk chunk in new MpegChunkEnumerable(chunkHandlers))
 			{
-				if (isCancelled)
+				if (ProcessAudioCanceled)
 					break;
 
 				Span<byte> chunkdata = chunkBuffer.Slice(0, chunk.Entry.ChunkSize);
 				InputStream.ReadNextChunk(chunk.Entry.ChunkOffset, chunkdata);
-				isCancelled = !chunk.Handler.HandleChunk(chunk.Entry, chunkdata);
+				ProcessAudioCanceled = !chunk.Handler.HandleChunk(chunk.Entry, chunkdata);
 
 				//Throttle update so it doesn't bog down UI
 				if (DateTime.Now > nextUpdate)
@@ -188,7 +188,7 @@ namespace AAXClean
 
 		public void Cancel()
 		{
-			isCancelled = true;
+			ProcessAudioCanceled = true;
 		}
 
 		public void Close()

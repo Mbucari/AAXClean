@@ -1,5 +1,6 @@
 ﻿using AAXClean.Boxes;
 using AAXClean.Chunks;
+using AAXClean.FrameFilters;
 using AAXClean.Util;
 using System;
 using System.Collections.Generic;
@@ -19,23 +20,29 @@ namespace AAXClean
 		public byte[] Key { get; private set; }
 		public byte[] IV { get; private set; }
 
+		private readonly long OriginalFtypSize;
+		private readonly long OriginalMoovSize;
+
 		public AaxFile(Stream file, long fileSize, bool additionalFixups = true) : base(file, fileSize)
 		{
 			if (FileType != FileType.Aax && FileType != FileType.Aaxc)
 				throw new ArgumentException($"This instance of {nameof(Mp4File)} is not an Aax or Aaxc file.");
 
-			(_, uint avgBitrate) = CalculateAudioSizeAndBitrate();
+			OriginalFtypSize = Ftyp.Header.TotalBoxSize;
+			OriginalMoovSize = Moov.Header.TotalBoxSize;
 
 			//This is the flag that, if set, prevents cover art from loading on android.
 			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.DependsOnCoreCoder = 0;
 			//Must change the audio type from aavd to mp4a
 			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Header.Type = "mp4a";
-			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
 
 			//These actions will alter the mpeg-4 size and should not
 			//be performed unless re-writing the entire mpeg-4 file.
 			if (additionalFixups)
 			{
+				(_, uint avgBitrate) = CalculateAudioSizeAndBitrate();
+				Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
+
 				//Remove extra Free boxes
 				List<Box> children = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children;
 				for (int i = children.Count - 1; i >= 0; i--)
@@ -63,6 +70,68 @@ namespace AAXClean
 
 		internal override Mp4AudioChunkHandler GetAudioChunkHandler()
 			=> new AavdChunkHandler(Moov.AudioTrack, Key, IV);
+
+		/// <summary>
+		/// Converts <see cref="AaxFile"/> to m4b with no change to the file structure. Will fail if any edits were made (e.g. tags).
+		/// </summary>
+		/// <param name="output">The stream to write the file. Does not need to be seekable.</param>
+		/// <returns></returns>
+		public ConversionResult ConvertPassThrough(Stream output)
+		{
+			if (Ftyp.RenderSize != OriginalFtypSize)
+				throw new FormatException($"Size of {nameof(Ftyp)} is different from source file. Was {nameof(AaxFile)} not initialized with additionalFixups = false?");
+
+			if (Moov.RenderSize != OriginalMoovSize)
+				throw new FormatException($"Size of {nameof(Moov)} is different from source file");
+
+			var trackedOutput = new TrackedWriteStream(output);
+
+			Ftyp.Save(trackedOutput);
+			Moov.Save(trackedOutput);
+
+			if (Mdat is null)
+			{
+				//mdat was zero size in source file
+				trackedOutput.WriteInt32BE(0);
+				trackedOutput.WriteType("mdat");
+			}
+			else
+			{
+				if (Mdat.Header.Version == 1)
+				{
+					trackedOutput.WriteUInt32BE(1);
+					trackedOutput.WriteType(Mdat.Header.Type);
+					trackedOutput.WriteInt64BE(Mdat.Header.TotalBoxSize);
+				}
+				else
+				{
+					trackedOutput.WriteUInt32BE((uint)Mdat.Header.TotalBoxSize);
+					trackedOutput.WriteType(Mdat.Header.Type);
+				}
+			}
+
+			var audioHandler = GetAudioChunkHandler();
+			audioHandler.FrameFilter = new PassthroughFilter(trackedOutput);
+
+			bool success;
+
+			if (Moov.TextTrack is null)
+			{
+				ProcessAudio(audioHandler);
+				success = audioHandler.Success;
+			}
+			else
+			{
+				var chapterHandler = new ChapterChunkHandler(Moov.TextTrack);
+				chapterHandler.FrameFilter = audioHandler.FrameFilter;
+				ProcessAudio(audioHandler, chapterHandler);
+				success = audioHandler.Success && chapterHandler.Success;
+			}
+
+			trackedOutput.Close();
+
+			return success && !ProcessAudioCanceled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
+		}
 
 		public ChapterInfo GetChaptersFromMetadata()
 		{

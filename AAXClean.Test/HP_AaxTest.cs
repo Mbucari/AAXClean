@@ -21,6 +21,7 @@ namespace AAXClean.Test
 		public override long RenderSize => 2876633L;
 		public override TimeSpan Duration => TimeSpan.FromTicks(299221159183);
 		public override string SingleM4bHash => "1c659ebbc126c497a49cb7817fa9d3427bcaba35";
+		public override string PassthroughM4bHash => "9b3d155fd909521b6f7306b5c7c2a2bd1590158a";
 		public override List<string> MultiM4bHashes => new()
 		{
 			"922603def2bb7dc73a2d51d3f4db85d41fdf4611",
@@ -105,7 +106,7 @@ namespace AAXClean.Test
 		}
 
 		[TestMethod]
-		public void _6_WriteTags()
+		public void _7_WriteTags()
 		{
 			string tagstring = "this is a tag string";
 			Mp4File mp4File = null;
