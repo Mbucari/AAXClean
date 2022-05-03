@@ -15,7 +15,7 @@ namespace AAXClean.Chunks
 		/// Enumerates over all chunks in all Mpeg tracks in order of the cunk offset
 		/// </summary>
 		/// <param name="handlers">Track chunk handlers</param>
-		public MpegChunkEnumerable(params ChunkHandlerBase[] handlers)
+		public MpegChunkEnumerable(params ChunkHandler[] handlers)
 		{
 			Tracks = new TrackEnum[handlers.Length];
 
@@ -107,7 +107,7 @@ namespace AAXClean.Chunks
 			/// <summary>
 			/// The handler of the track tha is being enumerated
 			/// </summary>
-			public ChunkHandlerBase Handler { get; init; }
+			public ChunkHandler Handler { get; init; }
 			/// <summary>
 			/// The <see cref="ChunkEntryList"/> enumerator
 			/// </summary>

@@ -4,18 +4,15 @@ using System;
 
 namespace AAXClean.Chunks
 {
-	internal class Mp4AudioChunkHandler : ChunkHandlerBase
+	internal class Mp4AudioChunkHandler : ChunkHandler
 	{
-		public Mp4AudioChunkHandler(TrakBox trak, IFrameFilter frameFilter = null) : base(trak)
-		{
-			FrameFilter = frameFilter;
-		}
+		public Mp4AudioChunkHandler(TrakBox trak, IFrameFilter frameFilter = null) : base(trak, frameFilter) { }
 
 		protected virtual bool ValidateFrame(Span<byte> frame) => (AV_RB16(frame) & 0xfff0) != 0xfff0;
 
-		public override bool HandleFrame(ChunkEntry cEntry, uint frameIndex, Span<byte> frameData)
+		public override bool HandleFrame(ChunkEntry cEntry, uint frameIndex, uint frameDelta, Span<byte> frameData)
 		{
-			return ValidateFrame(frameData) && (FrameFilter?.FilterFrame(cEntry, LastFrameProcessed, frameData) ?? false);
+			return ValidateFrame(frameData) && (FrameFilter?.FilterFrame(cEntry, frameIndex, frameDelta, frameData) ?? false);
 		}
 
 		//Defined at

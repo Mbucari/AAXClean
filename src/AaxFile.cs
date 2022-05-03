@@ -121,7 +121,7 @@ namespace AAXClean
 			}
 			else
 			{
-				var chapterHandler = new ChapterChunkHandler(Moov.TextTrack, audioHandler.FrameFilter);
+				var chapterHandler = new ChunkHandler(Moov.TextTrack, audioHandler.FrameFilter);
 				ProcessAudio(audioHandler, chapterHandler);
 				success = audioHandler.Success && chapterHandler.Success;
 			}

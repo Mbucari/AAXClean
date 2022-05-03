@@ -1,6 +1,7 @@
 ﻿using AAXClean.Util;
 using System.Collections.Generic;
 using System.IO;
+using System;
 
 namespace AAXClean.Boxes
 {
@@ -32,27 +33,38 @@ namespace AAXClean.Boxes
 			}
 		}
 
+		public uint FrameToFrameDelta(uint frameIndex)
+		{
+			foreach (SampleEntry entry in Samples)
+			{
+				if (frameIndex < entry.FrameCount)
+				{
+					return entry.FrameDelta;
+				}
+
+				frameIndex -= entry.FrameCount;
+			}
+			throw new IndexOutOfRangeException($"{nameof(frameIndex)} {frameIndex} is larger than the number of frames in {nameof(SttsBox)}");
+		}
+
 		/// <summary>
 		/// Gets the playback timestamp of an audio frame.
 		/// </summary>
-		public System.TimeSpan FrameToTime(double timeScale, uint frameIndex)
+		public TimeSpan FrameToTime(double timeScale, uint frameIndex)
 		{
 			double beginDelta = 0;
 
 			foreach (SampleEntry entry in Samples)
 			{
-				if (frameIndex > entry.FrameCount)
+				if (frameIndex <= entry.FrameCount)
 				{
-					beginDelta += (ulong)entry.FrameCount * entry.FrameDelta;
-					frameIndex -= entry.FrameCount;
+					return TimeSpan.FromSeconds((beginDelta + (ulong)frameIndex * entry.FrameDelta) / timeScale);
 				}
-				else
-				{
-					beginDelta += (ulong)frameIndex * entry.FrameDelta;
-					break;
-				}
+
+				beginDelta += (ulong)entry.FrameCount * entry.FrameDelta;
+				frameIndex -= entry.FrameCount;
 			}
-			return System.TimeSpan.FromSeconds(beginDelta / timeScale);
+			throw new IndexOutOfRangeException($"{nameof(frameIndex)} {frameIndex} is larger than the number of frames in {nameof(SttsBox)}");
 		}
 
 		protected override void Render(Stream file)

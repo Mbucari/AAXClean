@@ -6,6 +6,7 @@ using System;
 using System.IO;
 using System.Linq;
 using AAXClean.FrameFilters;
+using AAXClean.FrameFilters.Text;
 
 namespace AAXClean
 {
@@ -95,9 +96,10 @@ namespace AAXClean
 			}
 			else
 			{
-				ChapterChunkHandler chapterHandler = new(Moov.TextTrack);
+				ChapterFilter chFilter = new(TimeScale);
+				ChunkHandler chapterHandler = new(Moov.TextTrack, chFilter);
 				ProcessAudio(audioHandler, chapterHandler);
-				Chapters = userChapters ?? chapterHandler.Chapters;
+				Chapters = userChapters ?? chFilter.Chapters;
 			}
 			audioFilter.Chapters = Chapters;
 
@@ -128,25 +130,26 @@ namespace AAXClean
 
 		public ChapterInfo GetChapterInfo()
 		{
-			ChapterChunkHandler chapterHandler = new ChapterChunkHandler(Moov.TextTrack);
+			ChapterFilter chFilter = new(TimeScale);
+			ChunkHandler chapterHandler = new(Moov.TextTrack, chFilter);
 
 			ProcessAudioCanceled = false;
 
 			Span<byte> chunkBuffer = new byte[1024];
-			foreach (TrackChunk chunk in new MpegChunkEnumerable(chapterHandler))
+			foreach (ChunkEntry chunk in new ChunkEntryList(Moov.TextTrack))
 			{
 				if (ProcessAudioCanceled)
 					break;
 
-				Span<byte> chunkdata = chunkBuffer.Slice(0, chunk.Entry.ChunkSize);
-				InputStream.ReadNextChunk(chunk.Entry.ChunkOffset, chunkdata);
-				ProcessAudioCanceled = !chunk.Handler.HandleChunk(chunk.Entry, chunkdata);
+				Span<byte> chunkdata = chunkBuffer.Slice(0, chunk.ChunkSize);
+				InputStream.ReadNextChunk(chunk.ChunkOffset, chunkdata);
+				ProcessAudioCanceled = !chapterHandler.HandleChunk(chunk, chunkdata);
 			}
-			Chapters ??= chapterHandler.Chapters;
-			return chapterHandler.Chapters;
+			Chapters ??= chFilter.Chapters;
+			return chFilter.Chapters;
 		}
 
-		internal void ProcessAudio(params ChunkHandlerBase[] chunkHandlers)
+		internal void ProcessAudio(params ChunkHandler[] chunkHandlers)
 		{
 			DateTime beginProcess = DateTime.Now;
 			DateTime nextUpdate = beginProcess;

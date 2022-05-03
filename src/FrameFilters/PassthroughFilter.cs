@@ -15,7 +15,7 @@ namespace AAXClean.FrameFilters
 		}
 		public void Dispose() { }
 
-		public bool FilterFrame(ChunkEntry cEntry, uint frameIndex, Span<byte> audioFrame)
+		public bool FilterFrame(ChunkEntry cEntry, uint frameIndex, uint frameDelta, Span<byte> audioFrame)
 		{
 			if (cEntry.FirstFrameIndex == frameIndex)
 			{

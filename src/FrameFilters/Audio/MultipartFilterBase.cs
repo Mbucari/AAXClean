@@ -38,7 +38,7 @@ namespace AAXClean.FrameFilters.Audio
 			CloseCurrentWriter();
 		}
 
-		public override bool FilterFrame(ChunkEntry cEntry, uint frameIndex, Span<byte> audioFrame)
+		public override bool FilterFrame(ChunkEntry cEntry, uint frameIndex, uint frameDelta, Span<byte> audioFrame)
 		{
 			if (frameIndex > EndFrame)
 			{

@@ -2,7 +2,7 @@
 {
 	internal class TrackChunk
 	{
-		public ChunkHandlerBase Handler { get; init; }
+		public ChunkHandler Handler { get; init; }
 		public ChunkEntry Entry { get; init; }
 	}
 }
