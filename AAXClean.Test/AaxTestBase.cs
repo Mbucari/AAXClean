@@ -258,6 +258,51 @@ namespace AAXClean.Test
 				Aax.Close();
 			}
 		}
+		[TestMethod]
+		public void _7_CustomChapters()
+		{
+			try
+			{
+				FileStream tempfile = TestFiles.NewTempFile();
+				ChapterInfo newChapters = new ChapterInfo();
+				newChapters.AddChapter("Ch1", TimeSpan.FromTicks(15000000000));
+				newChapters.AddChapter("Ch2", TimeSpan.FromTicks(30000000000));
+				newChapters.AddChapter("Ch3", TimeSpan.FromTicks(45000000000));
+				newChapters.AddChapter("Ch4", TimeSpan.FromTicks(15000000000));
+				newChapters.AddChapter("Ch5", TimeSpan.FromTicks(30000000000));
+				newChapters.AddChapter("Ch6", TimeSpan.FromTicks(45000000000));
+				ConversionResult result = Aax.ConvertToMp4a(tempfile, newChapters);
 
+				Assert.AreEqual(ConversionResult.NoErrorsDetected, result);
+
+				Mp4File mp4 = new Mp4File(tempfile.Name);
+				var ch_2 = mp4.GetChaptersFromMetadata().ToList();
+				var ch_3 = mp4.GetChapterInfo().ToList();
+				mp4.Close();
+
+				var ch_1 = newChapters.ToList();
+				Assert.AreEqual(ch_1.Count, ch_2.Count, 0, "Compare to GetChaptersFromMetadata()");
+				Assert.AreEqual(ch_1.Count, ch_3.Count, 0, "Compare to GetChapterInfo()");
+
+				for (int i = 0; i < ch_1.Count; i++)
+				{
+					Assert.AreEqual(ch_1[i].Duration.Ticks, ch_2[i].Duration.Ticks, 10, "Compare to GetChaptersFromMetadata()");
+					Assert.AreEqual(ch_1[i].StartOffset.Ticks, ch_2[i].StartOffset.Ticks, 10, "Compare to GetChaptersFromMetadata()");
+					Assert.AreEqual(ch_1[i].EndOffset.Ticks, ch_2[i].EndOffset.Ticks, 10, "Compare to GetChaptersFromMetadata()");
+					Assert.AreEqual(ch_1[i].Title, ch_2[i].Title, "Compare to GetChaptersFromMetadata()");
+				}
+				for (int i = 0; i < ch_1.Count; i++)
+				{
+					Assert.AreEqual(ch_1[i].Duration.Ticks, ch_3[i].Duration.Ticks, 10, "Compare to GetChapterInfo()");
+					Assert.AreEqual(ch_1[i].StartOffset.Ticks, ch_3[i].StartOffset.Ticks, 10, "Compare to GetChapterInfo()");
+					Assert.AreEqual(ch_1[i].EndOffset.Ticks, ch_3[i].EndOffset.Ticks, 10, "Compare to GetChapterInfo()");
+					Assert.AreEqual(ch_1[i].Title, ch_3[i].Title, "Compare to GetChapterInfo()");
+				}
+			}
+			finally
+			{
+				TestFiles.CloseAllFiles();
+			}
+		}
 	}
 }
