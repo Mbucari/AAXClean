@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 
@@ -164,6 +165,41 @@ namespace AAXClean.Test
 			finally
 			{
 				mp4File?.Close();
+				TestFiles.CloseAllFiles();
+			}
+		}
+		[TestMethod]
+		public void _8_CustomChapters()
+		{
+			try
+			{
+				FileStream tempfile = TestFiles.NewTempFile();
+				ChapterInfo newChapters = new ChapterInfo();
+				newChapters.AddChapter("Ch1", TimeSpan.FromTicks(15000000000));
+				newChapters.AddChapter("Ch2", TimeSpan.FromTicks(30000000000));
+				newChapters.AddChapter("Ch4", TimeSpan.FromTicks(45000000000));
+				ConversionResult result = Aax.ConvertToMp4a(tempfile, newChapters);
+
+				Assert.AreEqual(ConversionResult.NoErrorsDetected, result);
+
+				Mp4File mp4 = new Mp4File(tempfile.Name);
+				var ch_2 = mp4.GetChapterInfo().ToList();
+				mp4.Close();
+
+				var ch_1 = newChapters.ToList();
+				Assert.AreEqual(ch_1.Count, ch_2.Count);
+
+				for (int i = 0; i < ch_1.Count; i++)
+				{
+
+					Assert.AreEqual(ch_1[i].Duration, ch_2[i].Duration);
+					Assert.AreEqual(ch_1[i].StartOffset, ch_2[i].StartOffset);
+					Assert.AreEqual(ch_1[i].EndOffset, ch_2[i].EndOffset);
+					Assert.AreEqual(ch_1[i].Title, ch_2[i].Title);
+				}
+			}
+			finally
+			{
 				TestFiles.CloseAllFiles();
 			}
 		}
