@@ -7,6 +7,8 @@ using System.IO;
 using System.Linq;
 using AAXClean.FrameFilters;
 using AAXClean.FrameFilters.Text;
+using System.Collections.Generic;
+using System.Text;
 
 namespace AAXClean
 {
@@ -93,14 +95,14 @@ namespace AAXClean
 			if (Moov.TextTrack is null || userChapters is not null)
 			{
 				ProcessAudio(audioHandler);
-				Chapters ??= userChapters;
+				Chapters = userChapters;
 			}
 			else
 			{
 				ChapterFilter chFilter = new(TimeScale);
 				ChunkHandler chapterHandler = new(Moov.TextTrack, chFilter);
 				ProcessAudio(audioHandler, chapterHandler);
-				Chapters = userChapters ?? chFilter.Chapters;
+				Chapters = chFilter.Chapters;
 			}
 			audioFilter.Chapters = Chapters;
 
@@ -148,6 +150,47 @@ namespace AAXClean
 			}
 			Chapters ??= chFilter.Chapters;
 			return chFilter.Chapters;
+		}
+
+		public ChapterInfo GetChaptersFromMetadata()
+		{
+			TrakBox textTrak = Moov.TextTrack;
+
+			//Get chapter names from metadata box in chapter track
+			List<string> chapterNames =
+				textTrak
+				?.GetChild<UdtaBox>()
+				?.GetChild<MetaBox>()
+				?.GetChild<AppleListBox>()
+				?.Children
+				?.Cast<AppleTagBox>()
+				?.Where(b => b.Header.Type == "©nam")
+				?.Select(b => Encoding.UTF8.GetString(b.Data.Data))
+				?.ToList();
+
+			if (chapterNames is null) return null;
+
+			IReadOnlyList<SttsBox.SampleEntry> sampleTimes = textTrak.Mdia.Minf.Stbl.Stts.Samples;
+
+			if (sampleTimes.Count != chapterNames.Count) return null;
+
+			ChunkEntryList cEntryList = new(textTrak);
+
+			if (cEntryList.Count != chapterNames.Count) return null;
+
+			ChapterBuilder builder = new(TimeScale);
+
+			for (int i = 0; i < chapterNames.Count; i++)
+			{
+				ChunkEntry cEntry = cEntryList[i];
+				builder.AddChapter(cEntry.ChunkIndex, chapterNames[(int)cEntry.ChunkIndex], (int)sampleTimes[i].FrameDelta);
+			}
+
+			ChapterInfo chlist = builder.ToChapterInfo();
+
+			Chapters ??= chlist;
+
+			return chlist;
 		}
 
 		internal void ProcessAudio(params ChunkHandler[] chunkHandlers)

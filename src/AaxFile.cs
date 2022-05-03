@@ -131,47 +131,6 @@ namespace AAXClean
 			return success && !ProcessAudioCanceled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
 		}
 
-		public ChapterInfo GetChaptersFromMetadata()
-		{
-			TrakBox textTrak = Moov.TextTrack;
-
-			//Get chapter names from metadata box in chapter track
-			List<string> chapterNames =
-				textTrak
-				?.GetChild<UdtaBox>()
-				?.GetChild<MetaBox>()
-				?.GetChild<AppleListBox>()
-				?.Children
-				?.Cast<AppleTagBox>()
-				?.Where(b => b.Header.Type == "©nam")
-				?.Select(b => Encoding.UTF8.GetString(b.Data.Data))
-				?.ToList();
-
-			if (chapterNames is null) return null;
-
-			IReadOnlyList<SttsBox.SampleEntry> sampleTimes = textTrak.Mdia.Minf.Stbl.Stts.Samples;
-
-			if (sampleTimes.Count != chapterNames.Count) return null;
-
-			ChunkEntryList cEntryList = new(textTrak);
-
-			if (cEntryList.Count != chapterNames.Count) return null;
-
-			ChapterBuilder builder = new(TimeScale);
-
-			for (int i = 0; i < chapterNames.Count; i++)
-			{
-				ChunkEntry cEntry = cEntryList[i];
-				builder.AddChapter(cEntry.ChunkIndex, chapterNames[(int)cEntry.ChunkIndex], (int)sampleTimes[i].FrameDelta);
-			}
-
-			ChapterInfo chlist = builder.ToChapterInfo();
-
-			Chapters ??= chlist;
-
-			return chlist;
-		}
-
 		#region Aax(c) Keys
 
 		public void SetDecryptionKey(string activationBytes)
