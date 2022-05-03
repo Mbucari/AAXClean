@@ -20,7 +20,7 @@ namespace AAXClean.FrameFilters
 
 		public void Dispose() { }
 
-		public virtual bool FilterFrame(ChunkEntry cEntry, uint frameIndex, Span<byte> audioFrame)
+		public bool FilterFrame(ChunkEntry cEntry, uint frameIndex, Span<byte> audioFrame)
 		{
 			if (cEntry.FirstFrameIndex == frameIndex)
 			{
@@ -33,7 +33,8 @@ namespace AAXClean.FrameFilters
 
 			return true;
 		}
-		protected void WriteZeroUntilPosition(long desiredPosition)
+
+		private void WriteZeroUntilPosition(long desiredPosition)
 		{
 			long padSize = desiredPosition - OutputStream.Position;
 
