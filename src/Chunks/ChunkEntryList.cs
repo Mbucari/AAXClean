@@ -40,7 +40,7 @@ namespace AAXClean.Chunks
 		}
 
 		public IEnumerator<ChunkEntry> GetEnumerator()
-			=> new TrachChunkEnumerator(EntryCount, i => GetChunkEntry(i));
+			=> new TrachChunkEnumerator(EntryCount, GetChunkEntry);
 
 		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 

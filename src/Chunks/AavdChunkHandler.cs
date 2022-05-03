@@ -1,4 +1,5 @@
 ﻿using AAXClean.Boxes;
+using AAXClean.FrameFilters;
 using AAXClean.Util;
 using System;
 
@@ -8,7 +9,7 @@ namespace AAXClean.Chunks
 	{
 		private AesCryptoTransform Aes { get; }
 
-		public AavdChunkHandler(TrakBox trak, byte[] key, byte[] iv) : base(trak)
+		public AavdChunkHandler(TrakBox trak, byte[] key, byte[] iv, IFrameFilter frameFilter = null) : base(trak, frameFilter)
 		{
 			if (key is null || key.Length != 16)
 				throw new ArgumentException($"{nameof(key)} must be 16 bytes long.");

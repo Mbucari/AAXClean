@@ -5,6 +5,7 @@ using AAXClean.Util;
 using System;
 using System.IO;
 using System.Linq;
+using AAXClean.FrameFilters;
 
 namespace AAXClean
 {
@@ -64,8 +65,8 @@ namespace AAXClean
 
 		public Mp4File(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read) : this(File.Open(fileName, FileMode.Open, access, share)) { }
 
-		internal virtual Mp4AudioChunkHandler GetAudioChunkHandler()
-			=> new(Moov.AudioTrack);
+		internal virtual Mp4AudioChunkHandler GetAudioChunkHandler(IFrameFilter frameFilter = null)
+			=> new(Moov.AudioTrack, frameFilter);
 
 		public void Save()
 		{
@@ -85,8 +86,8 @@ namespace AAXClean
 
 		public ConversionResult FilterAudio(AudioFilterBase audioFilter, ChapterInfo userChapters = null)
 		{
-			using Mp4AudioChunkHandler audioHandler = GetAudioChunkHandler();
-			audioHandler.FrameFilter = audioFilter;
+			using Mp4AudioChunkHandler audioHandler = GetAudioChunkHandler(audioFilter);
+
 			if (Moov.TextTrack is null)
 			{
 				ProcessAudio(audioHandler);
@@ -94,7 +95,7 @@ namespace AAXClean
 			}
 			else
 			{
-				ChapterChunkHandler chapterHandler = new ChapterChunkHandler(Moov.TextTrack);
+				ChapterChunkHandler chapterHandler = new(Moov.TextTrack);
 				ProcessAudio(audioHandler, chapterHandler);
 				Chapters = userChapters ?? chapterHandler.Chapters;
 			}

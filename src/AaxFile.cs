@@ -68,8 +68,8 @@ namespace AAXClean
 		public AaxFile(Stream file) : this(file, file.Length) { }
 		public AaxFile(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read) : this(File.Open(fileName, FileMode.Open, access, share)) { }
 
-		internal override Mp4AudioChunkHandler GetAudioChunkHandler()
-			=> new AavdChunkHandler(Moov.AudioTrack, Key, IV);
+		internal override Mp4AudioChunkHandler GetAudioChunkHandler(IFrameFilter frameFilter = null)
+			=> new AavdChunkHandler(Moov.AudioTrack, Key, IV, frameFilter);
 
 		/// <summary>
 		/// Converts <see cref="AaxFile"/> to m4b with no change to the file structure. Will fail if any edits were made (e.g. tags).
@@ -110,8 +110,7 @@ namespace AAXClean
 				}
 			}
 
-			var audioHandler = GetAudioChunkHandler();
-			audioHandler.FrameFilter = new PassthroughFilter(trackedOutput);
+			var audioHandler = GetAudioChunkHandler(new PassthroughFilter(trackedOutput));
 
 			bool success;
 
@@ -122,8 +121,7 @@ namespace AAXClean
 			}
 			else
 			{
-				var chapterHandler = new ChapterChunkHandler(Moov.TextTrack);
-				chapterHandler.FrameFilter = audioHandler.FrameFilter;
+				var chapterHandler = new ChapterChunkHandler(Moov.TextTrack, audioHandler.FrameFilter);
 				ProcessAudio(audioHandler, chapterHandler);
 				success = audioHandler.Success && chapterHandler.Success;
 			}

@@ -1,31 +1,21 @@
 ﻿using AAXClean.Boxes;
+using AAXClean.FrameFilters;
 using System;
 
 namespace AAXClean.Chunks
 {
 	internal class Mp4AudioChunkHandler : ChunkHandlerBase
 	{
-		public Mp4AudioChunkHandler(TrakBox trak) : base(trak) { }
+		public Mp4AudioChunkHandler(TrakBox trak, IFrameFilter frameFilter = null) : base(trak)
+		{
+			FrameFilter = frameFilter;
+		}
 
 		protected virtual bool ValidateFrame(Span<byte> frame) => (AV_RB16(frame) & 0xfff0) != 0xfff0;
 
-		public override bool HandleChunk(ChunkEntry chunkEntry, Span<byte> chunkData)
+		public override bool HandleFrame(ChunkEntry cEntry, uint frameIndex, Span<byte> frameData)
 		{
-			int framePosition = 0;
-			for (uint fIndex = 0; fIndex < chunkEntry.FrameSizes.Length; fIndex++)
-			{
-				LastFrameProcessed = chunkEntry.FirstFrameIndex + fIndex;
-
-				Span<byte> frame = chunkData.Slice(framePosition, chunkEntry.FrameSizes[fIndex]);
-
-				Success = ValidateFrame(frame) && FrameFilter?.FilterFrame(chunkEntry, LastFrameProcessed, frame) == true;
-
-				if (!Success)
-					return false;
-
-				framePosition += chunkEntry.FrameSizes[fIndex];
-			}
-			return true;
+			return ValidateFrame(frameData) && (FrameFilter?.FilterFrame(cEntry, LastFrameProcessed, frameData) ?? false);
 		}
 
 		//Defined at

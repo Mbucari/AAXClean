@@ -1,4 +1,5 @@
 ﻿using AAXClean.Boxes;
+using AAXClean.FrameFilters;
 using System;
 using System.Text;
 
@@ -9,33 +10,21 @@ namespace AAXClean.Chunks
 		public ChapterInfo Chapters => Builder.ToChapterInfo();
 		private readonly ChapterBuilder Builder;
 
-		public ChapterChunkHandler(TrakBox trak) : base(trak)
+		public ChapterChunkHandler(TrakBox trak, IFrameFilter frameFilter = null) : base(trak)
 		{
+			FrameFilter = frameFilter;
 			Builder = new ChapterBuilder(TimeScale);
 		}
-
-		public override bool HandleChunk(ChunkEntry chunkEntry, Span<byte> chunkData)
+		
+		public override bool HandleFrame(ChunkEntry cEntry, uint frameIndex, Span<byte> frameData)
 		{
-			if (chunkEntry.ChunkIndex < 0 || chunkEntry.ChunkIndex >= Stts.EntryCount)
-				return false;
+			int size = frameData[1] | frameData[0];
 
-			for (int start = 0, i = 0; i < chunkEntry.FrameSizes.Length; start += chunkEntry.FrameSizes[i], i++, LastFrameProcessed++)
-			{
-				Span<byte> chunki = chunkData.Slice(start, chunkEntry.FrameSizes[i]);
-				int size = chunki[1] | chunki[0];
+			string title = Encoding.UTF8.GetString(frameData.Slice(2, size));
 
-				string title = Encoding.UTF8.GetString(chunki.Slice(2, size));
+			Builder.AddChapter(cEntry.ChunkIndex, title, (int)Stts.Samples[(int)frameIndex].FrameDelta);
 
-				Builder.AddChapter(chunkEntry.ChunkIndex, title, (int)Stts.Samples[(int)LastFrameProcessed].FrameDelta);
-
-				if (FrameFilter is not null)
-				{
-					Success = FrameFilter.FilterFrame(chunkEntry, LastFrameProcessed, chunki);
-					if (!Success) break;
-				}
-			}
-
-			return Success;
+			return FrameFilter?.FilterFrame(cEntry, frameIndex, frameData) ?? true;
 		}
 
 		protected override void Dispose(bool disposing)
