@@ -8,7 +8,7 @@ namespace AAXClean.Chunks
 	{
 		public TrakBox Track { get; }
 		public TimeSpan ProcessPosition => Stts.FrameToTime(TimeScale, LastFrameProcessed);
-		public IFrameFilter FrameFilter { get; set; }
+		public IFrameFilter FrameFilter { get; init; }
 		public bool Success { get; protected set; } = true;
 
 		private readonly SttsBox Stts;
@@ -17,7 +17,7 @@ namespace AAXClean.Chunks
 
 		protected bool Disposed = false;
 
-		public ChunkHandler(TrakBox trak, IFrameFilter frameFilter = null)
+		public ChunkHandler(TrakBox trak, IFrameFilter frameFilter)
 		{
 			Track = trak;
 			TimeScale = Track.Mdia.Mdhd.Timescale;
