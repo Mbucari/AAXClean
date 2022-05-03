@@ -8,21 +8,21 @@ namespace AAXClean.Chunks
 	{
 		public TrakBox Track { get; }
 		public TimeSpan ProcessPosition => Stts.FrameToTime(TimeScale, LastFrameProcessed);
-		public IFrameFilter FrameFilter { get; init; }
-		public bool Success { get; protected set; } = true;
+		public IFrameFilter FrameFilter { get; }
+		public bool Success { get; private set; }
 
 		private readonly SttsBox Stts;
-		private uint LastFrameProcessed;
 		private readonly double TimeScale;
+		private uint LastFrameProcessed;
 
 		protected bool Disposed = false;
 
 		public ChunkHandler(TrakBox trak, IFrameFilter frameFilter)
 		{
 			Track = trak;
-			TimeScale = Track.Mdia.Mdhd.Timescale;
-			Stts = Track.Mdia.Minf.Stbl.Stts;
 			FrameFilter = frameFilter;
+			Stts = Track.Mdia.Minf.Stbl.Stts;
+			TimeScale = Track.Mdia.Mdhd.Timescale;
 		}
 
 		public bool HandleChunk(ChunkEntry chunkEntry, Span<byte> chunkData)

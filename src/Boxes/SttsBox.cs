@@ -52,16 +52,16 @@ namespace AAXClean.Boxes
 		/// </summary>
 		public TimeSpan FrameToTime(double timeScale, uint frameIndex)
 		{
-			double beginDelta = 0;
+			ulong beginDelta = 0;
 
 			foreach (SampleEntry entry in Samples)
 			{
 				if (frameIndex <= entry.FrameCount)
 				{
-					return TimeSpan.FromSeconds((beginDelta + (ulong)frameIndex * entry.FrameDelta) / timeScale);
+					return TimeSpan.FromSeconds((beginDelta + frameIndex * entry.FrameDelta) / timeScale);
 				}
 
-				beginDelta += (ulong)entry.FrameCount * entry.FrameDelta;
+				beginDelta += entry.FrameCount * entry.FrameDelta;
 				frameIndex -= entry.FrameCount;
 			}
 			throw new IndexOutOfRangeException($"{nameof(frameIndex)} {frameIndex} is larger than the number of frames in {nameof(SttsBox)}");

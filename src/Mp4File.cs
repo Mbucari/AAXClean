@@ -64,9 +64,10 @@ namespace AAXClean
 		}
 		public Mp4File(Stream file) : this(file, file.Length) { }
 
-		public Mp4File(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read) : this(File.Open(fileName, FileMode.Open, access, share)) { }
+		public Mp4File(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read) 
+			: this(File.Open(fileName, FileMode.Open, access, share)) { }
 
-		internal virtual Mp4AudioChunkHandler GetAudioChunkHandler(IFrameFilter frameFilter = null)
+		internal virtual Mp4AudioChunkHandler GetAudioChunkHandler(IFrameFilter frameFilter)
 			=> new(Moov.AudioTrack, frameFilter);
 
 		public void Save()
@@ -89,7 +90,7 @@ namespace AAXClean
 		{
 			using Mp4AudioChunkHandler audioHandler = GetAudioChunkHandler(audioFilter);
 
-			if (Moov.TextTrack is null)
+			if (Moov.TextTrack is null || userChapters is not null)
 			{
 				ProcessAudio(audioHandler);
 				Chapters ??= userChapters;
@@ -156,7 +157,7 @@ namespace AAXClean
 
 			ProcessAudioCanceled = false;
 
-			Span<byte> chunkBuffer = new byte[4 * 1024 * 1024];
+			Span<byte> chunkBuffer = new byte[64 * 1024];
 			foreach (TrackChunk chunk in new MpegChunkEnumerable(chunkHandlers))
 			{
 				if (ProcessAudioCanceled)
@@ -173,7 +174,7 @@ namespace AAXClean
 					double speed = position / (DateTime.Now - beginProcess);
 					ConversionProgressUpdate?.Invoke(this, new ConversionProgressEventArgs { TotalDuration = Duration, ProcessPosition = position, ProcessSpeed = speed });
 
-					nextUpdate = DateTime.Now.AddMilliseconds(200);
+					nextUpdate = DateTime.Now.AddMilliseconds(300);
 				}
 			}
 

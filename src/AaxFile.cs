@@ -68,7 +68,7 @@ namespace AAXClean
 		public AaxFile(Stream file) : this(file, file.Length) { }
 		public AaxFile(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read) : this(File.Open(fileName, FileMode.Open, access, share)) { }
 
-		internal override Mp4AudioChunkHandler GetAudioChunkHandler(IFrameFilter frameFilter = null)
+		internal override Mp4AudioChunkHandler GetAudioChunkHandler(IFrameFilter frameFilter)
 			=> new AavdChunkHandler(Moov.AudioTrack, Key, IV, frameFilter);
 
 		/// <summary>
