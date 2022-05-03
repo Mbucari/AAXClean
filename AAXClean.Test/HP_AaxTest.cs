@@ -21,7 +21,7 @@ namespace AAXClean.Test
 		public override uint MaxBitrate => 64004u;
 		public override long RenderSize => 2876633L;
 		public override TimeSpan Duration => TimeSpan.FromTicks(299221159183);
-		public override string SingleM4bHash => "1c659ebbc126c497a49cb7817fa9d3427bcaba35";
+		public override string SingleM4bHash => "d934641bbfe88db424c71ebef1eb4f62d55042be";
 		public override string PassthroughM4bHash => "9b3d155fd909521b6f7306b5c7c2a2bd1590158a";
 		public override List<string> MultiM4bHashes => new()
 		{
@@ -191,7 +191,6 @@ namespace AAXClean.Test
 
 				for (int i = 0; i < ch_1.Count; i++)
 				{
-
 					Assert.AreEqual(ch_1[i].Duration, ch_2[i].Duration);
 					Assert.AreEqual(ch_1[i].StartOffset, ch_2[i].StartOffset);
 					Assert.AreEqual(ch_1[i].EndOffset, ch_2[i].EndOffset);

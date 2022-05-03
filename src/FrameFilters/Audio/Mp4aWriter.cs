@@ -1,7 +1,10 @@
 ﻿using AAXClean.Boxes;
 using AAXClean.Util;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
 
 namespace AAXClean.FrameFilters.Audio
 {
@@ -122,6 +125,22 @@ namespace AAXClean.FrameFilters.Audio
 			else
 				Moov.TextTrack.Mdia.Minf.Stbl.Stco.EntryCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stco.ChunkOffsets.Count;
 
+			AppleListBox chapterNames =
+				Moov.TextTrack
+				?.GetChild<UdtaBox>()
+				?.GetChild<MetaBox>()
+				?.GetChild<AppleListBox>();
+
+			if (chapterNames is null) return;
+
+			chapterNames.Children.Clear();
+
+			foreach (var c in chapters)
+			{
+				chapterNames.AddTag("©nam", c.Title);
+				chapterNames.AddTag("©cmt", c.Title);
+			}
+
 		}
 
 		public void RemoveTextTrack()
@@ -173,7 +192,6 @@ namespace AAXClean.FrameFilters.Audio
 			StszBox t3 = null;
 			StcoBox t4 = null;
 			Co64Box t5 = null;
-			UdtaBox ttUdata = null;
 
 			bool hasTextTrack = false;
 			if (moov.TextTrack != null)
@@ -190,9 +208,6 @@ namespace AAXClean.FrameFilters.Audio
 				moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t3);
 				moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t4);
 				moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t5);
-
-				ttUdata = moov.TextTrack.GetChild<UdtaBox>();
-				moov.TextTrack.Children.Remove(ttUdata);
 			}
 
 			SttsBox a1 = moov.AudioTrack.Mdia.Minf.Stbl.Stts;
@@ -224,7 +239,6 @@ namespace AAXClean.FrameFilters.Audio
 				moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t3);
 				moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t4);
 				moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t5);
-				moov.TextTrack.Children.Add(ttUdata);
 			}
 
 			ms.Position = 0;
