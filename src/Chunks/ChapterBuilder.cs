@@ -8,7 +8,7 @@ namespace AAXClean.Chunks
 	{
 		public double TimeScale { get; }
 		private bool disposed = false;
-		private readonly List<(uint chunkIndex, string title, int frameDelta)> Chapters = new();
+		private readonly List<(uint chunkIndex, string title, long frameDelta)> Chapters = new();
 		public ChapterBuilder(double timeScale)
 		{
 			TimeScale = timeScale;
@@ -25,36 +25,45 @@ namespace AAXClean.Chunks
 		/// </summary>
 		public ChapterInfo ToChapterInfo()
 		{
+			List<(string title, long chapterEndFrame)> list = GetChapterEnds();
+
+			long last = 0;
+			ChapterInfo cInfo = new();
+
+			//Create ChapterInfo by calculating each chapter's duration.
+			foreach ((string title, long frameEnd) in list)
+			{
+				cInfo.AddChapter(title, TimeSpan.FromSeconds((frameEnd - last) / TimeScale));
+				last = frameEnd;
+			}
+
+			return cInfo;
+		}
+
+		private List<(string title, long chapterEndFrame)> GetChapterEnds()
+		{
 			checked
 			{
-				List<(uint chunkIndex, string title, int frameDelta)> orderedChapters = Chapters.OrderBy(c => c.chunkIndex).ToList();
-				List<(string title, long frameEnd)> list = new();
+				Chapters.Sort((c1, c2) => c1.chunkIndex.CompareTo(c2.chunkIndex));
+				List<(string title, long chapterEndFrame)> list = new();
 
 				long last = 0;
 
 				//Calculate the frame position of the chapter's end.
-				foreach ((uint chunkIndex, string title, int frameDelta) in orderedChapters)
+				foreach ((uint chunkIndex, string title, long frameDelta) in Chapters)
 				{
 					//If the frame delta is negative, assume the duration is 1 frame. This is what ffmpeg does.
-					long endTime = last + (frameDelta < 0 ? 1 : frameDelta);
-					list.Add((title, endTime));
+					long endFrame = last + (frameDelta < 0 ? 1 : frameDelta);
+					list.Add((title, endFrame));
 					last += frameDelta;
 				}
-				List<(string title, long frameEnd)> sortedEnds = list.OrderBy(c => c.frameEnd).ToList();
 
-				last = 0;
-				ChapterInfo cInfo = new();
+				list.Sort((c1, c2) => c1.chapterEndFrame.CompareTo(c2.chapterEndFrame));
 
-				//Create ChapterInfo by calculating each chapter's duration.
-				foreach ((string title, long frameEnd) in sortedEnds)
-				{
-					cInfo.AddChapter(title, TimeSpan.FromSeconds((frameEnd - last) / TimeScale));
-					last = frameEnd;
-				}
-
-				return cInfo;
+				return list;
 			}
 		}
+
 		public void Dispose() => Dispose(true);
 		private void Dispose(bool disposing)
 		{
