@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace AAXClean
 {
@@ -84,7 +83,7 @@ namespace AAXClean
 			if (Moov.RenderSize != OriginalMoovSize)
 				throw new FormatException($"Size of {nameof(Moov)} is different from source file");
 
-			var trackedOutput = new TrackedWriteStream(output);
+			TrackedWriteStream trackedOutput = new TrackedWriteStream(output);
 
 			Ftyp.Save(trackedOutput);
 			Moov.Save(trackedOutput);
@@ -110,7 +109,7 @@ namespace AAXClean
 				}
 			}
 
-			var audioHandler = GetAudioChunkHandler(new PassthroughFilter(trackedOutput));
+			Mp4AudioChunkHandler audioHandler = GetAudioChunkHandler(new PassthroughFilter(trackedOutput));
 
 			bool success;
 
@@ -121,7 +120,7 @@ namespace AAXClean
 			}
 			else
 			{
-				var chapterHandler = new ChunkHandler(Moov.TextTrack, audioHandler.FrameFilter);
+				ChunkHandler chapterHandler = new ChunkHandler(Moov.TextTrack, audioHandler.FrameFilter);
 				ProcessAudio(audioHandler, chapterHandler);
 				success = audioHandler.Success && chapterHandler.Success;
 			}

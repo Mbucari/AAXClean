@@ -1,13 +1,13 @@
-﻿using AAXClean.FrameFilters.Audio;
-using AAXClean.Boxes;
+﻿using AAXClean.Boxes;
 using AAXClean.Chunks;
+using AAXClean.FrameFilters;
+using AAXClean.FrameFilters.Audio;
+using AAXClean.FrameFilters.Text;
 using AAXClean.Util;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using AAXClean.FrameFilters;
-using AAXClean.FrameFilters.Text;
-using System.Collections.Generic;
 using System.Text;
 
 namespace AAXClean
@@ -66,7 +66,7 @@ namespace AAXClean
 		}
 		public Mp4File(Stream file) : this(file, file.Length) { }
 
-		public Mp4File(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read) 
+		public Mp4File(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read)
 			: this(File.Open(fileName, FileMode.Open, access, share)) { }
 
 		internal virtual Mp4AudioChunkHandler GetAudioChunkHandler(IFrameFilter frameFilter)

@@ -31,7 +31,7 @@ namespace AAXClean.Chunks
 			{
 				Span<byte> frameData = chunkData.Slice(start, chunkEntry.FrameSizes[f]);
 
-				Success = HandleFrame(chunkEntry, LastFrameProcessed, Stts.FrameToFrameDelta(LastFrameProcessed),  frameData);
+				Success = HandleFrame(chunkEntry, LastFrameProcessed, Stts.FrameToFrameDelta(LastFrameProcessed), frameData);
 
 				if (!Success) break;
 			}

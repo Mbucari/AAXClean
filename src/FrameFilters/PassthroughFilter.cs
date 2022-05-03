@@ -7,7 +7,7 @@ namespace AAXClean.FrameFilters
 	internal class PassthroughFilter : IFrameFilter
 	{
 		protected readonly Stream OutputStream;
-		static readonly byte[] ZeroBytes = new byte[1024];
+		private static readonly byte[] ZeroBytes = new byte[1024];
 
 		public PassthroughFilter(Stream outputStream)
 		{

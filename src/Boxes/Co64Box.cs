@@ -45,7 +45,7 @@ namespace AAXClean.Boxes
 			base.Render(file);
 			file.WriteUInt32BE((uint)ChunkOffsets.Count);
 			//Write ChunkOffsets sorted by the chunk index, leaving ChunkOffsets unsorted
-			var orderedChunkOffsets = ChunkOffsets.OrderBy(co => co.EntryIndex);
+			IOrderedEnumerable<ChunkOffsetEntry> orderedChunkOffsets = ChunkOffsets.OrderBy(co => co.EntryIndex);
 			foreach (ChunkOffsetEntry chunkOffset in orderedChunkOffsets)
 			{
 				file.WriteInt64BE(chunkOffset.ChunkOffset);

@@ -6,7 +6,7 @@ namespace AAXClean
 	/// <summary>
 	/// A write-only stream that tracks the stream position based on the number of bytes written. 
 	/// </summary>
-	class TrackedWriteStream : Stream
+	internal class TrackedWriteStream : Stream
 	{
 		private readonly Stream BaseStream;
 		private long WritePosition = 0;

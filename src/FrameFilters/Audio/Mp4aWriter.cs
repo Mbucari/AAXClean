@@ -1,10 +1,7 @@
 ﻿using AAXClean.Boxes;
 using AAXClean.Util;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 
 namespace AAXClean.FrameFilters.Audio
 {
@@ -135,7 +132,7 @@ namespace AAXClean.FrameFilters.Audio
 
 			chapterNames.Children.Clear();
 
-			foreach (var c in chapters)
+			foreach (Chapter c in chapters)
 			{
 				chapterNames.AddTag("©nam", c.Title);
 				chapterNames.AddTag("©cmt", c.Title);
