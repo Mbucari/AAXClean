@@ -7,7 +7,7 @@ namespace AAXClean.Test
 	public static class TestFiles
 	{
 		private static readonly List<FileStream> OpenTempFiles = new List<FileStream>();
-		private const string TEST_FILE_DIR = @"..\..\..\..\..\TestFiles";
+		private const string TEST_FILE_DIR = @"..\..\..\..\..\..\TestFiles";
 		private const string HP_URL = "https://drive.google.com/uc?export=download&id=1UIc0ouxIspS2RjGstX1Rzvp3QdeidDrR&confirm=t";
 		private const string BA_URL = "https://drive.google.com/uc?export=download&id=1Sl8m7-qEFtCVRVRcC09q66DledzWxTP8&confirm=t";
 		private const string AC_URL = "https://drive.google.com/uc?export=download&id=11hz3AjNJOK3GGDl5V9buicvVNdJ5acFC&confirm=t";
