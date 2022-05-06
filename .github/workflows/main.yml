@@ -16,13 +16,17 @@ jobs:
       # Publish
       - name: publish on version change
         id: publish_nuget
-        uses: rohith/publish-nuget@v2
+        uses: Mbucari/publish-nuget@master
         with:
           # Filepath of the project to be packaged, relative to root of repository
           PROJECT_FILE_PATH: src/AAXClean/AAXClean.csproj
           
           # NuGet package id, used for version detection & defaults to project name
           PACKAGE_NAME: AAXClean
+          
+          BUILD_PLATFORM: AnyCPU
+          BUILD_CONFIGURATION: Release
+          NUSPEC_FILE: AAXClean.nuspec
           
           # Filepath with version info, relative to root of repository & defaults to PROJECT_FILE_PATH
           # VERSION_FILE_PATH: Directory.Build.props
