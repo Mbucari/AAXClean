@@ -20,6 +20,7 @@ namespace Mpeg4Lib.Util
 				stream.WriteType(header.Type);
 			}
 		}
+
 		/// <summary>
 		/// Read the next track chuink from the input stream
 		/// </summary>
@@ -43,7 +44,7 @@ namespace Mpeg4Lib.Util
 					throw new Exception($"Input stream position 0x{inputStream.Position:X8} is past the chunk offset 0x{chunkOffset:X8} and is not seekable.");
 			}
 			inputStream.Read(chunkBuffer);
-		}
+		}		
 
 		public static void WriteType(this Stream stream, string type)
 		{

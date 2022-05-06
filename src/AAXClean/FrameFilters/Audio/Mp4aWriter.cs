@@ -72,7 +72,7 @@ namespace AAXClean.FrameFilters.Audio
 			OutputFile.Position = mdatEnd;
 
 
-			Stsc.Samples.Add(new StscBox.ChunkEntry(CurrentChunk, SamplesPerChunk, 1));
+			Stsc.Samples.Add(new StscBox.StscChunkEntry(CurrentChunk, SamplesPerChunk, 1));
 
 			Stts.EntryCount = 1;
 			Stts.Samples.Add(new SttsBox.SampleEntry((uint)Stsz.SampleSizes.Count, AAC_TIME_DOMAIN_SAMPLES));
@@ -98,7 +98,7 @@ namespace AAXClean.FrameFilters.Audio
 			if (Moov.TextTrack is null) return;
 
 			Moov.TextTrack.Mdia.Minf.Stbl.Stsc.EntryCount = 1;
-			Moov.TextTrack.Mdia.Minf.Stbl.Stsc.Samples.Add(new StscBox.ChunkEntry(1, 1, 1));
+			Moov.TextTrack.Mdia.Minf.Stbl.Stsc.Samples.Add(new StscBox.StscChunkEntry(1, 1, 1));
 
 			uint entIndex = 0;
 			foreach (Chapter c in chapters)
@@ -159,7 +159,7 @@ namespace AAXClean.FrameFilters.Audio
 
 				if (SamplesPerChunk > 0 && SamplesPerChunk != LastSamplesPerChunk)
 				{
-					Stsc.Samples.Add(new StscBox.ChunkEntry(CurrentChunk, SamplesPerChunk, 1));
+					Stsc.Samples.Add(new StscBox.StscChunkEntry(CurrentChunk, SamplesPerChunk, 1));
 
 					LastSamplesPerChunk = SamplesPerChunk;
 				}

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace AAXClean.Chunks
+namespace AAXClean
 {
 	internal class ChapterBuilder : IDisposable
 	{

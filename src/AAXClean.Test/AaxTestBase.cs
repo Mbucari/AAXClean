@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 
 namespace AAXClean.Test
 {
@@ -101,12 +102,12 @@ namespace AAXClean.Test
 		}
 
 		[TestMethod]
-		public void _2_ReadChapters()
+		public async Task _2_ReadChapters()
 		{
 			try
 			{
 				Assert.IsNull(Aax.Chapters);
-				ChapterInfo chapters = Aax.GetChapterInfo();
+				ChapterInfo chapters = await Aax.GetChapterInfoAsync();
 
 #if DEBUG
 				var chs = new System.Text.StringBuilder();
@@ -156,12 +157,12 @@ namespace AAXClean.Test
 		}
 
 		[TestMethod]
-		public void _4_ConvertSingle()
+		public async Task _4_ConvertSingle()
 		{
 			try
 			{
 				FileStream tempfile = TestFiles.NewTempFile();
-				ConversionResult result = Aax.ConvertToMp4a(tempfile);
+				ConversionResult result = await Aax.ConvertToMp4aAsync(tempfile);
 
 				Assert.AreEqual(ConversionResult.NoErrorsDetected, result);
 
@@ -189,7 +190,7 @@ namespace AAXClean.Test
 		}
 
 		[TestMethod]
-		public void _5_ConvertMultiple()
+		public async Task _5_ConvertMultiple()
 		{
 			try
 			{
@@ -200,7 +201,8 @@ namespace AAXClean.Test
 					tempFiles.Add(((FileStream)callback.OutputFile).Name);
 				}
 
-				Aax.ConvertToMultiMp4a(Chapters, NewSplit);
+				var result = await Aax.ConvertToMultiMp4aAsync(Chapters, NewSplit);
+				Assert.AreEqual(ConversionResult.NoErrorsDetected, result);
 #if !DEBUG
 				Assert.AreEqual(MultiM4bHashes.Count, tempFiles.Count);
 #endif
@@ -231,35 +233,11 @@ namespace AAXClean.Test
 				TestFiles.CloseAllFiles();
 				Aax.Close();
 			}
+
 		}
+
 		[TestMethod]
-		public void _6_ConvertPassthrough()
-		{
-			try
-			{
-				FileStream tempfile = TestFiles.NewTempFile();
-
-				//Use Sha1Managed if you really want sha1
-				using var shaForStream = SHA1.Create();
-				using Stream sourceStream = new CryptoStream(tempfile, shaForStream, CryptoStreamMode.Write);
-
-				ConversionResult result = AaxNoFixup.ConvertPassThrough(sourceStream);
-
-				Assert.AreEqual(ConversionResult.NoErrorsDetected, result);
-
-				string fileHash1 = string.Join("", shaForStream.Hash.Select(b => b.ToString("x2")));
-
-				Assert.AreEqual(AaxNoFixup.InputStream.Length, new FileInfo(tempfile.Name).Length);
-				Assert.AreEqual(PassthroughM4bHash, fileHash1);
-			}
-			finally
-			{
-				TestFiles.CloseAllFiles();
-				Aax.Close();
-			}
-		}
-		[TestMethod]
-		public void _7_CustomChapters()
+		public async Task _6_CustomChapters()
 		{
 			try
 			{
@@ -271,13 +249,13 @@ namespace AAXClean.Test
 				newChapters.AddChapter("Ch4", TimeSpan.FromTicks(15000000000));
 				newChapters.AddChapter("Ch5", TimeSpan.FromTicks(30000000000));
 				newChapters.AddChapter("Ch6", TimeSpan.FromTicks(45000000000));
-				ConversionResult result = Aax.ConvertToMp4a(tempfile, newChapters);
+				ConversionResult result = await Aax.ConvertToMp4aAsync(tempfile, newChapters);
 
 				Assert.AreEqual(ConversionResult.NoErrorsDetected, result);
 
 				Mp4File mp4 = new Mp4File(tempfile.Name);
 				var ch_2 = mp4.GetChaptersFromMetadata().ToList();
-				var ch_3 = mp4.GetChapterInfo().ToList();
+				var ch_3 = (await mp4.GetChapterInfoAsync()).ToList();
 				mp4.Close();
 
 				var ch_1 = newChapters.ToList();
@@ -302,6 +280,73 @@ namespace AAXClean.Test
 			finally
 			{
 				TestFiles.CloseAllFiles();
+			}
+		}
+
+		[TestMethod]
+		public async Task _7_TestCancelSingle()
+		{
+			var aaxFile = Aax;
+			try
+			{
+				FileStream tempfile = TestFiles.NewTempFile();				
+				ConversionResult result = ConversionResult.NoErrorsDetected;
+
+				async Task RunIt()
+				{
+					result = await aaxFile.ConvertToMp4aAsync(tempfile);
+				}
+				var convertTask = Task.Run(RunIt);
+
+				await Task.Delay(200);
+				await aaxFile.CancelAsync();
+
+				await convertTask;
+				Assert.AreEqual(ConversionResult.Cancelled, result);
+
+				TestFiles.CloseAllFiles();
+				Aax.Close();
+			}
+			finally
+			{
+				TestFiles.CloseAllFiles();
+				aaxFile.Close();
+			}
+		}
+
+		[TestMethod]
+		public async Task _8_TestCancelMulti()
+		{
+			var aaxFile = Aax;
+			try
+			{
+				FileStream tempfile = TestFiles.NewTempFile();
+				ConversionResult result = ConversionResult.NoErrorsDetected;
+
+				void NewSplit(NewSplitCallback callback)
+				{
+					callback.OutputFile = TestFiles.NewTempFile();
+				}
+
+				async Task RunIt()
+				{
+					result = await aaxFile.ConvertToMultiMp4aAsync(Chapters, NewSplit);
+				}
+				var convertTask = Task.Run(RunIt);
+
+				await Task.Delay(200);
+				await aaxFile.CancelAsync();
+
+				await convertTask;
+				Assert.AreEqual(ConversionResult.Cancelled, result);
+
+				TestFiles.CloseAllFiles();
+				Aax.Close();
+			}
+			finally
+			{
+				TestFiles.CloseAllFiles();
+				aaxFile.Close();
 			}
 		}
 	}

@@ -2,12 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace AAXClean.Chunks
+namespace Mpeg4Lib.Chunks
 {
 	/// <summary>
 	/// A readonly list of <see cref="ChunkEntry"/> from a <see cref="TrakBox"/>
 	/// </summary>
-	internal class ChunkEntryList : IReadOnlyList<ChunkEntry>
+	public class ChunkEntryList : IReadOnlyList<ChunkEntry>
 	{
 		private readonly IReadOnlyList<ChunkOffsetEntry> ChunkTable;
 		private readonly int EntryCount;

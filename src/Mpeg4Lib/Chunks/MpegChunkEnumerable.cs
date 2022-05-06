@@ -3,28 +3,28 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace AAXClean.Chunks
+namespace Mpeg4Lib.Chunks
 {
 	/// <summary>
 	/// Enumerates over all chunks in all Mpeg tracks in order of the cunk offset
 	/// </summary>
-	internal sealed class MpegChunkEnumerable : IEnumerable<TrackChunk>
+	public sealed class MpegChunkEnumerable : IEnumerable<TrackChunk>
 	{
+		public int NumberOfTracks => Tracks.Length;
 		private readonly TrackEnum[] Tracks;
 		/// <summary>
 		/// Enumerates over all chunks in all Mpeg tracks in order of the cunk offset
 		/// </summary>
-		/// <param name="handlers">Track chunk handlers</param>
-		public MpegChunkEnumerable(params ChunkHandler[] handlers)
+		/// <param name="tracks">Track chunk handlers</param>
+		public MpegChunkEnumerable(params TrakBox[] tracks)
 		{
-			Tracks = new TrackEnum[handlers.Length];
+			Tracks = new TrackEnum[tracks.Length];
 
-			for (int i = 0; i < handlers.Length; i++)
+			for (int i = 0; i < tracks.Length; i++)
 			{
 				Tracks[i] = new TrackEnum
 				{
-					ChunkEntryList = new ChunkEntryList(handlers[i].Track),
-					Handler = handlers[i]
+					ChunkEntryList = new ChunkEntryList(tracks[i]),
 				};
 			}
 		}
@@ -68,25 +68,30 @@ namespace AAXClean.Chunks
 				//Exit the enumerator after all tracks have reached the end
 				if (Tracks.All(t => t.TrackEnded)) return false;
 
-				TrackEnum nextTrack = Tracks[0];
+				int trackIndex = 0;
+				TrackEnum nextTrack = Tracks[trackIndex];
 
 				//Find the next chunk offset across all Tracks
 				for (int i = 1; i < Tracks.Length; i++)
 				{
 					if (nextTrack.TrackEnded)
 					{
-						nextTrack = Tracks[i];
+						trackIndex = i;
+						nextTrack = Tracks[trackIndex];
 						continue;
 					}
 
 					if (Tracks[i].ChunkEnumerator.Current.ChunkOffset < nextTrack.ChunkEnumerator.Current.ChunkOffset && !Tracks[i].TrackEnded)
-						nextTrack = Tracks[i];
+					{
+						trackIndex = i;
+						nextTrack = Tracks[trackIndex];
+					}
 				}
 
 				Current = new TrackChunk
 				{
 					Entry = nextTrack.ChunkEnumerator.Current,
-					Handler = nextTrack.Handler
+					TrackNum = trackIndex
 				};
 
 				//Once we have the next chuk offset, move to the next chunk in the track where we found it
@@ -104,10 +109,6 @@ namespace AAXClean.Chunks
 		private class TrackEnum
 		{
 			public ChunkEntryList ChunkEntryList { get; init; }
-			/// <summary>
-			/// The handler of the track tha is being enumerated
-			/// </summary>
-			public ChunkHandler Handler { get; init; }
 			/// <summary>
 			/// The <see cref="ChunkEntryList"/> enumerator
 			/// </summary>

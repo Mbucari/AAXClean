@@ -1,19 +1,21 @@
-﻿using Mpeg4Lib.Boxes;
-using AAXClean.Chunks;
+﻿using AAXClean.Chunks;
 using AAXClean.FrameFilters;
 using AAXClean.FrameFilters.Audio;
 using AAXClean.FrameFilters.Text;
-using Mpeg4Lib.Util;
+using Mpeg4Lib.Boxes;
+using Mpeg4Lib.Chunks;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace AAXClean
 {
 	public enum ConversionResult
 	{
+		Cancelled,
 		Failed,
 		NoErrorsDetected
 	}
@@ -39,12 +41,11 @@ namespace AAXClean
 		public ushort AudioSampleSize => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleSize;
 		public byte[] AscBlob => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.AscBlob;
 
-		internal FtypBox Ftyp { get; set; }
-		internal MoovBox Moov { get; }
-		internal MdatBox Mdat { get; }
+		public FtypBox Ftyp { get; set; }
+		public MoovBox Moov { get; }
+		public MdatBox Mdat { get; }
 
 		private readonly TrackedReadStream inputStream;
-		protected bool ProcessAudioCanceled { get; private set; } = false;
 
 		public Mp4File(Stream file, long fileSize) : base(new BoxHeader(fileSize, "MPEG"), null)
 		{
@@ -69,8 +70,8 @@ namespace AAXClean
 		public Mp4File(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read)
 			: this(File.Open(fileName, FileMode.Open, access, share)) { }
 
-		internal virtual Mp4AudioChunkHandler GetAudioChunkHandler(IFrameFilter frameFilter)
-			=> new(Moov.AudioTrack, frameFilter);
+		public virtual FrameTransformBase<FrameEntry, FrameEntry> GetAudioFrameFilter()
+			=> new AacValidateFilter();
 
 		public void Save()
 		{
@@ -88,69 +89,72 @@ namespace AAXClean
 			}
 		}
 
-		public ConversionResult FilterAudio(AudioFilterBase audioFilter, ChapterInfo userChapters = null)
-		{
-			using Mp4AudioChunkHandler audioHandler = GetAudioChunkHandler(audioFilter);
-
-			if (Moov.TextTrack is null || userChapters is not null)
-			{
-				ProcessAudio(audioHandler);
-				Chapters = userChapters;
-			}
-			else
-			{
-				ChapterFilter chFilter = new(TimeScale);
-				ChunkHandler chapterHandler = new(Moov.TextTrack, chFilter);
-				ProcessAudio(audioHandler, chapterHandler);
-				Chapters = chFilter.Chapters;
-			}
-			audioFilter.Chapters = Chapters;
-
-			return audioHandler.Success && !ProcessAudioCanceled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
-		}
-
 		public ConversionResult ConvertToMp4a(Stream outputStream, ChapterInfo userChapters = null)
+			=> ConvertToMp4aAsync(outputStream, userChapters).GetAwaiter().GetResult();
+
+		public async Task<ConversionResult> ConvertToMp4aAsync(Stream outputStream, ChapterInfo userChapters = null)
 		{
 			ConversionResult result;
-			using (LosslessFilter losslessFilter = new LosslessFilter(outputStream, this))
+			using (FrameTransformBase<FrameEntry, FrameEntry> f1 = GetAudioFrameFilter())
 			{
-				result = FilterAudio(losslessFilter, userChapters);
+				LosslessFilter f2 = new(outputStream, this);
+
+				f1.LinkTo(f2);
+
+
+				if (Moov.TextTrack is null || userChapters is not null)
+				{
+					f2.SetChapterDelegate(() => userChapters);
+					result = await ProcessAudio((Moov.AudioTrack, f1));
+				}
+				else
+				{
+					using ChapterFilter c1 = new ChapterFilter(TimeScale);
+					f2.SetChapterDelegate(() => c1.Chapters);
+					result = await ProcessAudio((Moov.AudioTrack, f1), (Moov.TextTrack, c1));
+				}
+
+				if (result == ConversionResult.NoErrorsDetected)
+					Chapters = f2.Chapters;
 			}
+
 			outputStream.Close();
+
 			return result;
 		}
+		public ConversionResult ConvertToMultiMp4a(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback)
+			=> ConvertToMultiMp4aAsync(userChapters, newFileCallback).GetAwaiter().GetResult();
 
-		public void ConvertToMultiMp4a(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback)
+		public async Task<ConversionResult> ConvertToMultiMp4aAsync(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback)
 		{
-			using LosslessMultipartFilter audioFilter = new LosslessMultipartFilter(
-				userChapters,
+			using FrameTransformBase<FrameEntry, FrameEntry> f1 = GetAudioFrameFilter();
+			LosslessMultipartFilter f2 = new
+				(userChapters,
 				newFileCallback,
 				Ftyp,
 				Moov);
 
-			FilterAudio(audioFilter, userChapters);
+			f1.LinkTo(f2);
+
+			return await ProcessAudio((Moov.AudioTrack, f1));
 		}
 
-		public ChapterInfo GetChapterInfo()
+		private void OnProgressUpdate(ConversionProgressEventArgs args)
 		{
-			ChapterFilter chFilter = new(TimeScale);
-			ChunkHandler chapterHandler = new(Moov.TextTrack, chFilter);
-
-			ProcessAudioCanceled = false;
-
-			Span<byte> chunkBuffer = new byte[1024];
-			foreach (ChunkEntry chunk in new ChunkEntryList(Moov.TextTrack))
-			{
-				if (ProcessAudioCanceled)
-					break;
-
-				Span<byte> chunkdata = chunkBuffer.Slice(0, chunk.ChunkSize);
-				InputStream.ReadNextChunk(chunk.ChunkOffset, chunkdata);
-				ProcessAudioCanceled = !chapterHandler.HandleChunk(chunk, chunkdata);
-			}
-			Chapters ??= chFilter.Chapters;
-			return chFilter.Chapters;
+			ConversionProgressUpdate?.Invoke(this, args);
 		}
+
+		public ChapterInfo GetChapterInfo() => GetChapterInfoAsync().GetAwaiter().GetResult();
+		public async Task<ChapterInfo> GetChapterInfoAsync()
+		{
+			ChapterFilter c1 = new ChapterFilter(TimeScale);
+
+			await ProcessAudio((Moov.TextTrack, c1));
+
+			Chapters ??= c1.Chapters;
+			return c1.Chapters;
+		}
+
 
 		public ChapterInfo GetChaptersFromMetadata()
 		{
@@ -193,35 +197,23 @@ namespace AAXClean
 			return chlist;
 		}
 
-		internal void ProcessAudio(params ChunkHandler[] chunkHandlers)
+		private CunkReader CurrentReader;
+
+		public async Task<ConversionResult> ProcessAudio(params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
 		{
-			DateTime beginProcess = DateTime.Now;
-			DateTime nextUpdate = beginProcess;
-
-			ProcessAudioCanceled = false;
-
-			Span<byte> chunkBuffer = new byte[64 * 1024];
-			foreach (TrackChunk chunk in new MpegChunkEnumerable(chunkHandlers))
+			CurrentReader = new(InputStream)
 			{
-				if (ProcessAudioCanceled)
-					break;
+				TotalDuration = Duration,
+				OnProggressUpdateDelegate = OnProgressUpdate
+			};
 
-				Span<byte> chunkdata = chunkBuffer.Slice(0, chunk.Entry.ChunkSize);
-				InputStream.ReadNextChunk(chunk.Entry.ChunkOffset, chunkdata);
-				ProcessAudioCanceled = !chunk.Handler.HandleChunk(chunk.Entry, chunkdata);
+			foreach ((TrakBox track, FrameFilterBase<FrameEntry> filter) in filters)
+				CurrentReader.AddTrack(track, filter);
 
-				//Throttle update so it doesn't bog down UI
-				if (DateTime.Now > nextUpdate)
-				{
-					TimeSpan position = chunk.Handler.ProcessPosition;
-					double speed = position / (DateTime.Now - beginProcess);
-					ConversionProgressUpdate?.Invoke(this, new ConversionProgressEventArgs { TotalDuration = Duration, ProcessPosition = position, ProcessSpeed = speed });
+			var result = await CurrentReader.RunAsync();
 
-					nextUpdate = DateTime.Now.AddMilliseconds(300);
-				}
-			}
 
-			ConversionProgressUpdate?.Invoke(this, new ConversionProgressEventArgs { TotalDuration = Duration, ProcessPosition = Duration, ProcessSpeed = Duration / (DateTime.Now - beginProcess) });
+			return await Task.FromResult(result);
 		}
 
 		protected (long audioSize, uint avgBitrate) CalculateAudioSizeAndBitrate()
@@ -234,9 +226,11 @@ namespace AAXClean
 			return (audioBits / 8, avgBitrate);
 		}
 
-		public void Cancel()
+		public void Cancel() => CancelAsync().GetAwaiter().GetResult();
+		public async Task CancelAsync()
 		{
-			ProcessAudioCanceled = true;
+			if (CurrentReader is not null)
+				await CurrentReader.CancelAsync();
 		}
 
 		public void Close()

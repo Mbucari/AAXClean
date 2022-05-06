@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <Version>0.3.7</Version>
+    <Version>0.4.0</Version>
     <Authors>MrGneissGuy</Authors>
     <Company>Just Me, Inc.</Company>
     <Description>Decrypts Audible aax and aaxc files to mp4.</Description>
@@ -21,8 +21,9 @@
 
   <PropertyGroup>
 	  <PublishReadyToRun>true</PublishReadyToRun>
-	  <PackageReleaseNotes>Chapter names are now written to track metadata.
-Architectural changes and refactoring for stability.</PackageReleaseNotes>
+	  <PackageReleaseNotes>Add async methods.
+	  Moved mpeg-4 parser into new Mpeg4Lib prject
+	  Lots of architectural changes and performance improvements.</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

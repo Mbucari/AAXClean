@@ -8,7 +8,7 @@ namespace Mpeg4Lib.Boxes
 	{
 		public override long RenderSize => base.RenderSize + 4 + Samples.Count * 3 * 4;
 		public uint EntryCount { get; set; }
-		public List<ChunkEntry> Samples { get; } = new List<ChunkEntry>();
+		public List<StscChunkEntry> Samples { get; } = new List<StscChunkEntry>();
 
 		public static StscBox CreateBlank(Box parent)
 		{
@@ -34,7 +34,7 @@ namespace Mpeg4Lib.Boxes
 
 			for (int i = 0; i < EntryCount; i++)
 			{
-				Samples.Add(new ChunkEntry(file));
+				Samples.Add(new StscChunkEntry(file));
 			}
 		}
 
@@ -67,7 +67,7 @@ namespace Mpeg4Lib.Boxes
 		{
 			base.Render(file);
 			file.WriteUInt32BE((uint)Samples.Count);
-			foreach (ChunkEntry sample in Samples)
+			foreach (StscChunkEntry sample in Samples)
 			{
 				file.WriteUInt32BE(sample.FirstChunk);
 				file.WriteUInt32BE(sample.SamplesPerChunk);
@@ -91,15 +91,15 @@ namespace Mpeg4Lib.Boxes
 			base.Dispose(disposing);
 		}
 
-		public class ChunkEntry
+		public class StscChunkEntry
 		{
-			public ChunkEntry(Stream file)
+			public StscChunkEntry(Stream file)
 			{
 				FirstChunk = file.ReadUInt32BE();
 				SamplesPerChunk = file.ReadUInt32BE();
 				SampleDescriptionIndex = file.ReadUInt32BE();
 			}
-			public ChunkEntry(uint firstChunk, uint samplesPerChunk, uint sampleDesIndex)
+			public StscChunkEntry(uint firstChunk, uint samplesPerChunk, uint sampleDesIndex)
 			{
 				FirstChunk = firstChunk;
 				SamplesPerChunk = samplesPerChunk;

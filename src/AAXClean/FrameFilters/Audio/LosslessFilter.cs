@@ -1,54 +1,58 @@
-﻿using AAXClean.Chunks;
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters.Audio
 {
-	internal class LosslessFilter : AudioFilterBase
+	internal class LosslessFilter : FrameFinalBase<FrameEntry>
 	{
 		private readonly Mp4aWriter Mp4writer;
 		private long LastChunkIndex = -1;
-		internal override ChapterInfo Chapters
-		{
-			get => base.Chapters;
-			set
-			{
-				base.Chapters = value;
-				if (Chapters != null)
-					Mp4writer.WriteChapters(Chapters);
-			}
-		}
+		private Func<ChapterInfo> GetChapterDelegate;
+
+		public ChapterInfo Chapters => GetChapterDelegate?.Invoke();
+
+		public bool Closed { get; private set; }
+
 		public LosslessFilter(Stream outputStream, Mp4File mp4Audio)
 		{
 			long audioSize = mp4Audio.Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => (long)s);
 			Mp4writer = new Mp4aWriter(outputStream, mp4Audio.Ftyp, mp4Audio.Moov, audioSize > uint.MaxValue);
 		}
-
-		public override bool FilterFrame(ChunkEntry cEntry, uint frameIndex, uint frameDelta, Span<byte> audioSample)
+		public void SetChapterDelegate(Func<ChapterInfo> getChapterDelegate)
 		{
-			Mp4writer.AddFrame(audioSample, cEntry.ChunkIndex > LastChunkIndex);
-			LastChunkIndex = cEntry.ChunkIndex;
-			return true;
+			GetChapterDelegate = getChapterDelegate;
 		}
-
-		public override void Close()
+		protected override void PerformFiltering(FrameEntry input)
+		{
+			Mp4writer.AddFrame(input.FrameData.Span, input.Chunk.ChunkIndex > LastChunkIndex);
+			LastChunkIndex = input.Chunk.ChunkIndex;
+		}
+		public override async Task CompleteAsync()
+		{
+			await base.CompleteAsync();
+			CloseWriter();
+		}
+		private void CloseWriter()
 		{
 			if (Closed) return;
+			ChapterInfo chinf = Chapters;
+			if (chinf is not null)
+			{
+				Mp4writer.WriteChapters(chinf);
+			}
 			Mp4writer.Close();
 			Closed = true;
 		}
 
 		protected override void Dispose(bool disposing)
 		{
-			if (!Disposed)
+			base.Dispose(disposing);
+			if (disposing)
 			{
-				if (disposing)
-				{
-					Close();
-					Mp4writer?.Dispose();
-				}
-				base.Dispose(disposing);
+				CloseWriter();
+				Mp4writer?.Dispose();
 			}
 		}
 	}

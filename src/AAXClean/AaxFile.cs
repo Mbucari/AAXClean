@@ -1,11 +1,13 @@
-﻿using Mpeg4Lib.Boxes;
-using AAXClean.Chunks;
-using AAXClean.FrameFilters;
+﻿using AAXClean.FrameFilters;
+using AAXClean.FrameFilters.Audio;
+using AAXClean.FrameFilters.Text;
+using Mpeg4Lib.Boxes;
 using Mpeg4Lib.Util;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace AAXClean
 {
@@ -67,68 +69,8 @@ namespace AAXClean
 		public AaxFile(Stream file) : this(file, file.Length) { }
 		public AaxFile(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read) : this(File.Open(fileName, FileMode.Open, access, share)) { }
 
-		internal override Mp4AudioChunkHandler GetAudioChunkHandler(IFrameFilter frameFilter)
-			=> new AavdChunkHandler(Moov.AudioTrack, Key, IV, frameFilter);
-
-		/// <summary>
-		/// Converts <see cref="AaxFile"/> to m4b with no change to the file structure. Will fail if any edits were made (e.g. tags).
-		/// </summary>
-		/// <param name="output">The stream to write the file. Does not need to be seekable.</param>
-		/// <returns></returns>
-		public ConversionResult ConvertPassThrough(Stream output)
-		{
-			if (Ftyp.RenderSize != OriginalFtypSize)
-				throw new FormatException($"Size of {nameof(Ftyp)} is different from source file. Was {nameof(AaxFile)} not initialized with additionalFixups = false?");
-
-			if (Moov.RenderSize != OriginalMoovSize)
-				throw new FormatException($"Size of {nameof(Moov)} is different from source file");
-
-			TrackedWriteStream trackedOutput = new TrackedWriteStream(output);
-
-			Ftyp.Save(trackedOutput);
-			Moov.Save(trackedOutput);
-
-			if (Mdat is null)
-			{
-				//mdat was zero size in source file
-				trackedOutput.WriteInt32BE(0);
-				trackedOutput.WriteType("mdat");
-			}
-			else
-			{
-				if (Mdat.Header.Version == 1)
-				{
-					trackedOutput.WriteUInt32BE(1);
-					trackedOutput.WriteType(Mdat.Header.Type);
-					trackedOutput.WriteInt64BE(Mdat.Header.TotalBoxSize);
-				}
-				else
-				{
-					trackedOutput.WriteUInt32BE((uint)Mdat.Header.TotalBoxSize);
-					trackedOutput.WriteType(Mdat.Header.Type);
-				}
-			}
-
-			Mp4AudioChunkHandler audioHandler = GetAudioChunkHandler(new PassthroughFilter(trackedOutput));
-
-			bool success;
-
-			if (Moov.TextTrack is null)
-			{
-				ProcessAudio(audioHandler);
-				success = audioHandler.Success;
-			}
-			else
-			{
-				ChunkHandler chapterHandler = new ChunkHandler(Moov.TextTrack, audioHandler.FrameFilter);
-				ProcessAudio(audioHandler, chapterHandler);
-				success = audioHandler.Success && chapterHandler.Success;
-			}
-
-			trackedOutput.Close();
-
-			return success && !ProcessAudioCanceled ? ConversionResult.NoErrorsDetected : ConversionResult.Failed;
-		}
+		public override FrameTransformBase<FrameEntry, FrameEntry> GetAudioFrameFilter()
+			=> new AavdFilter(Key, IV);	
 
 		#region Aax(c) Keys
 
@@ -141,6 +83,7 @@ namespace AAXClean
 
 			SetDecryptionKey(actBytes);
 		}
+
 		public void SetDecryptionKey(byte[] activationBytes)
 		{
 			if (activationBytes is null || activationBytes.Length != 4)

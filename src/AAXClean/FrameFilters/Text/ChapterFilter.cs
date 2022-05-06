@@ -1,10 +1,9 @@
-﻿using AAXClean.Chunks;
-using System;
+﻿using System;
 using System.Text;
 
 namespace AAXClean.FrameFilters.Text
 {
-	internal class ChapterFilter : IFrameFilter
+	internal class ChapterFilter : FrameFinalBase<FrameEntry>
 	{
 		public ChapterInfo Chapters => Builder.ToChapterInfo();
 		private readonly ChapterBuilder Builder;
@@ -16,16 +15,14 @@ namespace AAXClean.FrameFilters.Text
 		{
 			Builder.Dispose();
 		}
-
-		public bool FilterFrame(ChunkEntry cEntry, uint frameIndex, uint frameDelta, Span<byte> frameData)
+		protected override void PerformFiltering(FrameEntry input)
 		{
+			Span<byte> frameData = input.FrameData.Span;
 			int size = frameData[1] | frameData[0];
 
 			string title = Encoding.UTF8.GetString(frameData.Slice(2, size));
 
-			Builder.AddChapter(cEntry.ChunkIndex, title, (int)frameDelta);
-
-			return true;
+			Builder.AddChapter(input.Chunk.ChunkIndex, title, (int)input.FrameDelta);
 		}
 	}
 }

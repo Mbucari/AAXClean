@@ -1,4 +1,4 @@
-﻿namespace AAXClean.Chunks
+﻿namespace Mpeg4Lib.Chunks
 {
 	public class ChunkEntry
 	{

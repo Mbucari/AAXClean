@@ -107,7 +107,7 @@ namespace AAXClean.Test
 		}
 
 		[TestMethod]
-		public void _8_WriteTags()
+		public void _7_WriteTags()
 		{
 			string tagstring = "this is a tag string";
 			Mp4File mp4File = null;
