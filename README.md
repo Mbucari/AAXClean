@@ -33,7 +33,7 @@ var conversionResult = await aaxFile.ConvertToMp4aAsync(File.OpenWrite(@"C:\Decr
 Note that the input stream needs to be seekable to call GetChapterInfo()
 ```C#
 var chapters = aaxFile.GetChapterInfoAsync();
-await aaxFile.ConvertToMultiMp4aAsync(chapters, NewSplit);
+var conversionResult = await aaxFile.ConvertToMultiMp4aAsync(chapters, NewSplit);
             
 private static void NewSplit(NewSplitCallback newSplitCallback)
 {
