@@ -11,10 +11,14 @@ namespace AAXClean.FrameFilters.Text
 		{
 			Builder = new ChapterBuilder(timeScale);
 		}
-		public void Dispose()
+
+		protected override void Dispose(bool disposing)
 		{
-			Builder.Dispose();
+			if (disposing)
+				Builder.Dispose();
+			base.Dispose(disposing);
 		}
+
 		protected override void PerformFiltering(FrameEntry input)
 		{
 			Span<byte> frameData = input.FrameData.Span;
