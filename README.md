@@ -27,13 +27,13 @@ aaxFile.SetDecryptionKey(activation_bytes);
 ```
 ### Output:
 ```C#
-var conversionResult = aaxFile.ConvertToMp4a(File.OpenWrite(@"C:\Decrypted book.mb4"));
+var conversionResult = await aaxFile.ConvertToMp4aAsync(File.OpenWrite(@"C:\Decrypted book.mb4"));
 ```
 ### Multipart Conversion Example:
 Note that the input stream needs to be seekable to call GetChapterInfo()
 ```C#
-var chapters = aaxFile.GetChapterInfo();
-aaxFile.ConvertToMultiMp4a(chapters, NewSplit);
+var chapters = aaxFile.GetChapterInfoAsync();
+var conversionResult = await aaxFile.ConvertToMultiMp4aAsync(chapters, NewSplit);
             
 private static void NewSplit(NewSplitCallback newSplitCallback)
 {
