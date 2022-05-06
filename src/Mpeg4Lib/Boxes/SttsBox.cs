@@ -50,7 +50,7 @@ namespace Mpeg4Lib.Boxes
 		/// <summary>
 		/// Gets the playback timestamp of an audio frame.
 		/// </summary>
-		public TimeSpan FrameToTime(double timeScale, uint frameIndex)
+		public TimeSpan FrameToTime(double timeScale, ulong frameIndex)
 		{
 			ulong beginDelta = 0;
 
