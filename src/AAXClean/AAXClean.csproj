@@ -6,7 +6,6 @@
     <Authors>MrGneissGuy</Authors>
     <Company>Just Me, Inc.</Company>
     <Description>Decrypts Audible aax and aaxc files to mp4.</Description>
-    <Summary>Decrypt Audible aax and aaxc files.</Summary>
     <RequireLicenseAcceptance>false</RequireLicenseAcceptance>
     <Tags>Audible AAC AAXC m4b audiobook</Tags>
     <ProjectUrl>https://github.com/Mbucari/AAXClean</ProjectUrl>
@@ -29,9 +28,11 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
 	  <DebugType>embedded</DebugType>
 	  <DebugSymbols>true</DebugSymbols>
-  </PropertyGroup>
+  </PropertyGroup>	
+
 
   <ItemGroup>
     <ProjectReference Include="..\Mpeg4Lib\Mpeg4Lib.csproj" />
   </ItemGroup>
+	
 </Project>
