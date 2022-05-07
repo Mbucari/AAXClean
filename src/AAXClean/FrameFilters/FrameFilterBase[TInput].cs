@@ -32,7 +32,7 @@ namespace AAXClean.FrameFilters
 		public void Cancel() => CancelAsync().GetAwaiter().GetResult();
 		public void Fault(Exception ex) => FaultAsync(ex).GetAwaiter().GetResult();
 
-		public void AcceptInput(TInput input)
+		public void AddInput(TInput input)
 		{
 			try
 			{

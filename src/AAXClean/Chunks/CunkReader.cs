@@ -99,7 +99,7 @@ namespace AAXClean.Chunks
 			{
 				Memory<byte> frameData = chunkdata.Slice(start, chunk.FrameSizes[f]);
 
-				FirstFilters[trackIndex].AcceptInput(new FrameEntry
+				FirstFilters[trackIndex].AddInput(new FrameEntry
 				{
 					Chunk = chunk,
 					FrameIndex = LastFrameProcessed[trackIndex],

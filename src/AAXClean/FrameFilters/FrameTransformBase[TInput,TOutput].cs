@@ -14,7 +14,7 @@ namespace AAXClean.FrameFilters
 		protected override void HandleInputData(TInput input)
 		{
 			TOutput filteredData = PerformFiltering(input);
-			Linked?.AcceptInput(filteredData);
+			Linked?.AddInput(filteredData);
 		}
 		protected abstract TOutput PerformFiltering(TInput input);
 
