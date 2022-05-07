@@ -23,7 +23,7 @@ namespace AAXClean.FrameFilters.Audio
 			Writer?.OutputFile.Close();
 		}
 
-		protected override void WriteFrameToFile(IFrameEntry audioFrame, bool newChunk)
+		protected override void WriteFrameToFile(FrameEntry audioFrame, bool newChunk)
 		{
 			Writer.AddFrame(audioFrame.FrameData.Span, newChunk);
 		}

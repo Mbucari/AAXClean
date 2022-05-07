@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters.Audio
 {
-	public abstract class MultipartFilterBase<TInput> : FrameFinalBase<TInput> where TInput : IFrameEntry
+	public abstract class MultipartFilterBase<TInput> : FrameFinalBase<TInput> where TInput : FrameEntry
 	{
 		protected abstract Action<NewSplitCallback> NewFileCallback { get; }
 
@@ -15,13 +15,21 @@ namespace AAXClean.FrameFilters.Audio
 		private long EndFrame = -1;
 		private long LastChunkIndex = -1;
 
-		private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
 		private static readonly int[] asc_samplerates = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
 
-		protected abstract void CloseCurrentWriter();
-		protected abstract void WriteFrameToFile(IFrameEntry audioFrame, bool newChunk);
-		protected abstract void CreateNewWriter(NewSplitCallback callback);
+		public MultipartFilterBase(byte[] audioSpecificConfig, ChapterInfo splitChapters)
+		{
+			if (splitChapters is null || splitChapters.Count == 0)
+				throw new ArgumentException($"{nameof(splitChapters)} must contain at least one chapter.");
 
+			SampleRate = asc_samplerates[(audioSpecificConfig[0] & 7) << 1 | audioSpecificConfig[1] >> 7];
+			Channels = (audioSpecificConfig[1] >> 3) & 7;
+			SplitChapters = splitChapters.GetEnumerator();
+		}
+
+		protected abstract void CloseCurrentWriter();
+		protected abstract void WriteFrameToFile(FrameEntry audioFrame, bool newChunk);
+		protected abstract void CreateNewWriter(NewSplitCallback callback);
 		public override async Task CompleteAsync()
 		{
 			await base.CompleteAsync();
@@ -33,7 +41,7 @@ namespace AAXClean.FrameFilters.Audio
 			{
 				CloseCurrentWriter();
 
-				if (!GetNextChapter())
+				if (!GetNextChapter(input.FrameDelta))
 				{
 					Complete();
 				}
@@ -54,29 +62,20 @@ namespace AAXClean.FrameFilters.Audio
 			}
 		}
 
-		public MultipartFilterBase(byte[] audioSpecificConfig, ChapterInfo splitChapters)
-		{
-			if (splitChapters is null || splitChapters.Count == 0)
-				throw new ArgumentException($"{nameof(splitChapters)} must contain at least one chapter.");
-
-			SampleRate = asc_samplerates[(audioSpecificConfig[0] & 7) << 1 | audioSpecificConfig[1] >> 7];
-			Channels = (audioSpecificConfig[1] >> 3) & 7;
-			SplitChapters = splitChapters.GetEnumerator();
-		}
-
-		private bool GetNextChapter()
+		private bool GetNextChapter(uint frameDelta)
 		{
 			if (!SplitChapters.MoveNext())
 				return false;
 
-			StartFrame = (uint)(SplitChapters.Current.StartOffset.TotalSeconds * SampleRate / AAC_TIME_DOMAIN_SAMPLES);
-			EndFrame = (uint)(SplitChapters.Current.EndOffset.TotalSeconds * SampleRate / AAC_TIME_DOMAIN_SAMPLES);
+			StartFrame = (uint)(SplitChapters.Current.StartOffset.TotalSeconds * SampleRate / frameDelta);
+			EndFrame = (uint)(SplitChapters.Current.EndOffset.TotalSeconds * SampleRate / frameDelta);
 			return true;
 		}
+
 		protected override void Dispose(bool disposing)
 		{
-			base.Dispose(disposing);
 			SplitChapters?.Dispose();
+			base.Dispose(disposing);
 		}
 	}
 }

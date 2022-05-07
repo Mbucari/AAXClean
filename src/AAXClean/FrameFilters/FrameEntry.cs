@@ -3,12 +3,12 @@ using System;
 
 namespace AAXClean.FrameFilters
 {
-	public class FrameEntry : IFrameEntry
+	public class FrameEntry
 	{
-		public ChunkEntry Chunk { get; set; }
-		public uint FrameIndex { get; set; }
-		public uint FrameDelta { get; set; }
-		public int FrameSize { get; set; }
-		public Memory<byte> FrameData { get; set; }
+		public ChunkEntry Chunk { get; init; }
+		public uint FrameIndex { get; init; }
+		public uint FrameDelta { get; init; }
+		public int FrameSize { get; init; }
+		public Memory<byte> FrameData { get; init; }
 	}
 }
