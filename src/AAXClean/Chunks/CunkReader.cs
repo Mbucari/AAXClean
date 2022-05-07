@@ -46,7 +46,7 @@ namespace AAXClean.Chunks
 
 		public async Task<ConversionResult> RunAsync()
 		{
-			await Initialize();
+			Initialize();
 
 			DateTime beginProcess = DateTime.Now;
 			DateTime nextUpdate = beginProcess;
@@ -77,13 +77,13 @@ namespace AAXClean.Chunks
 			return await Finalize();
 		}
 
-		private async Task Initialize()
+		private void Initialize()
 		{
 			LastFrameProcessed = new uint[Tracks.Count];
 			Stts = Tracks.Select(t => t.Mdia.Minf.Stbl.Stts).ToArray();
 			TimeScales = Tracks.Select(t => t.Mdia.Mdhd.Timescale).ToArray();
 
-			foreach (FrameFilterBase<FrameEntry> f in FirstFilters) await f.StartAsync();
+			foreach (FrameFilterBase<FrameEntry> f in FirstFilters) f.Start();
 		}
 
 		private async Task<ConversionResult> Finalize()

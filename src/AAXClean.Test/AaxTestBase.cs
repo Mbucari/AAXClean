@@ -298,7 +298,7 @@ namespace AAXClean.Test
 				}
 				var convertTask = Task.Run(RunIt);
 
-				await Task.Delay(200);
+				await Task.Delay(500);
 				await aaxFile.CancelAsync();
 
 				await convertTask;
@@ -334,7 +334,7 @@ namespace AAXClean.Test
 				}
 				var convertTask = Task.Run(RunIt);
 
-				await Task.Delay(200);
+				await Task.Delay(500);
 				await aaxFile.CancelAsync();
 
 				await convertTask;

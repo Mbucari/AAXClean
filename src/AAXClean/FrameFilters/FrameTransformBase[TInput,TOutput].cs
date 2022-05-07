@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters
 {
@@ -12,61 +11,34 @@ namespace AAXClean.FrameFilters
 			Linked.Parent = this;
 		}
 
-		private void TransformEncoderLoop()
+		protected override void HandleInputData(TInput input)
 		{
-			try
-			{
-				while (InputBuffer.TryTake(out TInput message, -1, CancellationSource.Token))
-				{
-					TOutput output = PerformFiltering(message);
-					Linked?.AcceptInput(output);
-				}
-			}
-			catch (OperationCanceledException) { }
-			catch (Exception ex)
-			{
-				Task.Run(() => FaultAsync(ex));
-			}
+			TOutput filteredData = PerformFiltering(input);
+			Linked?.AcceptInput(filteredData);
 		}
-
 		protected abstract TOutput PerformFiltering(TInput input);
 
-		public override async Task StartAsync()
+		public override void Start()
 		{
-			EncoderLoopTask = Task.Run(TransformEncoderLoop);
-			if (Linked is not null)
-				await Linked.StartAsync();
+			base.Start();
+			//Starts propagate down
+			Linked?.Start();
 		}
 
 		public override async Task CompleteAsync()
 		{
-			InputBuffer.CompleteAdding();
-			await WaitForEncoderLoop();
-			if (!CompletionSource.Task.IsCompleted)
-				CompletionSource.SetResult();
+			await base.CompleteAsync();
 			//Completes propagate down
 			if (Linked is not null)
 				await Linked.CompleteAsync();
 		}
-		public override async Task CancelAsync()
+
+		public sealed override async Task CancelAsync()
 		{
-			CancellationSource.Cancel();
-			await WaitForEncoderLoop();
-			if (!CompletionSource.Task.IsCompleted)
-				CompletionSource.SetCanceled();
+			await base.CancelAsync();
 			//Cancellations propagate down
 			if (Linked is not null)
 				await Linked.CancelAsync();
-		}
-		public override async Task FaultAsync(Exception ex)
-		{
-			CancellationSource.Cancel();
-			await WaitForEncoderLoop();
-			if (!CompletionSource.Task.IsCompleted)
-				CompletionSource.SetException(ex);
-			//Faults propagate up
-			if (Parent is not null)
-				await Parent.FaultAsync(ex);
 		}
 
 		protected override void Dispose(bool disposing)

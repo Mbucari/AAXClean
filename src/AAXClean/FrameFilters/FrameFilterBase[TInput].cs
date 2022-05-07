@@ -12,25 +12,25 @@ namespace AAXClean.FrameFilters
 
 	public abstract class FrameFilterBase<TInput> : IFrameFilterBase
 	{
-		protected Task EncoderLoopTask;
 		public bool Disposed { get; private set; }
 		public IFrameFilterBase Parent { get; set; }
 		public Task Completion => CompletionSource.Task;
 		protected virtual int BufferSize => 200;
 
-		protected readonly TaskCompletionSource CompletionSource = new();
-		protected readonly BlockingCollection<TInput> InputBuffer;
-		protected readonly CancellationTokenSource CancellationSource = new();
+		private readonly TaskCompletionSource CompletionSource = new();
+		private readonly CancellationTokenSource CancellationSource = new();
+		private readonly BlockingCollection<TInput> InputBuffer;
+		private Task EncoderLoopTask;
 
 		public FrameFilterBase()
 		{
 			InputBuffer = new(BufferSize);
 		}
 
-		public abstract Task StartAsync();
-		public abstract Task CompleteAsync();
-		public abstract Task CancelAsync();
-		public abstract Task FaultAsync(Exception ex);
+		protected abstract void HandleInputData(TInput input);
+		public void Complete() => CompleteAsync().GetAwaiter().GetResult();
+		public void Cancel() => CancelAsync().GetAwaiter().GetResult();
+		public void Fault(Exception ex) => FaultAsync(ex).GetAwaiter().GetResult();
 
 		public void AcceptInput(TInput input)
 		{
@@ -41,15 +41,58 @@ namespace AAXClean.FrameFilters
 			catch (OperationCanceledException) { }
 		}
 
-		public void Start() => StartAsync().GetAwaiter().GetResult();
-		public void Complete() => CompleteAsync().GetAwaiter().GetResult();
-		public void Cancel() => CancelAsync().GetAwaiter().GetResult();
-		public void Fault(Exception ex) => FaultAsync(ex).GetAwaiter().GetResult();
+		public virtual void Start()
+		{
+			EncoderLoopTask = Task.Run(EncoderLoop);
+		}
 
-		protected virtual async Task WaitForEncoderLoop()
+		public virtual async Task CompleteAsync()
+		{
+			InputBuffer.CompleteAdding();
+			await WaitForEncoderLoop();
+			if (!Completion.IsCompleted)
+				CompletionSource.SetResult();
+		}
+
+		public virtual async Task CancelAsync()
+		{
+			CancellationSource.Cancel();
+			await WaitForEncoderLoop();
+			if (!Completion.IsCompleted)
+				CompletionSource.SetCanceled();
+		}
+
+		public async Task FaultAsync(Exception exception)
+		{
+			CancellationSource.Cancel();
+			await WaitForEncoderLoop();
+			if (!Completion.IsCompleted)
+				CompletionSource.SetException(exception);
+			//Faults propagate up
+			if (Parent is not null)
+				await Parent.FaultAsync(exception);
+		}
+
+		private async Task WaitForEncoderLoop()
 		{
 			if (EncoderLoopTask is not null)
 				await EncoderLoopTask;
+		}
+
+		private void EncoderLoop()
+		{
+			try
+			{
+				while (InputBuffer.TryTake(out TInput message, -1, CancellationSource.Token))
+				{
+					HandleInputData(message);
+				}
+			}
+			catch (OperationCanceledException) { }
+			catch (Exception ex)
+			{
+				Task.Run(() => FaultAsync(ex));
+			}
 		}
 
 		public void Dispose() => Dispose(true);
