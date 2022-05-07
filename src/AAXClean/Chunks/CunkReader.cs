@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AAXClean.Chunks
@@ -31,20 +32,9 @@ namespace AAXClean.Chunks
 			FirstFilters.Add(filter);
 		}
 
-		public void Cancel() => CancelAsync().GetAwaiter().GetResult();
+		public ConversionResult Run(CancellationToken token = default) => RunAsync(token).GetAwaiter().GetResult();
 
-		public async Task CancelAsync()
-		{
-			foreach (FrameFilterBase<FrameEntry> f in FirstFilters)
-			{
-				if (!f.Disposed)
-					await f.CancelAsync();
-			}
-		}
-
-		public ConversionResult Run() => RunAsync().GetAwaiter().GetResult();
-
-		public async Task<ConversionResult> RunAsync()
+		public async Task<ConversionResult> RunAsync(CancellationToken token = default)
 		{
 			Initialize();
 
@@ -53,11 +43,13 @@ namespace AAXClean.Chunks
 
 			foreach (TrackChunk c in new MpegChunkEnumerable(Tracks.ToArray()))
 			{
+				if (FirstFilters[c.TrackNum].Completion.IsFaulted || 
+					FirstFilters[c.TrackNum].Completion.IsCanceled || 
+					token.IsCancellationRequested)
+					break;
+
 				Memory<byte> chunkdata = new byte[c.Entry.ChunkSize];
 				InputStream.ReadNextChunk(c.Entry.ChunkOffset, chunkdata.Span);
-
-				if (FirstFilters[c.TrackNum].Completion.IsFaulted || FirstFilters[c.TrackNum].Completion.IsCanceled)
-					break;
 
 				DispatchChunk(c.TrackNum, c.Entry, chunkdata);
 
@@ -74,7 +66,7 @@ namespace AAXClean.Chunks
 
 			OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs { TotalDuration = TotalDuration, ProcessPosition = TotalDuration, ProcessSpeed = TotalDuration / (DateTime.Now - beginProcess) });
 
-			return await Finalize();
+			return await Finalize(token.IsCancellationRequested);
 		}
 
 		private void Initialize()
@@ -86,13 +78,9 @@ namespace AAXClean.Chunks
 			foreach (FrameFilterBase<FrameEntry> f in FirstFilters) f.Start();
 		}
 
-		private async Task<ConversionResult> Finalize()
+		private async Task<ConversionResult> Finalize(bool cancelled)
 		{
-			List<FrameFilterBase<FrameEntry>> completions = FirstFilters.Where(f => !f.Completion.IsCompleted).ToList();
-
-			foreach (FrameFilterBase<FrameEntry> f in completions) await f.CompleteAsync();
-
-			await Task.WhenAll(completions.Select(f => f.Completion));
+			await Task.WhenAll(FirstFilters.Where(f => !f.Completion.IsCompleted).Select(f => cancelled ? f.CancelAsync() : f.CompleteAsync()));
 
 			ConversionResult result;
 			if (FirstFilters.All(f => f.Completion.IsCompletedSuccessfully))

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AAXClean
@@ -197,23 +198,23 @@ namespace AAXClean
 			return chlist;
 		}
 
-		private CunkReader CurrentReader;
-
+		private CancellationTokenSource CancellationSource;
+		private Task<ConversionResult> ReaderTask;
 		public async Task<ConversionResult> ProcessAudio(params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
 		{
-			CurrentReader = new(InputStream)
+			CunkReader reader = new(InputStream)
 			{
 				TotalDuration = Duration,
 				OnProggressUpdateDelegate = OnProgressUpdate
 			};
 
 			foreach ((TrakBox track, FrameFilterBase<FrameEntry> filter) in filters)
-				CurrentReader.AddTrack(track, filter);
+				reader.AddTrack(track, filter);
 
-			var result = await CurrentReader.RunAsync();
+			CancellationSource = new CancellationTokenSource();
+			ReaderTask = Task.Run(() => reader.RunAsync(CancellationSource.Token));
 
-
-			return await Task.FromResult(result);
+			return await ReaderTask;
 		}
 
 		protected (long audioSize, uint avgBitrate) CalculateAudioSizeAndBitrate()
@@ -226,11 +227,16 @@ namespace AAXClean
 			return (audioBits / 8, avgBitrate);
 		}
 
-		public void Cancel() => CancelAsync().GetAwaiter().GetResult();
-		public async Task CancelAsync()
+		public ConversionResult Cancel() => CancelAsync().GetAwaiter().GetResult();
+		public async Task<ConversionResult> CancelAsync()
 		{
-			if (CurrentReader is not null)
-				await CurrentReader.CancelAsync();
+			if (CancellationSource is not null)
+			{
+				CancellationSource.Cancel();
+				if (ReaderTask is not null)
+					return await ReaderTask;
+			}
+			return await Task.FromResult(ConversionResult.Cancelled);
 		}
 
 		public void Close()

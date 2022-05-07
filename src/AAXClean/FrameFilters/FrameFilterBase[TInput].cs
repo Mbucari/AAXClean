@@ -50,24 +50,21 @@ namespace AAXClean.FrameFilters
 		{
 			InputBuffer.CompleteAdding();
 			await WaitForEncoderLoop();
-			if (!Completion.IsCompleted)
-				CompletionSource.SetResult();
+			CompletionSource.TrySetResult();
 		}
 
 		public virtual async Task CancelAsync()
 		{
 			CancellationSource.Cancel();
 			await WaitForEncoderLoop();
-			if (!Completion.IsCompleted)
-				CompletionSource.SetCanceled();
+			CompletionSource.TrySetCanceled();
 		}
 
 		public async Task FaultAsync(Exception exception)
 		{
 			CancellationSource.Cancel();
 			await WaitForEncoderLoop();
-			if (!Completion.IsCompleted)
-				CompletionSource.SetException(exception);
+			CompletionSource.TrySetException(exception);
 			//Faults propagate up
 			if (Parent is not null)
 				await Parent.FaultAsync(exception);
