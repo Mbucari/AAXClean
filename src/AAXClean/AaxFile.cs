@@ -1,13 +1,11 @@
 ﻿using AAXClean.FrameFilters;
 using AAXClean.FrameFilters.Audio;
-using AAXClean.FrameFilters.Text;
 using Mpeg4Lib.Boxes;
 using Mpeg4Lib.Util;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace AAXClean
 {
@@ -70,7 +68,7 @@ namespace AAXClean
 		public AaxFile(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read) : this(File.Open(fileName, FileMode.Open, access, share)) { }
 
 		public override FrameTransformBase<FrameEntry, FrameEntry> GetAudioFrameFilter()
-			=> new AavdFilter(Key, IV);	
+			=> new AavdFilter(Key, IV);
 
 		#region Aax(c) Keys
 

@@ -242,7 +242,7 @@ namespace AAXClean.Test
 			try
 			{
 				FileStream tempfile = TestFiles.NewTempFile();
-				ChapterInfo newChapters = new ChapterInfo();
+				ChapterInfo newChapters = new();
 				newChapters.AddChapter("Ch1", TimeSpan.FromTicks(15000000000));
 				newChapters.AddChapter("Ch2", TimeSpan.FromTicks(30000000000));
 				newChapters.AddChapter("Ch3", TimeSpan.FromTicks(45000000000));
@@ -253,7 +253,7 @@ namespace AAXClean.Test
 
 				Assert.AreEqual(ConversionResult.NoErrorsDetected, result);
 
-				Mp4File mp4 = new Mp4File(tempfile.Name);
+				Mp4File mp4 = new(tempfile.Name);
 				var ch_2 = mp4.GetChaptersFromMetadata().ToList();
 				var ch_3 = (await mp4.GetChapterInfoAsync()).ToList();
 				mp4.Close();

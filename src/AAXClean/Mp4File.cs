@@ -110,7 +110,7 @@ namespace AAXClean
 				}
 				else
 				{
-					using ChapterFilter c1 = new ChapterFilter(TimeScale);
+					using ChapterFilter c1 = new(TimeScale);
 					f2.SetChapterDelegate(() => c1.Chapters);
 					result = await ProcessAudio((Moov.AudioTrack, f1), (Moov.TextTrack, c1));
 				}
@@ -148,7 +148,7 @@ namespace AAXClean
 		public ChapterInfo GetChapterInfo() => GetChapterInfoAsync().GetAwaiter().GetResult();
 		public async Task<ChapterInfo> GetChapterInfoAsync()
 		{
-			ChapterFilter c1 = new ChapterFilter(TimeScale);
+			ChapterFilter c1 = new(TimeScale);
 
 			await ProcessAudio((Moov.TextTrack, c1));
 

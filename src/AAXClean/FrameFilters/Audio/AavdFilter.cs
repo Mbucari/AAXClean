@@ -1,6 +1,5 @@
 ﻿using Mpeg4Lib.Util;
 using System;
-using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters.Audio
 {

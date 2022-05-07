@@ -43,8 +43,8 @@ namespace AAXClean.Chunks
 
 			foreach (TrackChunk c in new MpegChunkEnumerable(Tracks.ToArray()))
 			{
-				if (FirstFilters[c.TrackNum].Completion.IsFaulted || 
-					FirstFilters[c.TrackNum].Completion.IsCanceled || 
+				if (FirstFilters[c.TrackNum].Completion.IsFaulted ||
+					FirstFilters[c.TrackNum].Completion.IsCanceled ||
 					token.IsCancellationRequested)
 					break;
 
