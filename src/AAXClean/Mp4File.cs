@@ -122,10 +122,10 @@ namespace AAXClean
 
 			return result;
 		}
-		public ConversionResult ConvertToMultiMp4a(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback)
-			=> ConvertToMultiMp4aAsync(userChapters, newFileCallback).GetAwaiter().GetResult();
+		public ConversionResult ConvertToMultiMp4a(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback, bool trimOutputToChapters = false)
+			=> ConvertToMultiMp4aAsync(userChapters, newFileCallback, trimOutputToChapters).GetAwaiter().GetResult();
 
-		public async Task<ConversionResult> ConvertToMultiMp4aAsync(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback)
+		public async Task<ConversionResult> ConvertToMultiMp4aAsync(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback, bool trimOutputToChapters = false)
 		{
 			using FrameTransformBase<FrameEntry, FrameEntry> f1 = GetAudioFrameFilter();
 			LosslessMultipartFilter f2 = new
@@ -136,7 +136,7 @@ namespace AAXClean
 
 			f1.LinkTo(f2);
 
-			return await ProcessAudio((Moov.AudioTrack, f1));
+			return await ProcessAudio(trimOutputToChapters, userChapters.StartOffset, userChapters.EndOffset, (Moov.AudioTrack, f1));
 		}
 
 		private void OnProgressUpdate(ConversionProgressEventArgs args)
@@ -153,7 +153,6 @@ namespace AAXClean
 			Chapters ??= c1.Chapters;
 			return c1.Chapters;
 		}
-
 
 		public ChapterInfo GetChaptersFromMetadata()
 		{
