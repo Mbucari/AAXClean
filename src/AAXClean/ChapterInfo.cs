@@ -7,14 +7,19 @@ namespace AAXClean
 {
 	public class ChapterInfo : IEnumerable<Chapter>
 	{
+		public TimeSpan StartOffset { get; }
+		public TimeSpan EndOffset => Count == 0 ? StartOffset : _chapterList.Max(c => c.EndOffset);
+
 		private readonly List<Chapter> _chapterList = new();
 		public IReadOnlyList<Chapter> Chapters => _chapterList;
 		public int Count => _chapterList.Count;
 		public int RenderSize => _chapterList.Sum(c => c.RenderSize);
 
+		public ChapterInfo(TimeSpan offsetFromBeginning = default) => StartOffset = offsetFromBeginning;
+
 		public void AddChapter(string title, TimeSpan duration)
 		{
-			TimeSpan starttime = _chapterList.Count == 0 ? TimeSpan.FromSeconds(0) : _chapterList[^1].EndOffset;
+			TimeSpan starttime = Count == 0 ? StartOffset : _chapterList[^1].EndOffset;
 
 			_chapterList.Add(new Chapter(title, starttime, duration));
 		}

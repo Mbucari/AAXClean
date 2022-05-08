@@ -299,7 +299,7 @@ namespace AAXClean.Test
 				var convertTask = Task.Run(RunIt);
 
 				await Task.Delay(500);
-				await aaxFile.CancelAsync();
+				aaxFile.Cancel();
 
 				await convertTask;
 				Assert.AreEqual(ConversionResult.Cancelled, result);
@@ -335,7 +335,7 @@ namespace AAXClean.Test
 				var convertTask = Task.Run(RunIt);
 
 				await Task.Delay(500);
-				await aaxFile.CancelAsync();
+				aaxFile.Cancel();
 
 				await convertTask;
 				Assert.AreEqual(ConversionResult.Cancelled, result);

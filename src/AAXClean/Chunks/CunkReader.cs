@@ -32,9 +32,9 @@ namespace AAXClean.Chunks
 			FirstFilters.Add(filter);
 		}
 
-		public ConversionResult Run(CancellationToken token = default) => RunAsync(token).GetAwaiter().GetResult();
+		public ConversionResult Run(CancellationToken token, bool doTimeFilter, TimeSpan startTime, TimeSpan endTime) => RunAsync(token, doTimeFilter, startTime, endTime).GetAwaiter().GetResult();
 
-		public async Task<ConversionResult> RunAsync(CancellationToken token = default)
+		public async Task<ConversionResult> RunAsync(CancellationToken token, bool doTimeFilter, TimeSpan startTime, TimeSpan endTime)
 		{
 			Initialize();
 
@@ -51,7 +51,7 @@ namespace AAXClean.Chunks
 				Memory<byte> chunkdata = new byte[c.Entry.ChunkSize];
 				InputStream.ReadNextChunk(c.Entry.ChunkOffset, chunkdata.Span);
 
-				DispatchChunk(c.TrackNum, c.Entry, chunkdata);
+				DispatchChunk(doTimeFilter, startTime, endTime, c.TrackNum, c.Entry, chunkdata);
 
 				//Throttle update so it doesn't bog down UI
 				if (DateTime.Now > nextUpdate)
@@ -93,17 +93,28 @@ namespace AAXClean.Chunks
 		}
 
 		private TimeSpan ProcessPosition(int trackNum) => Stts[trackNum].FrameToTime(TimeScales[trackNum], LastFrameProcessed[trackNum]);
-		private void DispatchChunk(int trackIndex, ChunkEntry chunk, Memory<byte> chunkdata)
+		private void DispatchChunk(bool doTimeFilter, TimeSpan startTime, TimeSpan endTime, int trackIndex, ChunkEntry chunk, Memory<byte> chunkdata)
 		{
 			for (int start = 0, f = 0; f < chunk.FrameSizes.Length; start += chunk.FrameSizes[f], f++, LastFrameProcessed[trackIndex]++)
 			{
+				uint frameDelta = Stts[trackIndex].FrameToFrameDelta(LastFrameProcessed[trackIndex]);
+
+				if (doTimeFilter)
+				{
+					var time = ProcessPosition(trackIndex);
+
+					if (time < startTime ||
+						time > endTime)
+						continue;
+				}
+
 				Memory<byte> frameData = chunkdata.Slice(start, chunk.FrameSizes[f]);
 
 				FirstFilters[trackIndex].AddInput(new FrameEntry
 				{
 					Chunk = chunk,
 					FrameIndex = LastFrameProcessed[trackIndex],
-					FrameDelta = Stts[trackIndex].FrameToFrameDelta(LastFrameProcessed[trackIndex]),
+					FrameDelta = frameDelta,
 					FrameSize = chunk.FrameSizes[f],
 					FrameData = frameData
 				});

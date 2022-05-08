@@ -28,7 +28,7 @@ namespace AAXClean
 	}
 	public class Mp4File : Box
 	{
-		public ChapterInfo Chapters { get; internal set; }
+		public ChapterInfo Chapters { get; set; }
 
 		public event EventHandler<ConversionProgressEventArgs> ConversionProgressUpdate;
 		public AppleTags AppleTags { get; }
@@ -90,10 +90,10 @@ namespace AAXClean
 			}
 		}
 
-		public ConversionResult ConvertToMp4a(Stream outputStream, ChapterInfo userChapters = null)
-			=> ConvertToMp4aAsync(outputStream, userChapters).GetAwaiter().GetResult();
+		public ConversionResult ConvertToMp4a(Stream outputStream, ChapterInfo userChapters = null, bool trimOutputToChapters = false)
+			=> ConvertToMp4aAsync(outputStream, userChapters, trimOutputToChapters).GetAwaiter().GetResult();
 
-		public async Task<ConversionResult> ConvertToMp4aAsync(Stream outputStream, ChapterInfo userChapters = null)
+		public async Task<ConversionResult> ConvertToMp4aAsync(Stream outputStream, ChapterInfo userChapters = null, bool trimOutputToChapters = false)
 		{
 			ConversionResult result;
 			using (FrameTransformBase<FrameEntry, FrameEntry> f1 = GetAudioFrameFilter())
@@ -102,11 +102,10 @@ namespace AAXClean
 
 				f1.LinkTo(f2);
 
-
 				if (Moov.TextTrack is null || userChapters is not null)
 				{
 					f2.SetChapterDelegate(() => userChapters);
-					result = await ProcessAudio((Moov.AudioTrack, f1));
+					result = await ProcessAudio(trimOutputToChapters, userChapters.StartOffset, userChapters.EndOffset, (Moov.AudioTrack, f1));
 				}
 				else
 				{
@@ -149,7 +148,6 @@ namespace AAXClean
 		public async Task<ChapterInfo> GetChapterInfoAsync()
 		{
 			ChapterFilter c1 = new(TimeScale);
-
 			await ProcessAudio((Moov.TextTrack, c1));
 
 			Chapters ??= c1.Chapters;
@@ -200,7 +198,13 @@ namespace AAXClean
 
 		private CancellationTokenSource CancellationSource;
 		private Task<ConversionResult> ReaderTask;
+
 		public async Task<ConversionResult> ProcessAudio(params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
+		{
+			return await ProcessAudio(false, TimeSpan.Zero, TimeSpan.Zero, filters);
+		}
+
+		public async Task<ConversionResult> ProcessAudio(bool doTimeFilter, TimeSpan startTime, TimeSpan endTime, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
 		{
 			CunkReader reader = new(InputStream)
 			{
@@ -212,7 +216,7 @@ namespace AAXClean
 				reader.AddTrack(track, filter);
 
 			CancellationSource = new CancellationTokenSource();
-			ReaderTask = Task.Run(() => reader.RunAsync(CancellationSource.Token));
+			ReaderTask = Task.Run(() => reader.RunAsync(CancellationSource.Token, doTimeFilter, startTime, endTime));
 
 			return await ReaderTask;
 		}
@@ -227,16 +231,15 @@ namespace AAXClean
 			return (audioBits / 8, avgBitrate);
 		}
 
-		public ConversionResult Cancel() => CancelAsync().GetAwaiter().GetResult();
-		public async Task<ConversionResult> CancelAsync()
+		public ConversionResult Cancel()
 		{
 			if (CancellationSource is not null)
 			{
 				CancellationSource.Cancel();
 				if (ReaderTask is not null)
-					return await ReaderTask;
+					return ReaderTask.GetAwaiter().GetResult();
 			}
-			return await Task.FromResult(ConversionResult.Cancelled);
+			return ConversionResult.Cancelled;
 		}
 
 		public void Close()

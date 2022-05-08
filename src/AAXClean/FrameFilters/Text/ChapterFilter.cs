@@ -3,7 +3,7 @@ using System.Text;
 
 namespace AAXClean.FrameFilters.Text
 {
-	internal class ChapterFilter : FrameFinalBase<FrameEntry>
+	public class ChapterFilter : FrameFinalBase<FrameEntry>
 	{
 		public ChapterInfo Chapters => Builder.ToChapterInfo();
 		private readonly ChapterBuilder Builder;
