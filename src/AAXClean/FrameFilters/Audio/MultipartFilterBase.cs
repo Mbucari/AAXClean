@@ -41,15 +41,13 @@ namespace AAXClean.FrameFilters.Audio
 			{
 				CloseCurrentWriter();
 
-				if (!GetNextChapter(input.FrameDelta))
+				if (GetNextChapter(input.FrameDelta))
 				{
-					Complete();
+					NewSplitCallback callback = new() { Chapter = SplitChapters.Current };
+					CreateNewWriter(callback);
+					WriteFrameToFile(input, true);
+					LastChunkIndex = input.Chunk.ChunkIndex;
 				}
-
-				NewSplitCallback callback = new() { Chapter = SplitChapters.Current };
-				CreateNewWriter(callback);
-				WriteFrameToFile(input, true);
-				LastChunkIndex = input.Chunk.ChunkIndex;
 			}
 			else if (input.FrameIndex >= StartFrame)
 			{
@@ -68,6 +66,7 @@ namespace AAXClean.FrameFilters.Audio
 				return false;
 
 			StartFrame = (uint)(SplitChapters.Current.StartOffset.TotalSeconds * SampleRate / frameDelta);
+			//Depending on time precision, the final EndFrame may be less than the last audio frame in the source file
 			EndFrame = (uint)(SplitChapters.Current.EndOffset.TotalSeconds * SampleRate / frameDelta);
 			return true;
 		}
