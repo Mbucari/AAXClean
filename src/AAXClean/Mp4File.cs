@@ -215,7 +215,7 @@ namespace AAXClean
 				reader.AddTrack(track, filter);
 
 			CancellationSource = new CancellationTokenSource();
-			ReaderTask = Task.Run(() => reader.RunAsync(CancellationSource.Token, doTimeFilter, startTime, endTime));
+			ReaderTask = reader.RunAsync(CancellationSource.Token, doTimeFilter, startTime, endTime);
 
 			return await ReaderTask;
 		}
@@ -231,12 +231,15 @@ namespace AAXClean
 		}
 
 		public ConversionResult Cancel()
+			=> CancelAsync().GetAwaiter().GetResult();
+
+		public async Task<ConversionResult> CancelAsync()
 		{
 			if (CancellationSource is not null)
 			{
 				CancellationSource.Cancel();
 				if (ReaderTask is not null)
-					return ReaderTask.GetAwaiter().GetResult();
+					return await ReaderTask;
 			}
 			return ConversionResult.Cancelled;
 		}

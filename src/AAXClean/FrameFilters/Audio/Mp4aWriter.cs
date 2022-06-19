@@ -12,7 +12,7 @@ namespace AAXClean.FrameFilters.Audio
 		private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
 
 		private readonly long mdatStart;
-		private readonly MoovBox Moov;
+		internal readonly MoovBox Moov;
 		private readonly SttsBox Stts;
 		private readonly StscBox Stsc;
 		private readonly StszBox Stsz;

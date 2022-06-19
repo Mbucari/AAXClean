@@ -6,8 +6,6 @@ namespace AAXClean.FrameFilters.Audio
 {
 	public abstract class MultipartFilterBase<TInput> : FrameFinalBase<TInput> where TInput : FrameEntry
 	{
-		protected abstract Action<NewSplitCallback> NewFileCallback { get; }
-
 		protected readonly int SampleRate;
 		protected readonly int Channels;
 		private readonly IEnumerator<Chapter> SplitChapters;

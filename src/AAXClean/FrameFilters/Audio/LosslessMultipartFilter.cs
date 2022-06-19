@@ -5,7 +5,7 @@ namespace AAXClean.FrameFilters.Audio
 {
 	internal sealed class LosslessMultipartFilter : MultipartFilterBase<FrameEntry>
 	{
-		protected override Action<NewSplitCallback> NewFileCallback { get; }
+		private Action<NewSplitCallback> NewFileCallback { get; }
 
 		private readonly FtypBox Ftyp;
 		private readonly MoovBox Moov;
@@ -34,6 +34,12 @@ namespace AAXClean.FrameFilters.Audio
 
 			Writer = new Mp4aWriter(callback.OutputFile, Ftyp, Moov, false);
 			Writer.RemoveTextTrack();
+
+			if (Writer.Moov.ILst is not null)
+			{
+				var tags = new AppleTags(Writer.Moov.ILst);
+				tags.Tracks = (callback.TrackNumber, callback.TrackCount);
+			}
 		}
 		protected override void Dispose(bool disposing)
 		{

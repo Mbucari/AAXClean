@@ -39,18 +39,30 @@ namespace AAXClean
 		public string Acr { get => IList.GetTagString("AACR"); set => IList.EditOrAddTag("AACR", value); }
 		public byte[] Cover { get => IList.GetTagBytes("covr"); set => IList.EditOrAddTag("covr", value, AppleDataType.ContainsJpegData); }
 
-		public void EditOrAddTag(string name, string data) => IList.EditOrAddTag(name, data);
-		public void EditOrAddTag(string name, byte[] data) => IList.EditOrAddTag(name, data);
-		public void AddTag(string name, string data) => IList.AddTag(name, data);
-		public void AddTag(string name, byte[] data) => IList.AddTag(name, data);
-		public string GetTagString(string name) => IList.GetTagString(name);
-		public byte[] GetTagBytes(string name) => IList.GetTagBytes(name);
-
-
-		[Obsolete("This method has been deprecated. Please use the Cover property.")]
-		public void SetCoverArt(byte[] coverArt)
+		public (int trackNum, int trackCount) Tracks
 		{
-			Cover = coverArt;
+			get
+			{
+				var data = IList.GetTagBytes("trkn");
+				if (data is null) return (1, 1);
+
+				int trackNum = (data[2] << 8) | data[3];
+				int trackCount = (data[4] << 8) | data[5];
+
+				return (trackNum, trackCount);
+			}
+			set 
+			{
+				var data = new byte[8];
+
+				data[3] = (byte)value.trackNum;
+				data[2] = (byte)(value.trackNum >> 8);
+
+				data[5] = (byte)value.trackCount;
+				data[4] = (byte)(value.trackCount >> 8);
+
+				IList.EditOrAddTag("trkn", data);
+			}
 		}
 	}
 }
