@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<metadata>
 		<id>AAXClean</id>
-		<version>0.4.7</version>
+		<version>0.4.8</version>
 		<description>Decrypts Audible aax and aaxc files to mp4.</description>
 		<authors>MrGneissGuy</authors>
 		<repository type="git" url="https://github.com/Mbucari/AAXClean.git" branch="master" />
@@ -10,7 +10,8 @@
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
 		<Tags>Audible AAC AAXC m4b audiobook</Tags>
         <language>en-US</language>
-		<releaseNotes>Fixed MultipartFilter bug wthat could occur on some large files.</releaseNotes>
+		<releaseNotes>* Added support for multipart track numbers and Track metadata tags
+		* Fixed async bug that would cause the procees to hang when cancelling</releaseNotes>
 	</metadata>
 	<dependencies>
 		<group targetFramework="net5.0">

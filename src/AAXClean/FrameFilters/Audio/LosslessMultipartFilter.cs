@@ -3,7 +3,7 @@ using System;
 
 namespace AAXClean.FrameFilters.Audio
 {
-	internal sealed class LosslessMultipartFilter : MultipartFilterBase<FrameEntry>
+	internal sealed class LosslessMultipartFilter : MultipartFilterBase<FrameEntry, NewSplitCallback>
 	{
 		private Action<NewSplitCallback> NewFileCallback { get; }
 
@@ -39,6 +39,7 @@ namespace AAXClean.FrameFilters.Audio
 			{
 				var tags = new AppleTags(Writer.Moov.ILst);
 				tags.Tracks = (callback.TrackNumber, callback.TrackCount);
+				tags.Title = callback.TrackTitle ?? tags.Title;
 			}
 		}
 		protected override void Dispose(bool disposing)

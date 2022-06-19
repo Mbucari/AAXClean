@@ -4,7 +4,9 @@ using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters.Audio
 {
-	public abstract class MultipartFilterBase<TInput> : FrameFinalBase<TInput> where TInput : FrameEntry
+	public abstract class MultipartFilterBase<TInput, TCallback> : FrameFinalBase<TInput>
+		where TInput : FrameEntry
+		where TCallback : NewSplitCallback, new()
 	{
 		protected readonly int SampleRate;
 		protected readonly int Channels;
@@ -27,7 +29,7 @@ namespace AAXClean.FrameFilters.Audio
 
 		protected abstract void CloseCurrentWriter();
 		protected abstract void WriteFrameToFile(FrameEntry audioFrame, bool newChunk);
-		protected abstract void CreateNewWriter(NewSplitCallback callback);
+		protected abstract void CreateNewWriter(TCallback callback);
 		public override async Task CompleteAsync()
 		{
 			await base.CompleteAsync();
@@ -41,7 +43,7 @@ namespace AAXClean.FrameFilters.Audio
 
 				if (GetNextChapter(input.FrameDelta))
 				{
-					NewSplitCallback callback = new() { Chapter = SplitChapters.Current };
+					TCallback callback = new() { Chapter = SplitChapters.Current };
 					CreateNewWriter(callback);
 					WriteFrameToFile(input, true);
 					LastChunkIndex = input.Chunk.ChunkIndex;
