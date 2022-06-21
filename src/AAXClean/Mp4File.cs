@@ -215,7 +215,8 @@ namespace AAXClean
 				reader.AddTrack(track, filter);
 
 			CancellationSource = new CancellationTokenSource();
-			ReaderTask = reader.RunAsync(CancellationSource.Token, doTimeFilter, startTime, endTime);
+
+			ReaderTask = Task.Run(async () => await reader.RunAsync(CancellationSource.Token, doTimeFilter, startTime, endTime));
 
 			return await ReaderTask;
 		}
@@ -229,9 +230,6 @@ namespace AAXClean
 
 			return (audioBits / 8, avgBitrate);
 		}
-
-		public ConversionResult Cancel()
-			=> CancelAsync().GetAwaiter().GetResult();
 
 		public async Task<ConversionResult> CancelAsync()
 		{

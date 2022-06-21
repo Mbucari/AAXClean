@@ -32,8 +32,6 @@ namespace AAXClean.Chunks
 			FirstFilters.Add(filter);
 		}
 
-		public ConversionResult Run(CancellationToken token, bool doTimeFilter, TimeSpan startTime, TimeSpan endTime) => RunAsync(token, doTimeFilter, startTime, endTime).GetAwaiter().GetResult();
-
 		public async Task<ConversionResult> RunAsync(CancellationToken token, bool doTimeFilter, TimeSpan startTime, TimeSpan endTime)
 		{
 			Initialize();
@@ -75,7 +73,8 @@ namespace AAXClean.Chunks
 			Stts = Tracks.Select(t => t.Mdia.Minf.Stbl.Stts).ToArray();
 			TimeScales = Tracks.Select(t => t.Mdia.Mdhd.Timescale).ToArray();
 
-			foreach (FrameFilterBase<FrameEntry> f in FirstFilters) f.Start();
+			foreach (FrameFilterBase<FrameEntry> f in FirstFilters)
+				f.Start();
 		}
 
 		private async Task<ConversionResult> Finalize(bool cancelled)

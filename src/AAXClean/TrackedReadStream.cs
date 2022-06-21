@@ -38,16 +38,17 @@ namespace AAXClean
 
 		public override int Read(byte[] buffer, int offset, int count)
 		{
-			int btsRead = 0;
+			int totalRead = 0, btsRead;
 
 			do
 			{
-				btsRead += BaseStream.Read(buffer, offset + btsRead, count - btsRead);
-			} while (btsRead < count);
+				btsRead = BaseStream.Read(buffer, offset + totalRead, count - totalRead);
+				totalRead += btsRead;
+			} while (totalRead < count && btsRead > 0);
 
-			ReadPosition += btsRead;
+			ReadPosition += totalRead;
 
-			return btsRead;
+			return totalRead;
 		}
 
 		protected override void Dispose(bool disposing)

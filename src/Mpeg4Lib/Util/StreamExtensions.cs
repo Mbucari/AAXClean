@@ -43,7 +43,8 @@ namespace Mpeg4Lib.Util
 				else
 					throw new Exception($"Input stream position 0x{inputStream.Position:X8} is past the chunk offset 0x{chunkOffset:X8} and is not seekable.");
 			}
-			inputStream.Read(chunkBuffer);
+			if (inputStream.Read(chunkBuffer) != chunkBuffer.Length)
+				throw new EndOfStreamException($"Stream ended before all {chunkBuffer.Length} bytes could be read");
 		}		
 
 		public static void WriteType(this Stream stream, string type)
@@ -111,6 +112,8 @@ namespace Mpeg4Lib.Util
 				needed -= count;
 			} while (needed > 0 && count != 0);
 
+			if (needed > 0)
+				throw new EndOfStreamException($"Stream ended before all {length} bytes could be read");
 			return buffer;
 		}
 		public static ushort ReadUInt16BE(this Stream stream)
