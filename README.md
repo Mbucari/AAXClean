@@ -25,6 +25,10 @@ aaxFile.SetDecryptionKey(audible_key, audible_iv);
 var activation_bytes = "0a1b2c3d";
 aaxFile.SetDecryptionKey(activation_bytes);
 ```
+### Edit Metadata Tags:
+```C#
+aaxFile.AppleTags.Generes = "Adventure"
+```
 ### Output:
 ```C#
 var conversionResult = await aaxFile.ConvertToMp4aAsync(File.OpenWrite(@"C:\Decrypted book.mb4"));
@@ -32,7 +36,8 @@ var conversionResult = await aaxFile.ConvertToMp4aAsync(File.OpenWrite(@"C:\Decr
 ### Multipart Conversion Example:
 Note that the input stream needs to be seekable to call GetChapterInfo()
 ```C#
-var chapters = aaxFile.GetChapterInfoAsync();
+var chapters = await aaxFile.GetChapterInfoAsync();
+	//or aaxFile.GetChaptersFromMetadata();
 var conversionResult = await aaxFile.ConvertToMultiMp4aAsync(chapters, NewSplit);
             
 private static void NewSplit(NewSplitCallback newSplitCallback)
@@ -41,8 +46,4 @@ private static void NewSplit(NewSplitCallback newSplitCallback)
 	string fileName = newSplitCallback.Chapter.Title.Replace(":", "") + ".m4b";
 	newSplitCallback.OutputFile = File.OpenWrite(Path.Combine(dir, fileName));
 }
-```
-### Edit Metadata Tags:
-```C#
-aaxFile.AppleTags.Generes = "Adventure"
 ```
