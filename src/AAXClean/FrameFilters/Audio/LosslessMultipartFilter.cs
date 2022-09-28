@@ -37,6 +37,7 @@ namespace AAXClean.FrameFilters.Audio
 			NewFileCallback(callback);
 
 			Mp4writer = new Mp4aWriter(callback.OutputFile, Ftyp, Moov, false);
+			Closed = false;
 			Mp4writer.RemoveTextTrack();
 
 			if (Mp4writer.Moov.ILst is not null)
