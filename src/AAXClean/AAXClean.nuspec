@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<metadata>
 		<id>AAXClean</id>
-		<version>0.4.9</version>
+		<version>0.4.10</version>
 		<description>Decrypts Audible aax and aaxc files to mp4.</description>
 		<authors>MrGneissGuy</authors>
 		<repository type="git" url="https://github.com/Mbucari/AAXClean.git" branch="master" />
@@ -11,7 +11,7 @@
 		<Tags>Audible AAC AAXC m4b audiobook</Tags>
         <language>en-US</language>
 		<releaseNotes>* Fixed a threading bug that would prevent graceful cancellation
-		* Fixed stream reading bug that would cause an infinite loop if the Read() continually returned 0</releaseNotes>
+		* Fixed thread hang bug</releaseNotes>
 	</metadata>
 	<dependencies>
 		<group targetFramework="net5.0">
