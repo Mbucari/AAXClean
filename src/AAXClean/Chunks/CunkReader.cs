@@ -38,33 +38,39 @@ namespace AAXClean.Chunks
 
 			DateTime beginProcess = DateTime.Now;
 			DateTime nextUpdate = beginProcess;
-
-			foreach (TrackChunk c in new MpegChunkEnumerable(Tracks.ToArray()))
+			ConversionResult result;
+			try
 			{
-				if (FirstFilters[c.TrackNum].Completion.IsFaulted ||
-					FirstFilters[c.TrackNum].Completion.IsCanceled ||
-					token.IsCancellationRequested)
-					break;
-
-				Memory<byte> chunkdata = new byte[c.Entry.ChunkSize];
-				InputStream.ReadNextChunk(c.Entry.ChunkOffset, chunkdata.Span);
-
-				DispatchChunk(doTimeFilter, startTime, endTime, c.TrackNum, c.Entry, chunkdata);
-
-				//Throttle update so it doesn't bog down UI
-				if (DateTime.Now > nextUpdate)
+				foreach (TrackChunk c in new MpegChunkEnumerable(Tracks.ToArray()))
 				{
-					TimeSpan position = ProcessPosition(c.TrackNum);
-					double speed = position / (DateTime.Now - beginProcess);
-					OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs { TotalDuration = TotalDuration, ProcessPosition = position, ProcessSpeed = speed });
+					if (FirstFilters[c.TrackNum].Completion.IsFaulted ||
+						FirstFilters[c.TrackNum].Completion.IsCanceled ||
+						token.IsCancellationRequested)
+						break;
 
-					nextUpdate = DateTime.Now.AddMilliseconds(300);
+					Memory<byte> chunkdata = new byte[c.Entry.ChunkSize];
+					InputStream.ReadNextChunk(c.Entry.ChunkOffset, chunkdata.Span);
+
+					DispatchChunk(doTimeFilter, startTime, endTime, c.TrackNum, c.Entry, chunkdata);
+
+					//Throttle update so it doesn't bog down UI
+					if (DateTime.Now > nextUpdate)
+					{
+						TimeSpan position = ProcessPosition(c.TrackNum);
+						double speed = position / (DateTime.Now - beginProcess);
+						OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs { TotalDuration = TotalDuration, ProcessPosition = position, ProcessSpeed = speed });
+
+						nextUpdate = DateTime.Now.AddMilliseconds(300);
+					}
 				}
 			}
+			finally
+			{
+				OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs { TotalDuration = TotalDuration, ProcessPosition = TotalDuration, ProcessSpeed = TotalDuration / (DateTime.Now - beginProcess) });
 
-			OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs { TotalDuration = TotalDuration, ProcessPosition = TotalDuration, ProcessSpeed = TotalDuration / (DateTime.Now - beginProcess) });
-
-			return await Finalize(token.IsCancellationRequested);
+				result = await Finalize(token.IsCancellationRequested);
+			}
+			return result;
 		}
 
 		private void Initialize()
@@ -79,7 +85,10 @@ namespace AAXClean.Chunks
 
 		private async Task<ConversionResult> Finalize(bool cancelled)
 		{
-			await Task.WhenAll(FirstFilters.Where(f => !f.Completion.IsCompleted).Select(f => cancelled ? f.CancelAsync() : f.CompleteAsync()));
+			await Task.WhenAll(
+				FirstFilters
+				.Where(f => !f.Completion.IsCompleted)
+				.Select(f => cancelled ? f.CancelAsync() : f.CompleteAsync()));
 
 			ConversionResult result;
 			if (FirstFilters.All(f => f.Completion.IsCompletedSuccessfully))

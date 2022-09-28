@@ -41,16 +41,16 @@ namespace Mpeg4Lib.Util
 				if (inputStream.CanSeek)
 					inputStream.Position = chunkOffset;
 				else
-					throw new Exception($"Input stream position 0x{inputStream.Position:X8} is past the chunk offset 0x{chunkOffset:X8} and is not seekable.");
+					throw new NotSupportedException($"Input stream position 0x{inputStream.Position:X8} is past the chunk offset 0x{chunkOffset:X8} and is not seekable.");
 			}
 			if (inputStream.Read(chunkBuffer) != chunkBuffer.Length)
-				throw new EndOfStreamException($"Stream ended before all {chunkBuffer.Length} bytes could be read");
+				throw new EndOfStreamException($"Stream ended at position {inputStream.Position} before all {chunkBuffer.Length} bytes were read.");
 		}		
 
 		public static void WriteType(this Stream stream, string type)
 		{
 			if (type?.Length != 4)
-				throw new Exception("Type must be 4 chas long.");
+				throw new ArgumentException("Type must be 4 chas long.");
 
 			stream.WriteDWord(new byte[] { (byte)type[0], (byte)type[1], (byte)type[2], (byte)type[3] });
 		}
@@ -80,17 +80,17 @@ namespace Mpeg4Lib.Util
 		}
 		public static void WriteWord(this Stream stream, byte[] word)
 		{
-			if (word.Length != 2) throw new Exception("Word must be 2 bytes.");
+			if (word.Length != 2) throw new ArgumentException("Word must be 2 bytes.");
 			stream.Write(word);
 		}
 		public static void WriteDWord(this Stream stream, byte[] dWord)
 		{
-			if (dWord.Length != 4) throw new Exception("Word must be 4 bytes.");
+			if (dWord.Length != 4) throw new ArgumentException("DWord must be 4 bytes.");
 			stream.Write(dWord);
 		}
 		public static void WriteQWord(this Stream stream, byte[] qWord)
 		{
-			if (qWord.Length != 8) throw new Exception("Word must be 8 bytes.");
+			if (qWord.Length != 8) throw new ArgumentException("QWord must be 8 bytes.");
 			stream.Write(qWord);
 		}
 		public static byte[] ReadBlock(this Stream stream, int length)
@@ -146,27 +146,9 @@ namespace Mpeg4Lib.Util
 		{
 			return (long)stream.ReadUInt64BE();
 		}
-		public static byte[] ReadWord(this Stream stream)
-		{
-			byte[] qword = stream.ReadBlock(2);
-			if (qword.Length != 2)
-				throw new Exception("Too short");
-			return qword;
-		}
-		public static byte[] ReadDWord(this Stream stream)
-		{
-			byte[] qword = stream.ReadBlock(4);
-			if (qword.Length != 4)
-				throw new Exception("Too short");
-			return qword;
-		}
-		public static byte[] ReadQWord(this Stream stream)
-		{
-			byte[] qword = stream.ReadBlock(8);
-			if (qword.Length != 8)
-				throw new Exception("Too short");
-			return qword;
-		}
+		public static byte[] ReadWord(this Stream stream) => stream.ReadBlock(2);
+		public static byte[] ReadDWord(this Stream stream) => stream.ReadBlock(4);
+		public static byte[] ReadQWord(this Stream stream) => stream.ReadBlock(8);
 		public static string ReadType(this Stream stream)
 		{
 			byte[] qword = stream.ReadDWord();

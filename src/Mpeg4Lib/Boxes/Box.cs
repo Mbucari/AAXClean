@@ -27,7 +27,7 @@ namespace Mpeg4Lib.Boxes
 			{
 				0 => null,
 				1 => children.First(),
-				_ => throw new Exception($"{GetType().Name} has {children.Count()} children of type {typeof(T)}. Call {nameof(GetChildren)} instead."),
+				_ => throw new InvalidOperationException($"{GetType().Name} has {children.Count()} children of type {typeof(T)}. Call {nameof(GetChildren)} instead."),
 			};
 		}
 

@@ -43,6 +43,7 @@ namespace AAXClean.FrameFilters.Audio
 				Mp4writer.WriteChapters(chinf);
 			}
 			Mp4writer.Close();
+			Mp4writer.OutputFile.Close();
 			Closed = true;
 		}
 
