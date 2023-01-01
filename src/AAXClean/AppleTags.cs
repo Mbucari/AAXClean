@@ -15,6 +15,7 @@ namespace AAXClean
 			IList = appleListBox;
 		}
 
+		public AppleListBox AppleListBox => IList;
 		public string FirstAuthor => Performers?.Split(';')?[0];
 		public string TitleSansUnabridged => Title?.Replace(" (Unabridged)", "");
 

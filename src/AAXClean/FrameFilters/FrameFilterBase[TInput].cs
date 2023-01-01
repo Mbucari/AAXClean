@@ -88,7 +88,12 @@ namespace AAXClean.FrameFilters
 			catch (OperationCanceledException) { }
 			catch (Exception ex)
 			{
-				Task.Run(() => FaultAsync(ex));
+				CancellationSource.Cancel();
+				CompletionSource.TrySetException(ex);
+				//Faults propagate up
+				if (Parent is not null)
+					Parent.FaultAsync(ex).Wait();
+
 			}
 		}
 

@@ -134,8 +134,8 @@ namespace AAXClean.FrameFilters.Audio
 
 			foreach (Chapter c in chapters)
 			{
-				chapterNames.AddTag("©nam", c.Title);
-				chapterNames.AddTag("©cmt", c.Title);
+				chapterNames.EditOrAddTag("©nam", c.Title);
+				chapterNames.EditOrAddTag("©cmt", c.Title);
 			}
 
 		}
