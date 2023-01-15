@@ -1,4 +1,5 @@
 ﻿using Mpeg4Lib.Boxes;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -61,6 +62,8 @@ namespace Mpeg4Lib.Chunks
 					//Do not dispose of Tracks[i].Handler or Tracks[i].ChunkEntryList.
 					//They are still used after the MpegChunkEnumerator disposes
 				}
+
+				GC.SuppressFinalize(this);
 			}
 
 			public bool MoveNext()

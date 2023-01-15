@@ -19,6 +19,5 @@ namespace AAXClean.FrameFilters.Audio
 		{
 			return (ushort)(frame[0] << 8 | frame[1]);
 		}
-
 	}
 }

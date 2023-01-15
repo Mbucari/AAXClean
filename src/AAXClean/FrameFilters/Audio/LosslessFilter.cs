@@ -24,16 +24,16 @@ namespace AAXClean.FrameFilters.Audio
 		{
 			GetChapterDelegate = getChapterDelegate;
 		}
+		protected override void Flush()
+		{
+			CloseWriter();
+		}
 		protected override void PerformFiltering(FrameEntry input)
 		{
 			Mp4writer.AddFrame(input.FrameData.Span, input.Chunk.ChunkIndex > LastChunkIndex);
 			LastChunkIndex = input.Chunk.ChunkIndex;
 		}
-		public override async Task CompleteAsync()
-		{
-			await base.CompleteAsync();
-			CloseWriter();
-		}
+
 		private void CloseWriter()
 		{
 			if (Closed) return;

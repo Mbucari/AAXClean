@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters.Audio
 {
@@ -8,40 +7,46 @@ namespace AAXClean.FrameFilters.Audio
 		where TInput : FrameEntry
 		where TCallback : NewSplitCallback, new()
 	{
-		protected readonly int SampleRate;
-		protected readonly int Channels;
+		protected readonly bool InputStereo;
+		protected readonly SampleRate InputSampleRate;
+
 		private readonly IEnumerator<Chapter> SplitChapters;
-		private uint StartFrame;
-		private long EndFrame = -1;
+		private uint StartSample;
+		private long EndSample = -1;
 		private long LastChunkIndex = -1;
+		private long CurrentSample = 0;
 
-		private static readonly int[] asc_samplerates = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
 
-		public MultipartFilterBase(byte[] audioSpecificConfig, ChapterInfo splitChapters)
+		public MultipartFilterBase(ChapterInfo splitChapters, SampleRate inputSampleRate, bool inputStereo)
 		{
 			if (splitChapters is null || splitChapters.Count == 0)
 				throw new ArgumentException($"{nameof(splitChapters)} must contain at least one chapter.");
 
-			SampleRate = asc_samplerates[(audioSpecificConfig[0] & 7) << 1 | audioSpecificConfig[1] >> 7];
-			Channels = (audioSpecificConfig[1] >> 3) & 7;
+			InputSampleRate = inputSampleRate;
+			InputStereo = inputStereo;
 			SplitChapters = splitChapters.GetEnumerator();
 		}
 
 		protected abstract void CloseCurrentWriter();
-		protected abstract void WriteFrameToFile(FrameEntry audioFrame, bool newChunk);
+		protected abstract void WriteFrameToFile(TInput audioFrame, bool newChunk);
 		protected abstract void CreateNewWriter(TCallback callback);
-		public override async Task CompleteAsync()
+
+		protected sealed override void Flush()
 		{
-			await base.CompleteAsync();
 			CloseCurrentWriter();
 		}
 		protected override void PerformFiltering(TInput input)
 		{
-			if (input.FrameIndex > EndFrame)
+			if (input.Chunk is null)
+			{
+				//This is the final flushed entry
+				WriteFrameToFile(input, false);
+			}
+			else if (CurrentSample > EndSample)
 			{
 				CloseCurrentWriter();
 
-				if (GetNextChapter(input.FrameDelta))
+				if (GetNextChapter())
 				{
 					TCallback callback = new() { Chapter = SplitChapters.Current };
 					CreateNewWriter(callback);
@@ -49,7 +54,7 @@ namespace AAXClean.FrameFilters.Audio
 					LastChunkIndex = input.Chunk.ChunkIndex;
 				}
 			}
-			else if (input.FrameIndex >= StartFrame)
+			else if (CurrentSample >= StartSample)
 			{
 				bool newChunk = input.Chunk.ChunkIndex > LastChunkIndex;
 				if (newChunk)
@@ -58,16 +63,17 @@ namespace AAXClean.FrameFilters.Audio
 				}
 				WriteFrameToFile(input, newChunk);
 			}
+			CurrentSample += input.SamplesInFrame;
 		}
 
-		private bool GetNextChapter(uint frameDelta)
+		private bool GetNextChapter()
 		{
 			if (!SplitChapters.MoveNext())
 				return false;
 
-			StartFrame = (uint)(SplitChapters.Current.StartOffset.TotalSeconds * SampleRate / frameDelta);
+			StartSample = (uint)Math.Round(SplitChapters.Current.StartOffset.TotalSeconds * (int)InputSampleRate);
 			//Depending on time precision, the final EndFrame may be less than the last audio frame in the source file
-			EndFrame = (uint)(SplitChapters.Current.EndOffset.TotalSeconds * SampleRate / frameDelta);
+			EndSample = (uint)Math.Round(SplitChapters.Current.EndOffset.TotalSeconds * (int)InputSampleRate);
 			return true;
 		}
 

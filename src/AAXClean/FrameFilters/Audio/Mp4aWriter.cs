@@ -2,17 +2,18 @@
 using Mpeg4Lib.Util;
 using System;
 using System.IO;
+using System.Linq;
 
 namespace AAXClean.FrameFilters.Audio
 {
-	internal class Mp4aWriter
+	public class Mp4aWriter
 	{
 		internal Stream OutputFile { get; }
 
 		private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
 
 		private readonly long mdatStart;
-		internal readonly MoovBox Moov;
+		public readonly MoovBox Moov;
 		private readonly SttsBox Stts;
 		private readonly StscBox Stsc;
 		private readonly StszBox Stsz;
@@ -89,6 +90,12 @@ namespace AAXClean.FrameFilters.Audio
 			Moov.Mvhd.Duration = Moov.AudioTrack.Mdia.Mdhd.Duration * Moov.Mvhd.Timescale / Moov.AudioTrack.Mdia.Mdhd.Timescale;
 			Moov.AudioTrack.Tkhd.Duration = Moov.Mvhd.Duration;
 
+			int maxBitRate = Stsz.SampleSizes.Max() * 8 * (int)Moov.AudioTrack.Mdia.Mdhd.Timescale;
+
+			long audioBits = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => (long)s) * 8;
+			double duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
+			uint avgBitrate = (uint)(audioBits * Moov.AudioTrack.Mdia.Mdhd.Timescale / duration);
+
 			Moov.Save(OutputFile);
 			Closed = true;
 		}
@@ -144,6 +151,9 @@ namespace AAXClean.FrameFilters.Audio
 		{
 			Moov.Children.Remove(Moov.TextTrack);
 
+			var trefBox = Moov.AudioTrack.Children.OfType<UnknownBox>().First(u => u.Header.Type == "tref");
+			if (trefBox != null)
+				Moov.AudioTrack.Children.Remove(trefBox);
 			Moov.Mvhd.NextTrackID--;
 		}
 
@@ -180,6 +190,7 @@ namespace AAXClean.FrameFilters.Audio
 			Stsz?.SampleSizes.Clear();
 			Stco?.ChunkOffsets.Clear();
 			Co64?.ChunkOffsets.Clear();
+			GC.SuppressFinalize(this);
 		}
 
 		private static MoovBox MakeBlankMoov(MoovBox moov, bool co64)

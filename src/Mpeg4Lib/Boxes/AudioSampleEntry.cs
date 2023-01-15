@@ -12,7 +12,7 @@ namespace Mpeg4Lib.Boxes
 		public ushort ChannelCount { get; }
 		public ushort SampleSize { get; }
 		public short PreDefined { get; }
-		public ushort SampleRate { get; }
+		public ushort SampleRate { get; set; }
 		private readonly ushort SampleRate_loworder;
 
 		public EsdsBox Esds => GetChild<EsdsBox>();

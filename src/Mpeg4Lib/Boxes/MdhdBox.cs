@@ -8,7 +8,7 @@ namespace Mpeg4Lib.Boxes
 		public override long RenderSize => base.RenderSize + (Version == 0 ? 20 : 32);
 		public ulong CreationTime { get; }
 		public ulong ModificationTime { get; }
-		public uint Timescale { get; }
+		public uint Timescale { get; set; }
 		public ulong Duration { get; set; }
 		private readonly byte[] Blob;
 		public MdhdBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)

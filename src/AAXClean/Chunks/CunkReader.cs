@@ -64,12 +64,17 @@ namespace AAXClean.Chunks
 					}
 				}
 			}
+			catch (Exception ex)
+			{
+				
+			}
 			finally
 			{
 				OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs { TotalDuration = TotalDuration, ProcessPosition = TotalDuration, ProcessSpeed = TotalDuration / (DateTime.Now - beginProcess) });
 
 				result = await Finalize(token.IsCancellationRequested);
 			}
+			
 			return result;
 		}
 
@@ -90,6 +95,15 @@ namespace AAXClean.Chunks
 				.Where(f => !f.Completion.IsCompleted)
 				.Select(f => cancelled ? f.CancelAsync() : f.CompleteAsync()));
 
+			var errors =
+				FirstFilters
+				.Where(f => f.Completion.IsFaulted)
+				.SelectMany(f => f.Completion.Exception?.InnerExceptions);
+
+			if (errors.Count() == 1) throw errors.First();
+			else if (errors.Count() > 1)
+				throw new AggregateException(errors);
+
 			ConversionResult result;
 			if (FirstFilters.All(f => f.Completion.IsCompletedSuccessfully))
 				result = ConversionResult.NoErrorsDetected;
@@ -97,7 +111,7 @@ namespace AAXClean.Chunks
 				result = ConversionResult.Cancelled;
 			else result = ConversionResult.Failed;
 
-			return await Task.FromResult(result);
+			return result;
 		}
 
 		private TimeSpan ProcessPosition(int trackNum) => Stts[trackNum].FrameToTime(TimeScales[trackNum], LastFrameProcessed[trackNum]);
@@ -122,8 +136,7 @@ namespace AAXClean.Chunks
 				{
 					Chunk = chunk,
 					FrameIndex = LastFrameProcessed[trackIndex],
-					FrameDelta = frameDelta,
-					FrameSize = chunk.FrameSizes[f],
+					SamplesInFrame = frameDelta,
 					FrameData = frameData
 				});
 			}

@@ -11,8 +11,8 @@ namespace AAXClean.FrameFilters.Audio
 		private readonly MoovBox Moov;
 		private Mp4aWriter Mp4writer;
 		public bool Closed { get; private set; }
-		public LosslessMultipartFilter(ChapterInfo splitChapters, Action<NewSplitCallback> newFileCallback, FtypBox ftyp, MoovBox moov)
-			: base(moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.AscBlob, splitChapters)
+		public LosslessMultipartFilter(ChapterInfo splitChapters, FtypBox ftyp, MoovBox moov, Action<NewSplitCallback> newFileCallback)
+			: base(splitChapters, (SampleRate)moov.AudioTrack.Mdia.Mdhd.Timescale, moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.ChannelCount == 2)
 		{
 			NewFileCallback = newFileCallback;
 			Ftyp = ftyp;
@@ -25,7 +25,6 @@ namespace AAXClean.FrameFilters.Audio
 			Mp4writer?.OutputFile.Close();
 			Closed = true;
 		}
-
 
 		protected override void WriteFrameToFile(FrameEntry audioFrame, bool newChunk)
 		{

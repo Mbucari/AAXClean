@@ -43,6 +43,7 @@ namespace Mpeg4Lib.Util
 		{
 			Aes.Dispose();
 			AesTransform.Dispose();
+			GC.SuppressFinalize(this);
 		}
 	}
 }

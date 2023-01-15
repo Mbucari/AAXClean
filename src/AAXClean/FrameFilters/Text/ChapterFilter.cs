@@ -5,6 +5,7 @@ namespace AAXClean.FrameFilters.Text
 {
 	public class ChapterFilter : FrameFinalBase<FrameEntry>
 	{
+		protected override void Flush() { }
 		public ChapterInfo Chapters => Builder.ToChapterInfo();
 		private readonly ChapterBuilder Builder;
 		public ChapterFilter(uint timeScale)
@@ -26,7 +27,7 @@ namespace AAXClean.FrameFilters.Text
 
 			string title = Encoding.UTF8.GetString(frameData.Slice(2, size));
 
-			Builder.AddChapter(input.Chunk.ChunkIndex, title, (int)input.FrameDelta);
+			Builder.AddChapter(input.Chunk.ChunkIndex, title, (int)input.SamplesInFrame);
 		}
 	}
 }

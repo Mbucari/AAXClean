@@ -7,7 +7,7 @@ namespace AAXClean.FrameFilters
 {
 	public interface IFrameFilterBase : IDisposable
 	{
-		Task FaultAsync(Exception ex);
+		void Fault(Exception ex);
 	}
 
 	public abstract class FrameFilterBase<TInput> : IFrameFilterBase
@@ -27,10 +27,8 @@ namespace AAXClean.FrameFilters
 			InputBuffer = new(BufferSize);
 		}
 
+		protected abstract void Flush();
 		protected abstract void HandleInputData(TInput input);
-		public void Complete() => CompleteAsync().GetAwaiter().GetResult();
-		public void Cancel() => CancelAsync().GetAwaiter().GetResult();
-		public void Fault(Exception ex) => FaultAsync(ex).GetAwaiter().GetResult();
 
 		public void AddInput(TInput input)
 		{
@@ -46,7 +44,7 @@ namespace AAXClean.FrameFilters
 			EncoderLoopTask = Task.Run(EncoderLoop);
 		}
 
-		public virtual async Task CompleteAsync()
+		public async Task CompleteAsync()
 		{
 			InputBuffer.CompleteAdding();
 			await WaitForEncoderLoop();
@@ -60,14 +58,12 @@ namespace AAXClean.FrameFilters
 			CompletionSource.TrySetCanceled();
 		}
 
-		public async Task FaultAsync(Exception exception)
+		public void Fault(Exception exception)
 		{
 			CancellationSource.Cancel();
-			await WaitForEncoderLoop();
 			CompletionSource.TrySetException(exception);
 			//Faults propagate up
-			if (Parent is not null)
-				await Parent.FaultAsync(exception);
+			Parent?.Fault(exception);
 		}
 
 		private async Task WaitForEncoderLoop()
@@ -80,20 +76,16 @@ namespace AAXClean.FrameFilters
 		{
 			try
 			{
-				while (InputBuffer.TryTake(out TInput message, -1, CancellationSource.Token))
+				while (InputBuffer.TryTake(out var message, -1, CancellationSource.Token))
 				{
 					HandleInputData(message);
 				}
+				Flush();
 			}
 			catch (OperationCanceledException) { }
 			catch (Exception ex)
 			{
-				CancellationSource.Cancel();
-				CompletionSource.TrySetException(ex);
-				//Faults propagate up
-				if (Parent is not null)
-					Parent.FaultAsync(ex).Wait();
-
+				Fault(ex);
 			}
 		}
 
@@ -108,7 +100,7 @@ namespace AAXClean.FrameFilters
 			if (disposing)
 			{
 				if (!Completion.IsCompleted)
-					Cancel();
+					CancelAsync().Wait();
 				InputBuffer.Dispose();
 				CancellationSource.Dispose();
 				EncoderLoopTask?.Dispose();

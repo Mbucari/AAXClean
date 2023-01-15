@@ -12,28 +12,39 @@ namespace AAXClean.FrameFilters
 			Linked.Parent = this;
 		}
 		protected abstract TOutput PerformFiltering(TInput input);
-
+		protected virtual TOutput PerformFinalFiltering() => default;
+		protected sealed override void Flush()
+		{
+			TOutput filteredData = PerformFinalFiltering();
+			if (filteredData != null)
+				Linked?.AddInput(filteredData);
+			Linked?.CompleteAsync().Wait();
+		}
 		protected sealed override void HandleInputData(TInput input)
 		{
 			TOutput filteredData = PerformFiltering(input);
-			Linked?.AddInput(filteredData);
+
+#if DEBUG
+			if (Linked is null)
+			{
+				//Allow unlined for testing purposes
+				if (filteredData is IDisposable dis)
+					dis.Dispose();
+				return;
+			}
+#endif
+			Linked.AddInput(filteredData);
 		}
 
 		public override void Start()
 		{
 			base.Start();
+#if !DEBUG
 			if (Linked is null)
 				throw new InvalidOperationException($"Cannot start a {nameof(FrameTransformBase<TInput, TOutput>)} without a linked filter.");
+#endif
 			//Starts propagate down
-			Linked.Start();
-		}
-
-		public override async Task CompleteAsync()
-		{
-			await base.CompleteAsync();
-			//Completes propagate down
-			if (Linked is not null)
-				await Linked.CompleteAsync();
+			Linked?.Start();
 		}
 
 		public sealed override async Task CancelAsync()

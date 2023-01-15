@@ -7,8 +7,7 @@ namespace AAXClean.FrameFilters
 	{
 		public ChunkEntry Chunk { get; init; }
 		public uint FrameIndex { get; init; }
-		public uint FrameDelta { get; init; }
-		public int FrameSize { get; init; }
+		public uint SamplesInFrame { get; init; }
 		public Memory<byte> FrameData { get; init; }
 	}
 }

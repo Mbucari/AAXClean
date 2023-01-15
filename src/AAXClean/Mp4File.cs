@@ -26,6 +26,24 @@ namespace AAXClean
 		Aaxc,
 		Mpeg4
 	}
+
+	public enum SampleRate : int
+	{
+		_96000 = 96000,
+		_88200 = 88200,
+		_64000 = 64000,
+		_48000 = 48000,
+		_44100 = 44100,
+		_32000 = 32000,
+		_24000 = 24000,
+		_22050 = 22050,
+		_16000 = 16000,
+		_12000 = 12000,
+		_11025 = 11025,
+		_8000 = 8000,
+		_7350 = 7350
+	}
+
 	public class Mp4File : Box
 	{
 		public ChapterInfo Chapters { get; set; }
@@ -96,27 +114,26 @@ namespace AAXClean
 		public async Task<ConversionResult> ConvertToMp4aAsync(Stream outputStream, ChapterInfo userChapters = null, bool trimOutputToChapters = false)
 		{
 			ConversionResult result;
-			using (FrameTransformBase<FrameEntry, FrameEntry> f1 = GetAudioFrameFilter())
+			using FrameTransformBase<FrameEntry, FrameEntry> f1 = GetAudioFrameFilter();
+
+			using LosslessFilter f2 = new(outputStream, this);
+
+			f1.LinkTo(f2);
+
+			if (Moov.TextTrack is null || userChapters is not null)
 			{
-				LosslessFilter f2 = new(outputStream, this);
-
-				f1.LinkTo(f2);
-
-				if (Moov.TextTrack is null || userChapters is not null)
-				{
-					f2.SetChapterDelegate(() => userChapters);
-					result = await ProcessAudio(trimOutputToChapters, userChapters.StartOffset, userChapters.EndOffset, (Moov.AudioTrack, f1));
-				}
-				else
-				{
-					using ChapterFilter c1 = new(TimeScale);
-					f2.SetChapterDelegate(() => c1.Chapters);
-					result = await ProcessAudio((Moov.AudioTrack, f1), (Moov.TextTrack, c1));
-				}
-
-				if (result == ConversionResult.NoErrorsDetected)
-					Chapters = f2.Chapters;
+				f2.SetChapterDelegate(() => userChapters);
+				result = await ProcessAudio(trimOutputToChapters, userChapters.StartOffset, userChapters.EndOffset, (Moov.AudioTrack, f1));
 			}
+			else
+			{
+				using ChapterFilter c1 = new(TimeScale);
+				f2.SetChapterDelegate(() => c1.Chapters);
+				result = await ProcessAudio((Moov.AudioTrack, f1), (Moov.TextTrack, c1));
+			}
+
+			if (result == ConversionResult.NoErrorsDetected)
+				Chapters = f2.Chapters;
 
 			outputStream.Close();
 
@@ -128,11 +145,11 @@ namespace AAXClean
 		public async Task<ConversionResult> ConvertToMultiMp4aAsync(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback, bool trimOutputToChapters = false)
 		{
 			using FrameTransformBase<FrameEntry, FrameEntry> f1 = GetAudioFrameFilter();
-			LosslessMultipartFilter f2 = new
+			using LosslessMultipartFilter f2 = new
 				(userChapters,
-				newFileCallback,
 				Ftyp,
-				Moov);
+				Moov,
+				newFileCallback);
 
 			f1.LinkTo(f2);
 

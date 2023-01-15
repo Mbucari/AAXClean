@@ -47,15 +47,15 @@ namespace Mpeg4Lib.Descriptors
 		{
 			get
 			{
-				return (AscBlob[1] >> 3) & 7;
+				return (AscBlob[1] >> 3) & 0xf;
 			}
 			set
 			{
-				AscBlob[1] = (byte)(value << 3 | AscBlob[0] & 0x87);
+				AscBlob[1] = (byte)(((value & 0xf ) << 3) | AscBlob[1] & 0x87);
 			}
 		}
 
-		//GASpecificConfig in ISO/IEC 14496-3 Subpart 4 (pp 487)
+		//GASpecificConfig in ISO/IEC 14496-3 Subpart 4 4.4.1 (pp 487)
 		public int FrameLengthFlag
 		{
 			get
