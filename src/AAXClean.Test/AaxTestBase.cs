@@ -162,9 +162,9 @@ namespace AAXClean.Test
 			try
 			{
 				FileStream tempfile = TestFiles.NewTempFile();
-				ConversionResult result = await Aax.ConvertToMp4aAsync(tempfile);
+				ConversionStatus result = await Aax.ConvertToMp4aAsync(tempfile);
 
-				Assert.AreEqual(ConversionResult.NoErrorsDetected, result);
+				Assert.AreEqual(ConversionStatus.NoErrorsDetected, result);
 
 				using SHA1 sha = SHA1.Create();
 
@@ -202,7 +202,7 @@ namespace AAXClean.Test
 				}
 
 				var result = await Aax.ConvertToMultiMp4aAsync(Chapters, NewSplit);
-				Assert.AreEqual(ConversionResult.NoErrorsDetected, result);
+				Assert.AreEqual(ConversionStatus.NoErrorsDetected, result);
 #if !DEBUG
 				Assert.AreEqual(MultiM4bHashes.Count, tempFiles.Count);
 #endif
@@ -249,9 +249,9 @@ namespace AAXClean.Test
 				newChapters.AddChapter("Ch4", TimeSpan.FromTicks(15000000000));
 				newChapters.AddChapter("Ch5", TimeSpan.FromTicks(30000000000));
 				newChapters.AddChapter("Ch6", TimeSpan.FromTicks(45000000000));
-				ConversionResult result = await Aax.ConvertToMp4aAsync(tempfile, newChapters);
+				ConversionStatus result = await Aax.ConvertToMp4aAsync(tempfile, newChapters);
 
-				Assert.AreEqual(ConversionResult.NoErrorsDetected, result);
+				Assert.AreEqual(ConversionStatus.NoErrorsDetected, result);
 
 				Mp4File mp4 = new(tempfile.Name);
 				var ch_2 = mp4.GetChaptersFromMetadata().ToList();
@@ -290,7 +290,7 @@ namespace AAXClean.Test
 			try
 			{
 				FileStream tempfile = TestFiles.NewTempFile();				
-				ConversionResult result = ConversionResult.NoErrorsDetected;
+				ConversionStatus result = ConversionStatus.NoErrorsDetected;
 
 				async Task RunIt()
 				{
@@ -302,7 +302,7 @@ namespace AAXClean.Test
 				await aaxFile.CancelAsync();
 
 				await convertTask;
-				Assert.AreEqual(ConversionResult.Cancelled, result);
+				Assert.AreEqual(ConversionStatus.Cancelled, result);
 
 				TestFiles.CloseAllFiles();
 				Aax.Close();
@@ -321,7 +321,7 @@ namespace AAXClean.Test
 			try
 			{
 				FileStream tempfile = TestFiles.NewTempFile();
-				ConversionResult result = ConversionResult.NoErrorsDetected;
+				ConversionStatus result = ConversionStatus.NoErrorsDetected;
 
 				void NewSplit(NewSplitCallback callback)
 				{
@@ -338,7 +338,7 @@ namespace AAXClean.Test
 				await aaxFile.CancelAsync();
 
 				await convertTask;
-				Assert.AreEqual(ConversionResult.Cancelled, result);
+				Assert.AreEqual(ConversionStatus.Cancelled, result);
 
 				TestFiles.CloseAllFiles();
 				Aax.Close();

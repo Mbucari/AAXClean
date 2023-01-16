@@ -39,6 +39,7 @@ namespace AAXClean.Chunks
 			DateTime beginProcess = DateTime.Now;
 			DateTime nextUpdate = beginProcess;
 			ConversionResult result;
+			Exception chunkReadException = null;
 			try
 			{
 				foreach (TrackChunk c in new MpegChunkEnumerable(Tracks.ToArray()))
@@ -66,7 +67,7 @@ namespace AAXClean.Chunks
 			}
 			catch (Exception ex)
 			{
-				
+				chunkReadException = ex;
 			}
 			finally
 			{
@@ -74,8 +75,19 @@ namespace AAXClean.Chunks
 
 				result = await Finalize(token.IsCancellationRequested);
 			}
-			
-			return result;
+
+			var errors =
+			FirstFilters
+			.Where(f => f.Completion.IsFaulted)
+			.SelectMany(f => f.Completion.Exception?.InnerExceptions)
+			.ToList();
+
+			if (chunkReadException is not null)
+				errors.Add(chunkReadException);
+
+			if (errors.Count() == 1) throw errors.First();
+			else if (errors.Count() > 1) throw new AggregateException(errors);
+			else return result;
 		}
 
 		private void Initialize()
@@ -94,15 +106,6 @@ namespace AAXClean.Chunks
 				FirstFilters
 				.Where(f => !f.Completion.IsCompleted)
 				.Select(f => cancelled ? f.CancelAsync() : f.CompleteAsync()));
-
-			var errors =
-				FirstFilters
-				.Where(f => f.Completion.IsFaulted)
-				.SelectMany(f => f.Completion.Exception?.InnerExceptions);
-
-			if (errors.Count() == 1) throw errors.First();
-			else if (errors.Count() > 1)
-				throw new AggregateException(errors);
 
 			ConversionResult result;
 			if (FirstFilters.All(f => f.Completion.IsCompletedSuccessfully))

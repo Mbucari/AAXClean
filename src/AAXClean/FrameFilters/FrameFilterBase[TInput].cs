@@ -60,7 +60,11 @@ namespace AAXClean.FrameFilters
 
 		public void Fault(Exception exception)
 		{
-			CancellationSource.Cancel();
+			if (!CancellationSource.IsCancellationRequested)
+			{
+				CancellationSource.Cancel();
+				EncoderLoopTask?.Wait();
+			}
 			CompletionSource.TrySetException(exception);
 			//Faults propagate up
 			Parent?.Fault(exception);
@@ -85,6 +89,7 @@ namespace AAXClean.FrameFilters
 			catch (OperationCanceledException) { }
 			catch (Exception ex)
 			{
+				CancellationSource.Cancel();
 				Fault(ex);
 			}
 		}
@@ -95,12 +100,12 @@ namespace AAXClean.FrameFilters
 			GC.SuppressFinalize(this);
 		}
 
-		protected virtual void Dispose(bool disposing)
+		protected virtual async void Dispose(bool disposing)
 		{
 			if (disposing)
 			{
 				if (!Completion.IsCompleted)
-					CancelAsync().Wait();
+					await CancelAsync();
 				InputBuffer.Dispose();
 				CancellationSource.Dispose();
 				EncoderLoopTask?.Dispose();

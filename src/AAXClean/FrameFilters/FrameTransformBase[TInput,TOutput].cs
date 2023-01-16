@@ -27,7 +27,7 @@ namespace AAXClean.FrameFilters
 #if DEBUG
 			if (Linked is null)
 			{
-				//Allow unlined for testing purposes
+				//Allow unlinked for testing purposes
 				if (filteredData is IDisposable dis)
 					dis.Dispose();
 				return;

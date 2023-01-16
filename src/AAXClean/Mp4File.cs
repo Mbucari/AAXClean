@@ -233,7 +233,7 @@ namespace AAXClean
 
 			CancellationSource = new CancellationTokenSource();
 
-			ReaderTask = Task.Run(async () => await reader.RunAsync(CancellationSource.Token, doTimeFilter, startTime, endTime));
+			ReaderTask = Task.Run(() =>reader.RunAsync(CancellationSource.Token, doTimeFilter, startTime, endTime));
 
 			return await ReaderTask;
 		}
@@ -254,7 +254,9 @@ namespace AAXClean
 			{
 				CancellationSource.Cancel();
 				if (ReaderTask is not null)
+				{
 					return await ReaderTask;
+				}
 			}
 			return ConversionResult.Cancelled;
 		}

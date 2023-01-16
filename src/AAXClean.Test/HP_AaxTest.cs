@@ -135,10 +135,10 @@ namespace AAXClean.Test
 				Aax.AppleTags.Cover = newPic;
 
 				FileStream tempfile = TestFiles.NewTempFile();
-				ConversionResult result = Aax.ConvertToMp4a(tempfile);
+				ConversionStatus result = Aax.ConvertToMp4a(tempfile);
 				Aax.Close();
 
-				Assert.AreEqual(ConversionResult.NoErrorsDetected, result);
+				Assert.AreEqual(ConversionStatus.NoErrorsDetected, result);
 
 				mp4File = new Mp4File(tempfile.Name);
 
