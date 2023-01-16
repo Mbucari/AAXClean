@@ -13,11 +13,11 @@
 		<releaseNotes>* Exposed Apple List Box to add custom tags</releaseNotes>
 	</metadata>
 	<dependencies>
-		<group targetFramework="net5.0">
+		<group targetFramework="net6.0">
 			<dependency id="Mpeg4Lib" version="0.1.1" />
 		</group>
 	</dependencies>
 	<files>
-		<file src="bin\Release\net5.0\*.dll" target="lib\net5.0" />
+		<file src="bin\Release\net6.0\*.dll" target="lib\net6.0" />
 	</files>
 </Project>
