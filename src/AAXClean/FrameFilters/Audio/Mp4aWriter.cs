@@ -1,4 +1,5 @@
-﻿using Mpeg4Lib.Boxes;
+﻿using Microsoft.VisualBasic;
+using Mpeg4Lib.Boxes;
 using Mpeg4Lib.Util;
 using System;
 using System.IO;
@@ -90,11 +91,20 @@ namespace AAXClean.FrameFilters.Audio
 			Moov.Mvhd.Duration = Moov.AudioTrack.Mdia.Mdhd.Duration * Moov.Mvhd.Timescale / Moov.AudioTrack.Mdia.Mdhd.Timescale;
 			Moov.AudioTrack.Tkhd.Duration = Moov.Mvhd.Duration;
 
-			int maxBitRate = Stsz.SampleSizes.Max() * 8 * (int)Moov.AudioTrack.Mdia.Mdhd.Timescale;
+			uint maxBitRate = (uint)Stsz.SampleSizes.Max() * 8u * Moov.AudioTrack.Mdia.Mdhd.Timescale;
 
 			long audioBits = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => (long)s) * 8;
 			double duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
 			uint avgBitrate = (uint)(audioBits * Moov.AudioTrack.Mdia.Mdhd.Timescale / duration);
+
+			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate = maxBitRate;
+			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
+
+			if (Moov.TextTrack is not null)
+			{
+				Moov.TextTrack.Mdia.Mdhd.Duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
+				Moov.TextTrack.Tkhd.Duration = Moov.Mvhd.Duration;
+			}
 
 			Moov.Save(OutputFile);
 			Closed = true;
