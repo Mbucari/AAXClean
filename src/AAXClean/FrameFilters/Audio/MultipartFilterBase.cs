@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters.Audio
 {
@@ -31,11 +32,12 @@ namespace AAXClean.FrameFilters.Audio
 		protected abstract void WriteFrameToFile(TInput audioFrame, bool newChunk);
 		protected abstract void CreateNewWriter(TCallback callback);
 
-		protected sealed override void Flush()
+		protected sealed override Task FlushAsync()
 		{
 			CloseCurrentWriter();
+			return Task.CompletedTask;
 		}
-		protected override void PerformFiltering(TInput input)
+		protected override Task PerformFilteringAsync(TInput input)
 		{
 			if (input.Chunk is null)
 			{
@@ -64,6 +66,8 @@ namespace AAXClean.FrameFilters.Audio
 				WriteFrameToFile(input, newChunk);
 			}
 			CurrentSample += input.SamplesInFrame;
+
+			return Task.CompletedTask;
 		}
 
 		private bool GetNextChapter()
@@ -79,7 +83,8 @@ namespace AAXClean.FrameFilters.Audio
 
 		protected override void Dispose(bool disposing)
 		{
-			SplitChapters?.Dispose();
+			if (disposing && !Disposed)
+				SplitChapters?.Dispose();
 			base.Dispose(disposing);
 		}
 	}

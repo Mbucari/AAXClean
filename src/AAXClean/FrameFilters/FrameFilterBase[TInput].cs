@@ -1,97 +1,108 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters
 {
-	public interface IFrameFilterBase : IDisposable
+	public interface IFrameFilter<TInput> : IDisposable
 	{
-		void Fault(Exception ex);
+		public void SetCancellationSource(CancellationTokenSource cancellationSource);
+		Task CancelAsync();
+		Task CompleteAsync();
+		Task AddInputAsync(TInput input);		 
 	}
-
-	public abstract class FrameFilterBase<TInput> : IFrameFilterBase
+	public abstract class FrameFilterBase<TInput> : IFrameFilter<TInput>
 	{
-		public bool Disposed { get; private set; }
-		public IFrameFilterBase Parent { get; set; }
-		public Task Completion => CompletionSource.Task;
-		protected virtual int BufferSize => 200;
+		protected bool Disposed { get; private set; }
+		protected abstract int InputBufferSize { get; }
 
-		private readonly TaskCompletionSource CompletionSource = new();
-		private readonly CancellationTokenSource CancellationSource = new();
-		private readonly BlockingCollection<TInput> InputBuffer;
-		private Task EncoderLoopTask;
+		private CancellationTokenSource CancellationTokenSource;
+		private readonly Channel<(int numEntries, TInput[] entries)> FilterChannel;
+		private Task FilterLoop;
+		private TInput[] buffer;
+		private int bufferPosition = 0;
 
 		public FrameFilterBase()
 		{
-			InputBuffer = new(BufferSize);
+			FilterChannel = Channel.CreateBounded<(int, TInput[])>(new BoundedChannelOptions(2) { SingleReader = true, SingleWriter = true });
+			buffer = new TInput[InputBufferSize];
 		}
 
-		protected abstract void Flush();
-		protected abstract void HandleInputData(TInput input);
+		public virtual void SetCancellationSource(CancellationTokenSource cancellationSource) => CancellationTokenSource = cancellationSource;
+		protected abstract Task FlushAsync();
+		protected abstract Task HandleInputDataAsync(TInput input);
 
-		public void AddInput(TInput input)
+		public async Task AddInputAsync(TInput input)
 		{
 			try
 			{
-				InputBuffer.TryAdd(input, -1, CancellationSource.Token);
-			}
-			catch (OperationCanceledException) { }
-		}
+				FilterLoop ??= Task.Run(Encoder);
 
-		public virtual void Start()
-		{
-			EncoderLoopTask = Task.Run(EncoderLoop);
-		}
+				if (CancellationTokenSource.IsCancellationRequested)
+					return;
 
-		public async Task CompleteAsync()
-		{
-			InputBuffer.CompleteAdding();
-			await WaitForEncoderLoop();
-			CompletionSource.TrySetResult();
-		}
+				buffer[bufferPosition++] = input;
 
-		public virtual async Task CancelAsync()
-		{
-			CancellationSource.Cancel();
-			await WaitForEncoderLoop();
-			CompletionSource.TrySetCanceled();
-		}
-
-		public void Fault(Exception exception)
-		{
-			if (!CancellationSource.IsCancellationRequested)
-			{
-				CancellationSource.Cancel();
-				EncoderLoopTask?.Wait();
-			}
-			CompletionSource.TrySetException(exception);
-			//Faults propagate up
-			Parent?.Fault(exception);
-		}
-
-		private async Task WaitForEncoderLoop()
-		{
-			if (EncoderLoopTask is not null)
-				await EncoderLoopTask;
-		}
-
-		private void EncoderLoop()
-		{
-			try
-			{
-				while (InputBuffer.TryTake(out var message, -1, CancellationSource.Token))
+				if (bufferPosition == InputBufferSize)
 				{
-					HandleInputData(message);
+					if (await FilterChannel.Writer.WaitToWriteAsync(CancellationTokenSource.Token))
+					{
+						await FilterChannel.Writer.WriteAsync((bufferPosition, buffer), CancellationTokenSource.Token);
+						bufferPosition = 0;
+						buffer = new TInput[InputBufferSize];
+					}
 				}
-				Flush();
 			}
 			catch (OperationCanceledException) { }
-			catch (Exception ex)
+			catch
 			{
-				CancellationSource.Cancel();
-				Fault(ex);
+				Cancel();
+				throw;
 			}
+		}
+
+		private async Task Encoder()
+		{
+			try
+			{
+				while(await FilterChannel.Reader.WaitToReadAsync(CancellationTokenSource.Token))
+				{
+					await foreach (var messages in FilterChannel.Reader.ReadAllAsync(CancellationTokenSource.Token))
+					{
+						for (int i = 0; i < messages.numEntries; i++)
+							await HandleInputDataAsync(messages.entries[i]);
+					}
+				}
+				await FlushAsync();
+			}
+			catch (OperationCanceledException) { }
+			catch
+			{
+				Cancel();
+				throw;
+			}
+		}
+
+		protected virtual async Task CompleteInternalAsync()
+		{
+			try
+			{
+				await FilterChannel.Writer.WriteAsync((bufferPosition, buffer), CancellationTokenSource.Token);
+				FilterChannel.Writer.Complete();
+			}
+			catch(OperationCanceledException) { }
+			await FilterLoop;
+		}
+
+		private void Cancel() => CancellationTokenSource?.Cancel();
+		public Task CompleteAsync() => CompleteInternalAsync();
+
+
+		public async Task CancelAsync()
+		{
+			Cancel();
+			await FilterLoop;
 		}
 
 		public void Dispose()
@@ -100,15 +111,12 @@ namespace AAXClean.FrameFilters
 			GC.SuppressFinalize(this);
 		}
 
-		protected virtual async void Dispose(bool disposing)
+		protected virtual void Dispose(bool disposing)
 		{
-			if (disposing)
+			if (disposing && !Disposed)
 			{
-				if (!Completion.IsCompleted)
-					await CancelAsync();
-				InputBuffer.Dispose();
-				CancellationSource.Dispose();
-				EncoderLoopTask?.Dispose();
+				if (FilterLoop?.IsCompleted is false)
+					Cancel();
 			}
 			Disposed = true;
 		}

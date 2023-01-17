@@ -14,7 +14,7 @@ namespace AAXClean.Chunks
 	internal class CunkReader
 	{
 		private readonly List<TrakBox> Tracks = new();
-		private readonly List<FrameFilterBase<FrameEntry>> FirstFilters = new();
+		private readonly List<IFrameFilter<FrameEntry>> FirstFilters = new();
 		private readonly Stream InputStream;
 		private uint[] LastFrameProcessed;
 		private uint[] TimeScales;
@@ -26,33 +26,33 @@ namespace AAXClean.Chunks
 			InputStream = inputStream;
 		}
 
-		public void AddTrack(TrakBox trak, FrameFilterBase<FrameEntry> filter)
+		public void AddTrack(TrakBox trak, IFrameFilter<FrameEntry> filter)
 		{
 			Tracks.Add(trak);
 			FirstFilters.Add(filter);
 		}
 
-		public async Task<ConversionResult> RunAsync(CancellationToken token, bool doTimeFilter, TimeSpan startTime, TimeSpan endTime)
+		public async Task RunAsync(CancellationTokenSource cancellationSource, bool doTimeFilter, TimeSpan startTime, TimeSpan endTime)
 		{
 			Initialize();
 
 			DateTime beginProcess = DateTime.Now;
 			DateTime nextUpdate = beginProcess;
-			ConversionResult result;
-			Exception chunkReadException = null;
+
+			foreach (var filter in FirstFilters)
+				filter.SetCancellationSource(cancellationSource);
+
 			try
 			{
 				foreach (TrackChunk c in new MpegChunkEnumerable(Tracks.ToArray()))
 				{
-					if (FirstFilters[c.TrackNum].Completion.IsFaulted ||
-						FirstFilters[c.TrackNum].Completion.IsCanceled ||
-						token.IsCancellationRequested)
+					if (cancellationSource.IsCancellationRequested)
 						break;
 
 					Memory<byte> chunkdata = new byte[c.Entry.ChunkSize];
 					InputStream.ReadNextChunk(c.Entry.ChunkOffset, chunkdata.Span);
 
-					DispatchChunk(doTimeFilter, startTime, endTime, c.TrackNum, c.Entry, chunkdata);
+					await DispatchChunk(doTimeFilter, startTime, endTime, c.TrackNum, c.Entry, chunkdata);
 
 					//Throttle update so it doesn't bog down UI
 					if (DateTime.Now > nextUpdate)
@@ -65,29 +65,12 @@ namespace AAXClean.Chunks
 					}
 				}
 			}
-			catch (Exception ex)
-			{
-				chunkReadException = ex;
-			}
 			finally
 			{
 				OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs { TotalDuration = TotalDuration, ProcessPosition = TotalDuration, ProcessSpeed = TotalDuration / (DateTime.Now - beginProcess) });
 
-				result = await Finalize(token.IsCancellationRequested);
+				await Task.WhenAll(FirstFilters.Select(f => cancellationSource.IsCancellationRequested? f.CancelAsync() : f.CompleteAsync()));
 			}
-
-			var errors =
-			FirstFilters
-			.Where(f => f.Completion.IsFaulted)
-			.SelectMany(f => f.Completion.Exception?.InnerExceptions)
-			.ToList();
-
-			if (chunkReadException is not null)
-				errors.Add(chunkReadException);
-
-			if (errors.Count() == 1) throw errors.First();
-			else if (errors.Count() > 1) throw new AggregateException(errors);
-			else return result;
 		}
 
 		private void Initialize()
@@ -95,30 +78,10 @@ namespace AAXClean.Chunks
 			LastFrameProcessed = new uint[Tracks.Count];
 			Stts = Tracks.Select(t => t.Mdia.Minf.Stbl.Stts).ToArray();
 			TimeScales = Tracks.Select(t => t.Mdia.Mdhd.Timescale).ToArray();
-
-			foreach (FrameFilterBase<FrameEntry> f in FirstFilters)
-				f.Start();
-		}
-
-		private async Task<ConversionResult> Finalize(bool cancelled)
-		{
-			await Task.WhenAll(
-				FirstFilters
-				.Where(f => !f.Completion.IsCompleted)
-				.Select(f => cancelled ? f.CancelAsync() : f.CompleteAsync()));
-
-			ConversionResult result;
-			if (FirstFilters.All(f => f.Completion.IsCompletedSuccessfully))
-				result = ConversionResult.NoErrorsDetected;
-			else if (FirstFilters.Any(f => f.Completion.IsCanceled))
-				result = ConversionResult.Cancelled;
-			else result = ConversionResult.Failed;
-
-			return result;
 		}
 
 		private TimeSpan ProcessPosition(int trackNum) => Stts[trackNum].FrameToTime(TimeScales[trackNum], LastFrameProcessed[trackNum]);
-		private void DispatchChunk(bool doTimeFilter, TimeSpan startTime, TimeSpan endTime, int trackIndex, ChunkEntry chunk, Memory<byte> chunkdata)
+		private async Task DispatchChunk(bool doTimeFilter, TimeSpan startTime, TimeSpan endTime, int trackIndex, ChunkEntry chunk, Memory<byte> chunkdata)
 		{
 			for (int start = 0, f = 0; f < chunk.FrameSizes.Length; start += chunk.FrameSizes[f], f++, LastFrameProcessed[trackIndex]++)
 			{
@@ -133,14 +96,12 @@ namespace AAXClean.Chunks
 						continue;
 				}
 
-				Memory<byte> frameData = chunkdata.Slice(start, chunk.FrameSizes[f]);
-
-				FirstFilters[trackIndex].AddInput(new FrameEntry
+				await FirstFilters[trackIndex].AddInputAsync(new FrameEntry
 				{
 					Chunk = chunk,
 					FrameIndex = LastFrameProcessed[trackIndex],
 					SamplesInFrame = frameDelta,
-					FrameData = frameData
+					FrameData = chunkdata.Slice(start, chunk.FrameSizes[f])
 				});
 			}
 		}

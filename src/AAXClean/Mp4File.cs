@@ -14,12 +14,6 @@ using System.Threading.Tasks;
 
 namespace AAXClean
 {
-	public enum ConversionResult
-	{
-		Cancelled,
-		Failed,
-		NoErrorsDetected
-	}
 	public enum FileType
 	{
 		Aax,
@@ -108,12 +102,11 @@ namespace AAXClean
 			}
 		}
 
-		public ConversionResult ConvertToMp4a(Stream outputStream, ChapterInfo userChapters = null, bool trimOutputToChapters = false)
+		public void ConvertToMp4a(Stream outputStream, ChapterInfo userChapters = null, bool trimOutputToChapters = false)
 			=> ConvertToMp4aAsync(outputStream, userChapters, trimOutputToChapters).GetAwaiter().GetResult();
 
-		public async Task<ConversionResult> ConvertToMp4aAsync(Stream outputStream, ChapterInfo userChapters = null, bool trimOutputToChapters = false)
+		public async Task ConvertToMp4aAsync(Stream outputStream, ChapterInfo userChapters = null, bool trimOutputToChapters = false)
 		{
-			ConversionResult result;
 			using FrameTransformBase<FrameEntry, FrameEntry> f1 = GetAudioFrameFilter();
 
 			using LosslessFilter f2 = new(outputStream, this);
@@ -123,26 +116,24 @@ namespace AAXClean
 			if (Moov.TextTrack is null || userChapters is not null)
 			{
 				f2.SetChapterDelegate(() => userChapters);
-				result = await ProcessAudio(trimOutputToChapters, userChapters.StartOffset, userChapters.EndOffset, (Moov.AudioTrack, f1));
+				await ProcessAudio(trimOutputToChapters, userChapters.StartOffset, userChapters.EndOffset, (Moov.AudioTrack, f1));
 			}
 			else
 			{
 				using ChapterFilter c1 = new(TimeScale);
 				f2.SetChapterDelegate(() => c1.Chapters);
-				result = await ProcessAudio((Moov.AudioTrack, f1), (Moov.TextTrack, c1));
+				await ProcessAudio((Moov.AudioTrack, f1), (Moov.TextTrack, c1));
 			}
 
-			if (result == ConversionResult.NoErrorsDetected)
+			if (!CancellationSource.IsCancellationRequested)
 				Chapters = f2.Chapters;
 
 			outputStream.Close();
-
-			return result;
 		}
-		public ConversionResult ConvertToMultiMp4a(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback, bool trimOutputToChapters = false)
+		public void ConvertToMultiMp4a(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback, bool trimOutputToChapters = false)
 			=> ConvertToMultiMp4aAsync(userChapters, newFileCallback, trimOutputToChapters).GetAwaiter().GetResult();
 
-		public async Task<ConversionResult> ConvertToMultiMp4aAsync(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback, bool trimOutputToChapters = false)
+		public async Task ConvertToMultiMp4aAsync(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback, bool trimOutputToChapters = false)
 		{
 			using FrameTransformBase<FrameEntry, FrameEntry> f1 = GetAudioFrameFilter();
 			using LosslessMultipartFilter f2 = new
@@ -153,7 +144,7 @@ namespace AAXClean
 
 			f1.LinkTo(f2);
 
-			return await ProcessAudio(trimOutputToChapters, userChapters.StartOffset, userChapters.EndOffset, (Moov.AudioTrack, f1));
+			await ProcessAudio(trimOutputToChapters, userChapters.StartOffset, userChapters.EndOffset, (Moov.AudioTrack, f1));
 		}
 
 		private void OnProgressUpdate(ConversionProgressEventArgs args)
@@ -213,14 +204,14 @@ namespace AAXClean
 		}
 
 		private CancellationTokenSource CancellationSource;
-		private Task<ConversionResult> ReaderTask;
+		private Task ReaderTask;
 
-		public async Task<ConversionResult> ProcessAudio(params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
+		public Task ProcessAudio(params (TrakBox track, IFrameFilter<FrameEntry> filter)[] filters)
 		{
-			return await ProcessAudio(false, TimeSpan.Zero, TimeSpan.Zero, filters);
+			return ProcessAudio(false, TimeSpan.Zero, TimeSpan.Zero, filters);
 		}
 
-		public async Task<ConversionResult> ProcessAudio(bool doTimeFilter, TimeSpan startTime, TimeSpan endTime, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
+		public Task ProcessAudio(bool doTimeFilter, TimeSpan startTime, TimeSpan endTime, params (TrakBox track, IFrameFilter<FrameEntry> filter)[] filters)
 		{
 			CunkReader reader = new(InputStream)
 			{
@@ -228,14 +219,12 @@ namespace AAXClean
 				OnProggressUpdateDelegate = OnProgressUpdate
 			};
 
-			foreach ((TrakBox track, FrameFilterBase<FrameEntry> filter) in filters)
+			foreach ((TrakBox track, IFrameFilter<FrameEntry> filter) in filters)
 				reader.AddTrack(track, filter);
 
 			CancellationSource = new CancellationTokenSource();
 
-			ReaderTask = Task.Run(() =>reader.RunAsync(CancellationSource.Token, doTimeFilter, startTime, endTime));
-
-			return await ReaderTask;
+			return ReaderTask = reader.RunAsync(CancellationSource, doTimeFilter, startTime, endTime);
 		}
 
 		protected (long audioSize, uint avgBitrate) CalculateAudioSizeAndBitrate()
@@ -248,17 +237,12 @@ namespace AAXClean
 			return (audioBits / 8, avgBitrate);
 		}
 
-		public async Task<ConversionResult> CancelAsync()
+		public bool IsCancelled => CancellationSource?.IsCancellationRequested is true;
+		public async Task CancelAsync()
 		{
-			if (CancellationSource is not null)
-			{
-				CancellationSource.Cancel();
-				if (ReaderTask is not null)
-				{
-					return await ReaderTask;
-				}
-			}
-			return ConversionResult.Cancelled;
+			CancellationSource?.Cancel();
+			if (ReaderTask is not null)
+				await ReaderTask;
 		}
 
 		public void Close()

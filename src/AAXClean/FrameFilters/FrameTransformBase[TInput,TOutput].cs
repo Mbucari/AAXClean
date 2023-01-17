@@ -1,29 +1,30 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters
 {
 	public abstract class FrameTransformBase<TInput, TOutput> : FrameFilterBase<TInput>
 	{
-		public FrameFilterBase<TOutput> Linked { get; private set; }
-		public void LinkTo(FrameFilterBase<TOutput> nextFilter)
+		private IFrameFilter<TOutput> Linked;
+		public override void SetCancellationSource(CancellationTokenSource cancellationSource)
 		{
-			Linked = nextFilter;
-			Linked.Parent = this;
+			base.SetCancellationSource(cancellationSource);
+			Linked.SetCancellationSource(cancellationSource);
 		}
+		public void LinkTo(IFrameFilter<TOutput> nextFilter) => Linked = nextFilter;
 		protected abstract TOutput PerformFiltering(TInput input);
 		protected virtual TOutput PerformFinalFiltering() => default;
-		protected sealed override void Flush()
+		protected sealed override async Task FlushAsync()
 		{
 			TOutput filteredData = PerformFinalFiltering();
 			if (filteredData != null)
-				Linked?.AddInput(filteredData);
-			Linked?.CompleteAsync().Wait();
+				await Linked.AddInputAsync(filteredData);
 		}
-		protected sealed override void HandleInputData(TInput input)
+
+		protected sealed override async Task HandleInputDataAsync(TInput input)
 		{
 			TOutput filteredData = PerformFiltering(input);
-
 #if DEBUG
 			if (Linked is null)
 			{
@@ -33,35 +34,20 @@ namespace AAXClean.FrameFilters
 				return;
 			}
 #endif
-			Linked.AddInput(filteredData);
+			await Linked.AddInputAsync(filteredData);
 		}
 
-		public override void Start()
+		protected sealed override async Task CompleteInternalAsync()
 		{
-			base.Start();
-#if !DEBUG
-			if (Linked is null)
-				throw new InvalidOperationException($"Cannot start a {nameof(FrameTransformBase<TInput, TOutput>)} without a linked filter.");
-#endif
-			//Starts propagate down
-			Linked?.Start();
-		}
-
-		public sealed override async Task CancelAsync()
-		{
-			await base.CancelAsync();
-			//Cancellations propagate down
-			if (Linked is not null)
-				await Linked.CancelAsync();
+			await base.CompleteInternalAsync();
+			await Linked.CompleteAsync();
 		}
 
 		protected override void Dispose(bool disposing)
 		{
-			base.Dispose(disposing);
-			if (disposing)
-			{
+			if (disposing && !Disposed)
 				Linked?.Dispose();
-			}
+			base.Dispose(disposing);
 		}
 	}
 }

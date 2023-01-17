@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters.Audio
 {
@@ -9,7 +10,7 @@ namespace AAXClean.FrameFilters.Audio
 		private readonly Mp4aWriter Mp4writer;
 		private long LastChunkIndex = -1;
 		private Func<ChapterInfo> GetChapterDelegate;
-
+		protected override int InputBufferSize => 200;
 		public ChapterInfo Chapters => GetChapterDelegate?.Invoke();
 
 		public bool Closed { get; private set; }
@@ -23,14 +24,16 @@ namespace AAXClean.FrameFilters.Audio
 		{
 			GetChapterDelegate = getChapterDelegate;
 		}
-		protected override void Flush()
+		protected override Task FlushAsync()
 		{
 			CloseWriter();
+			return Task.CompletedTask;
 		}
-		protected override void PerformFiltering(FrameEntry input)
+		protected override Task PerformFilteringAsync(FrameEntry input)
 		{
 			Mp4writer.AddFrame(input.FrameData.Span, input.Chunk.ChunkIndex > LastChunkIndex);
 			LastChunkIndex = input.Chunk.ChunkIndex;
+			return Task.CompletedTask;
 		}
 
 		private void CloseWriter()
@@ -48,12 +51,12 @@ namespace AAXClean.FrameFilters.Audio
 
 		protected override void Dispose(bool disposing)
 		{
-			base.Dispose(disposing);
-			if (disposing)
+			if (disposing && !Disposed)
 			{
 				CloseWriter();
 				Mp4writer?.Dispose();
 			}
+			base.Dispose(disposing);
 		}
 	}
 }

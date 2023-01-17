@@ -27,11 +27,9 @@ namespace AAXClean.FrameFilters.Audio
 		}
 		protected override void Dispose(bool disposing)
 		{
-			base.Dispose(disposing);
-			if (disposing)
-			{
+			if (disposing && !Disposed)
 				Aes.Dispose();
-			}
+			base.Dispose(disposing);
 		}
 	}
 }

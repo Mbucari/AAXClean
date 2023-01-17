@@ -51,7 +51,7 @@ namespace AAXClean.FrameFilters.Audio
 
 		public void Close()
 		{
-			if (Closed) return;
+			if (Closed || !OutputFile.CanWrite) return;
 
 			long mdatEnd = OutputFile.Position;
 

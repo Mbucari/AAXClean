@@ -1,11 +1,10 @@
-﻿
-using System;
+﻿using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters
 {
 	public abstract class FrameFinalBase<TInput> : FrameFilterBase<TInput>
 	{
-		protected sealed override void HandleInputData(TInput input) => PerformFiltering(input);
-		protected abstract void PerformFiltering(TInput input);
+		protected sealed override Task HandleInputDataAsync(TInput input) => PerformFilteringAsync(input);
+		protected abstract Task PerformFilteringAsync(TInput input);
 	}
 }
