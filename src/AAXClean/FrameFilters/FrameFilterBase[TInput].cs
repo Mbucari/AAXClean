@@ -10,7 +10,7 @@ namespace AAXClean.FrameFilters
 		public void SetCancellationSource(CancellationTokenSource cancellationSource);
 		Task CancelAsync();
 		Task CompleteAsync();
-		Task AddInputAsync(TInput input);		 
+		Task AddInputAsync(TInput input);
 	}
 	public abstract class FrameFilterBase<TInput> : IFrameFilter<TInput>
 	{
@@ -66,7 +66,7 @@ namespace AAXClean.FrameFilters
 		{
 			try
 			{
-				while(await FilterChannel.Reader.WaitToReadAsync(CancellationTokenSource.Token))
+				while (await FilterChannel.Reader.WaitToReadAsync(CancellationTokenSource.Token))
 				{
 					await foreach (var messages in FilterChannel.Reader.ReadAllAsync(CancellationTokenSource.Token))
 					{
@@ -91,7 +91,7 @@ namespace AAXClean.FrameFilters
 				await FilterChannel.Writer.WriteAsync((bufferPosition, buffer), CancellationTokenSource.Token);
 				FilterChannel.Writer.Complete();
 			}
-			catch(OperationCanceledException) { }
+			catch (OperationCanceledException) { }
 			await FilterLoop;
 		}
 

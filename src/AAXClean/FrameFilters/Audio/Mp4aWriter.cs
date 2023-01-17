@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualBasic;
-using Mpeg4Lib.Boxes;
+﻿using Mpeg4Lib.Boxes;
 using Mpeg4Lib.Util;
 using System;
 using System.IO;

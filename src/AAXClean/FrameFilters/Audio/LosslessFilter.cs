@@ -10,7 +10,7 @@ namespace AAXClean.FrameFilters.Audio
 		private readonly Mp4aWriter Mp4writer;
 		private long LastChunkIndex = -1;
 		private Func<ChapterInfo> GetChapterDelegate;
-		protected override int InputBufferSize => 200;
+		protected override int InputBufferSize => 1000;
 		public ChapterInfo Chapters => GetChapterDelegate?.Invoke();
 
 		public bool Closed { get; private set; }

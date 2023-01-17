@@ -10,7 +10,7 @@ namespace AAXClean.FrameFilters.Audio
 		private readonly FtypBox Ftyp;
 		private readonly MoovBox Moov;
 		private Mp4aWriter Mp4writer;
-		protected override int InputBufferSize => 200;
+		protected override int InputBufferSize => 1000;
 		public bool Closed { get; private set; }
 		public LosslessMultipartFilter(ChapterInfo splitChapters, FtypBox ftyp, MoovBox moov, Action<NewSplitCallback> newFileCallback)
 			: base(splitChapters, (SampleRate)moov.AudioTrack.Mdia.Mdhd.Timescale, moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.ChannelCount == 2)

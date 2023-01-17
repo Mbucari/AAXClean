@@ -17,7 +17,6 @@ namespace AAXClean.FrameFilters.Audio
 		private long LastChunkIndex = -1;
 		private long CurrentSample = 0;
 
-
 		public MultipartFilterBase(ChapterInfo splitChapters, SampleRate inputSampleRate, bool inputStereo)
 		{
 			if (splitChapters is null || splitChapters.Count == 0)

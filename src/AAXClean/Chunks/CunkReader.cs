@@ -69,7 +69,7 @@ namespace AAXClean.Chunks
 			{
 				OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs { TotalDuration = TotalDuration, ProcessPosition = TotalDuration, ProcessSpeed = TotalDuration / (DateTime.Now - beginProcess) });
 
-				await Task.WhenAll(FirstFilters.Select(f => cancellationSource.IsCancellationRequested? f.CancelAsync() : f.CompleteAsync()));
+				await Task.WhenAll(FirstFilters.Select(f => cancellationSource.IsCancellationRequested ? f.CancelAsync() : f.CompleteAsync()));
 			}
 		}
 
