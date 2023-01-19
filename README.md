@@ -51,7 +51,7 @@ private static void NewSplit(NewSplitCallback newSplitCallback)
 All `ConvertTo___Async()` methods return an `Mp4Operation`. `Mp4Operation` contains the conversion task that's created in a suspended state. The `Mp4Operation` can be started by calling `Start()` or by awaiting it, and it can be cancelled by calling `Cancel()`. If you run the task by calling `Start()`, you may access the running task at `Mp4Operation.OperationTask` The `Mp4Operation` also contains the operation's progress and has an event you may subscribe to for progress updates.
 
 ## Successive Convert operations
-`Mp4File` is opened with a `Stream`, and it reads from this input stream when converting or running `GetChapterInfoAsync()`. If the `Stream` is seekable, multiple conversion operations may be performed on the same MprFile instance. If the `Stream` is not seekable, each new operation must be run on a new instance with the `Stream.Position = 0`.
+`Mp4File` is opened with a `Stream`, and it reads from this input stream when converting or running `GetChapterInfoAsync()`. If the `Stream` is seekable, multiple conversion operations may be performed on the same `Mp4File` instance. If the `Stream` is not seekable, each new operation must be run on a new instance with the `Stream.Position = 0`.
 
 ## Concurrent Operations
 Because `Mp4File` only has one input stream, it does not support concurrency. However, you may run as many concurrent operation on one file as you have `Stream` instances of that file. If the file source is a local filesystem file, this may be accomplished like so:
