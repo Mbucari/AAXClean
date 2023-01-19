@@ -27,7 +27,7 @@
 	  <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
 
-  <ItemGroup  Condition="'$(Configuration)'=='Debug'">
+  <ItemGroup>
     <ProjectReference Include="..\Mpeg4Lib\Mpeg4Lib.csproj" />
   </ItemGroup>
 	
