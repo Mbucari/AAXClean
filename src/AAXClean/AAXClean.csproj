@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <Version>0.5.1</Version>
+    <Version>0.5.2</Version>
     <Authors>MrGneissGuy</Authors>
     <Company>Just Me, Inc.</Company>
     <Description>Decrypts Audible aax and aaxc files to mp4.</Description>
@@ -22,12 +22,12 @@
 	  <PublishReadyToRun>true</PublishReadyToRun>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
 	  <DebugType>embedded</DebugType>
 	  <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
 
-  <ItemGroup>
+  <ItemGroup  Condition="'$(Configuration)'=='Debug'">
     <ProjectReference Include="..\Mpeg4Lib\Mpeg4Lib.csproj" />
   </ItemGroup>
 	
