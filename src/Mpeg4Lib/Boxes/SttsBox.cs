@@ -35,14 +35,15 @@ namespace Mpeg4Lib.Boxes
 
 		public uint FrameToFrameDelta(uint frameIndex)
 		{
+			uint workingIndex = frameIndex;
 			foreach (SampleEntry entry in Samples)
 			{
-				if (frameIndex < entry.FrameCount)
+				if (workingIndex < entry.FrameCount)
 				{
 					return entry.FrameDelta;
 				}
 
-				frameIndex -= entry.FrameCount;
+				workingIndex -= entry.FrameCount;
 			}
 			throw new IndexOutOfRangeException($"{nameof(frameIndex)} {frameIndex} is larger than the number of frames in {nameof(SttsBox)}");
 		}
@@ -52,17 +53,17 @@ namespace Mpeg4Lib.Boxes
 		/// </summary>
 		public TimeSpan FrameToTime(double timeScale, ulong frameIndex)
 		{
-			ulong beginDelta = 0;
+			ulong beginDelta = 0, workingIndex = frameIndex;
 
 			foreach (SampleEntry entry in Samples)
 			{
-				if (frameIndex <= entry.FrameCount)
+				if (workingIndex <= entry.FrameCount)
 				{
-					return TimeSpan.FromSeconds((beginDelta + frameIndex * entry.FrameDelta) / timeScale);
+					return TimeSpan.FromSeconds((beginDelta + workingIndex * entry.FrameDelta) / timeScale);
 				}
 
 				beginDelta += entry.FrameCount * entry.FrameDelta;
-				frameIndex -= entry.FrameCount;
+				workingIndex -= entry.FrameCount;
 			}
 			throw new IndexOutOfRangeException($"{nameof(frameIndex)} {frameIndex} is larger than the number of frames in {nameof(SttsBox)}");
 		}

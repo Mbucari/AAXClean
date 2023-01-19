@@ -1,18 +1,17 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters
 {
 	public abstract class FrameTransformBase<TInput, TOutput> : FrameFilterBase<TInput>
 	{
-		private IFrameFilter<TOutput> Linked;
+		private FrameFilterBase<TOutput> Linked;
 		public override void SetCancellationSource(CancellationTokenSource cancellationSource)
 		{
 			base.SetCancellationSource(cancellationSource);
 			Linked.SetCancellationSource(cancellationSource);
 		}
-		public void LinkTo(IFrameFilter<TOutput> nextFilter) => Linked = nextFilter;
+		public void LinkTo(FrameFilterBase<TOutput> nextFilter) => Linked = nextFilter;
 		protected abstract TOutput PerformFiltering(TInput input);
 		protected virtual TOutput PerformFinalFiltering() => default;
 		protected sealed override async Task FlushAsync()
@@ -26,13 +25,9 @@ namespace AAXClean.FrameFilters
 		{
 			TOutput filteredData = PerformFiltering(input);
 #if DEBUG
+			//Allow unlinked for testing purposes
 			if (Linked is null)
-			{
-				//Allow unlinked for testing purposes
-				if (filteredData is IDisposable dis)
-					dis.Dispose();
 				return;
-			}
 #endif
 			await Linked.AddInputAsync(filteredData);
 		}

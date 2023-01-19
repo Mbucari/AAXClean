@@ -29,8 +29,10 @@ namespace AAXClean.FrameFilters.Audio
 			CloseWriter();
 			return Task.CompletedTask;
 		}
+		int t = 0;
 		protected override Task PerformFilteringAsync(FrameEntry input)
 		{
+			if (t++ > 1000000) throw new Exception();
 			Mp4writer.AddFrame(input.FrameData.Span, input.Chunk.ChunkIndex > LastChunkIndex);
 			LastChunkIndex = input.Chunk.ChunkIndex;
 			return Task.CompletedTask;

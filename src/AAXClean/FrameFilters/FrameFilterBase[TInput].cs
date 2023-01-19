@@ -5,14 +5,7 @@ using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters
 {
-	public interface IFrameFilter<TInput> : IDisposable
-	{
-		public void SetCancellationSource(CancellationTokenSource cancellationSource);
-		Task CancelAsync();
-		Task CompleteAsync();
-		Task AddInputAsync(TInput input);
-	}
-	public abstract class FrameFilterBase<TInput> : IFrameFilter<TInput>
+	public abstract class FrameFilterBase<TInput>
 	{
 		protected bool Disposed { get; private set; }
 		protected abstract int InputBufferSize { get; }
@@ -92,18 +85,13 @@ namespace AAXClean.FrameFilters
 				FilterChannel.Writer.Complete();
 			}
 			catch (OperationCanceledException) { }
-			await FilterLoop;
+
+			if (FilterLoop is not null)
+				await FilterLoop;
 		}
 
 		private void Cancel() => CancellationTokenSource?.Cancel();
 		public Task CompleteAsync() => CompleteInternalAsync();
-
-
-		public async Task CancelAsync()
-		{
-			Cancel();
-			await FilterLoop;
-		}
 
 		public void Dispose()
 		{
