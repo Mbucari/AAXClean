@@ -7,7 +7,7 @@ namespace Mpeg4Lib.Boxes
 {
 	public class BoxHeader
 	{
-		public long FilePosition { get; }
+		public long FilePosition { get; internal set; }
 		public long TotalBoxSize { get; }
 		public string Type { get; set; }
 		public uint HeaderSize { get; private set; }

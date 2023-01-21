@@ -28,9 +28,14 @@ namespace Mpeg4Lib.Boxes
 			return;
 		}
 
-		private void AddTag(string name, byte[] data, AppleDataType type)
+		public void AddTag(string name, byte[] data, AppleDataType type)
 		{
 			AppleTagBox.Create(this, name, data, type);
+		}
+		
+		public void AddTag(string name, string data)
+		{
+			AppleTagBox.Create(this, name, Encoding.ASCII.GetBytes(data), AppleDataType.ContainsText);
 		}
 
 		public void EditOrAddTag(string name, string data)
@@ -62,7 +67,7 @@ namespace Mpeg4Lib.Boxes
 			byte[] tag = GetTagBytes(name);
 			if (tag is null) return null;
 
-			return Encoding.ASCII.GetString(tag);
+			return Encoding.UTF8.GetString(tag);
 		}
 
 		public byte[] GetTagBytes(string name)

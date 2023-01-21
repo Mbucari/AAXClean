@@ -8,9 +8,13 @@ namespace AAXClean
 	public class Mp4Operation
 	{
 		public event EventHandler<ConversionProgressEventArgs> ConversionProgressUpdate;
-		public bool IsRunning => Continuation?.IsCompleted is false;
+		public bool IsCompleted => Continuation?.IsCompleted is true;
+		public bool IsFaulted => _readerTask?.IsFaulted is true;
+		public bool IsCanceled => _readerTask?.IsCanceled is true;
+		public bool IsCompletedSuccessfully => _readerTask?.IsCompletedSuccessfully is true && Continuation?.IsCompletedSuccessfully is true;
 		public TimeSpan CurrentProcessPosition => _lastArgs?.ProcessPosition ?? TimeSpan.Zero;
 		public double ProcessSpeed => _lastArgs?.ProcessSpeed ?? 0;
+		public TaskStatus TaskStatus => _readerTask?.Status ?? TaskStatus.Created;
 		public Task OperationTask => Continuation;
 		public Mp4File Mp4File { get; }
 
@@ -35,14 +39,10 @@ namespace AAXClean
 			Mp4File = mp4File;
 		}
 
-		/// <summary>
-		/// Cancel the operation
-		/// </summary>
+		/// <summary>Cancel the operation</summary>
 		public void Cancel() => _cancellationSource.Cancel();
 
-		/// <summary>
-		/// Start the Mp4 operation;
-		/// </summary>
+		/// <summary>Start the Mp4 operation</summary>
 		public void Start()
 		{
 			if (_readerTask is null)

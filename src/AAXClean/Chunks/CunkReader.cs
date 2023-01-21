@@ -11,6 +11,19 @@ using System.Threading.Tasks;
 
 namespace AAXClean.Chunks
 {
+	internal static class MiscExt
+	{
+		public static bool Between<T>(this T value, T lower, T upper) where T : IComparable<T>
+		{
+			return value.CompareTo(lower) >= 0 && value.CompareTo(upper) <= 0;
+		}
+
+		public static bool ChunkHasFrameInRange(this ChunkEntry value, uint lower, uint upper)
+		{
+			return value.FirstFrameIndex + value.FrameSizes.Length >= lower && value.FirstFrameIndex <= upper;
+		}
+	}
+
 	internal class CunkReader
 	{
 		private const uint ACC_SAMPLES_PER_FRAME = 1024;
@@ -18,10 +31,10 @@ namespace AAXClean.Chunks
 		private readonly List<FrameFilterBase<FrameEntry>> FirstFilters = new();
 		private readonly Stream InputStream;
 		private uint[] LastFrameProcessed;
-		private uint[] StartFrames;
-		private uint[] EndFrames;
 		private uint[] TimeScales;
 		private SttsBox[] Stts;
+		private uint[] StartFrames;
+		private uint[] EndFrames;
 		internal Action<ConversionProgressEventArgs> OnProggressUpdateDelegate { get; set; }
 		internal TimeSpan TotalDuration { get; set; }
 		internal CunkReader(Stream inputStream)
@@ -47,20 +60,18 @@ namespace AAXClean.Chunks
 
 		internal async Task RunAsync(CancellationTokenSource cancellationSource)
 		{
+			//All filters share the came cancellation source.
+			foreach (var filter in FirstFilters)
+				filter.SetCancellationToken(cancellationSource.Token);
+
 			DateTime beginProcess = DateTime.Now;
 			DateTime nextUpdate = beginProcess;
 
-			//All filters share the came cancellation source.
-			foreach (var filter in FirstFilters)
-				filter.SetCancellationSource(cancellationSource);
-
-			var chunkEnumerable = new MpegChunkEnumerable(Tracks.ToArray());
-
 			try
 			{
-				foreach (TrackChunk c in chunkEnumerable.Where(
-						c => c.Entry.FirstFrameIndex + c.Entry.FrameSizes.Length >= StartFrames[c.TrackNum]
-						&& c.Entry.FirstFrameIndex <= EndFrames[c.TrackNum]))
+				var chunkEnumerable = new MpegChunkEnumerable(Tracks.ToArray());
+
+				foreach (TrackChunk c in chunkEnumerable.Where(c => c.Entry.ChunkHasFrameInRange(StartFrames[c.TrackNum], EndFrames[c.TrackNum])))
 				{
 					if (cancellationSource.IsCancellationRequested)
 						break;
@@ -75,12 +86,13 @@ namespace AAXClean.Chunks
 					{
 						TimeSpan position = ProcessPosition(c.TrackNum);
 						double speed = position / (DateTime.Now - beginProcess);
-						OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs { TotalDuration = TotalDuration, ProcessPosition = position, ProcessSpeed = speed });
+						OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs(TotalDuration, position, speed));
 
 						nextUpdate = DateTime.Now.AddMilliseconds(300);
 					}
 				}
 			}
+			catch (OperationCanceledException) { }
 			catch
 			{
 				cancellationSource.Cancel();
@@ -88,7 +100,7 @@ namespace AAXClean.Chunks
 			}
 			finally
 			{
-				OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs { TotalDuration = TotalDuration, ProcessPosition = TotalDuration, ProcessSpeed = TotalDuration / (DateTime.Now - beginProcess) });
+				OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs(TotalDuration, TotalDuration, TotalDuration / (DateTime.Now - beginProcess)));
 
 				//Always call CompleteAsync() on all filters so that every
 				//FilterLoop gets awaited and any exceptions are thrown.
@@ -104,7 +116,7 @@ namespace AAXClean.Chunks
 			for (int start = 0, f = 0; f < chunk.FrameSizes.Length; start += chunk.FrameSizes[f], f++)
 			{
 				uint frameIndex = chunk.FirstFrameIndex + (uint)f;
-								
+
 				LastFrameProcessed[trackIndex] = frameIndex;
 
 				if (!frameIndex.Between(StartFrames[trackIndex], EndFrames[trackIndex]))

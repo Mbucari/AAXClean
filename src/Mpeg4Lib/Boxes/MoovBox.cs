@@ -17,6 +17,24 @@ namespace Mpeg4Lib.Boxes
 		public AppleListBox ILst => GetChild<UdtaBox>()?.GetChild<MetaBox>()?.GetChild<AppleListBox>();
 		public IEnumerable<TrakBox> Tracks => GetChildren<TrakBox>();
 
+		/// <summary>
+		/// Adjust the chunk offsets in all tracks
+		/// </summary>
+		/// <param name="shiftVector">The size and direction of the shift</param>
+		public void ShiftChunkOffsets(long shiftVector)
+		{
+			foreach (var track in Tracks)
+			{
+				var chunkOffsetEntries
+					= track.Mdia.Minf.Stbl.Stco is not null
+					? track.Mdia.Minf.Stbl.Stco.ChunkOffsets
+					: track.Mdia.Minf.Stbl.Co64.ChunkOffsets;
+
+				foreach (var co in chunkOffsetEntries)
+					co.ChunkOffset += shiftVector;
+			}
+		}
+
 		protected override void Render(Stream file)
 		{
 			return;

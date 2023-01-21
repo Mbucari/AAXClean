@@ -9,7 +9,7 @@ namespace AAXClean
 
 		private readonly AppleListBox IList;
 		public IEnumerable<string> TagNames => IList.Tags.Select(t => t.Header.Type);
-		internal AppleTags(AppleListBox appleListBox)
+		public AppleTags(AppleListBox appleListBox)
 		{
 			IList = appleListBox;
 		}

@@ -52,6 +52,16 @@ namespace Mpeg4Lib.Boxes
 			}
 		}
 
+		public List<FreeBox> GetFreeBoxes()
+		{
+			List<FreeBox> freeBoxes = GetChildren<FreeBox>().ToList();
+
+			foreach (var child in Children)
+				freeBoxes.AddRange(child.GetFreeBoxes());
+
+			return freeBoxes;
+		}
+
 		public void Save(Stream file)
 		{
 			file.WriteHeader(Header, RenderSize);
@@ -72,10 +82,7 @@ namespace Mpeg4Lib.Boxes
 		}
 		protected virtual void Dispose(bool disposing)
 		{
-			if (_disposed)
-				return;
-
-			if (disposing)
+			if (disposing && !_disposed)
 			{
 				foreach (Box child in Children)
 					child?.Dispose();

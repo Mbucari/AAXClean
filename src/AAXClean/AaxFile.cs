@@ -9,11 +9,6 @@ using System.Linq;
 
 namespace AAXClean
 {
-	public enum OutputFormat
-	{
-		Mp4a,
-		Mp3
-	}
 	public sealed class AaxFile : Mp4File
 	{
 		public byte[] Key { get; private set; }

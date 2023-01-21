@@ -4,12 +4,14 @@ namespace Mpeg4Lib.Boxes
 {
 	public class FreeBox : Box
 	{
+		public const int MinSize = 8;
 		public override long RenderSize => base.RenderSize + Header.TotalBoxSize - Header.HeaderSize;
 
-		public static FreeBox Create(int size, Box parent)
+		public static FreeBox Create(int freeSize, Box parent)
 		{
-			BoxHeader header = new BoxHeader((uint)size, "free");
+			BoxHeader header = new BoxHeader(freeSize, "free");
 			FreeBox free = new FreeBox(header, parent);
+			parent.Children.Add(free);
 			return free;
 		}
 
@@ -23,9 +25,7 @@ namespace Mpeg4Lib.Boxes
 
 		protected override void Render(Stream file)
 		{
-			for (uint i = Header.HeaderSize; i < Header.TotalBoxSize; i++)
-				file.WriteByte(0);
+			file.Write(new byte[Header.TotalBoxSize - Header.HeaderSize]);
 		}
-
 	}
 }

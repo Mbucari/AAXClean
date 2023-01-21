@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 
 namespace AAXClean.Test
 {
@@ -21,31 +22,30 @@ namespace AAXClean.Test
 		public override uint MaxBitrate => 64004u;
 		public override long RenderSize => 2876633L;
 		public override TimeSpan Duration => TimeSpan.FromTicks(299221159183);
-		public override string SingleM4bHash => "d934641bbfe88db424c71ebef1eb4f62d55042be";
-		public override string PassthroughM4bHash => "9b3d155fd909521b6f7306b5c7c2a2bd1590158a";
+		public override string SingleM4bHash => "46f58df5d52cd762e5defcf749115cc943330581";
 		public override List<string> MultiM4bHashes => new()
 		{
-			"922603def2bb7dc73a2d51d3f4db85d41fdf4611",
-			"b688ac7720b9471a7bf1f1b5e8395c43e6c623b7",
-			"ed994c6bfcd315171ff67fe68d913f1b99827a49",
-			"61fcc07e0ee4dae6bfea0b7e7e885065e1e89855",
-			"94129c14d0087f87d6662ff6d503e9a78101364b",
-			"afd4cab923a4e5f5b558feac8d8bb950df818797",
-			"1b9ed4337470e70b4af1a48fb0e20f27b304de3e",
-			"817802dfc22aa5e0ed2016e5e7999d689bed11f1",
-			"695237516b7f14706171782b3c90216e5d093407",
-			"dea663df21bacac296f5378e17ff4f1930678f1c",
-			"f1061a9025bf8b0e8761e4d6e4e71e404eba7665",
-			"ffc6429c136542d7e26c15ab5a5d2f758b71e02e",
-			"d9dafe3f211e38d60c5c57d343cf13b62ceab837",
-			"f44f20b03799abe4836f392e931f47a54f82ad17",
-			"c45650f19cb6ef79cfb3e3a5c2ae40f4bed916a5",
-			"d68b70537dc4d46fbd76e375e1aa891a98480919",
-			"7209caae2666664e9bbc0cf3557622c716abed47",
-			"a470890ec65f2d990e87cec93954c685aabc27da",
-			"b1e508be9884cdbdb6b38c37a9e936446ec05a03",
-			"55bc1db600e2ed4731134b15226bd4ff2ccd5444",
-			"563a863f0d3cf72ef65d66fec482a5225549ced1",
+			"ad25f9e1220ce993e94970a3b5eae39235745302",
+			"f657d297d7219020838b7f8d35c41e547a613b6d",
+			"595ef44ed338d373a9a284175441c081ad4df0e8",
+			"bee722adafd02c5d2fcb17a880cf29114782bd2b",
+			"e4ca5ea2c1d5e01fc12d9553cad9a1944012f83a",
+			"e3edf6fcc2a4040b8d3e146c5da33b595eb98a4e",
+			"25c8334fd421f4154f31b0a41d12c12d373f0bd1",
+			"400024dbea3bac914418e5ebff7398684fec56cb",
+			"31a73c1c9adc4efdd7d304ce0bbc09612a162903",
+			"83d66e72b6068a083487ea966f2a64e880140348",
+			"2f3f654a9e48b9834a20706986b86054e8b24311",
+			"e475f92b8eda1d84d5930c19caba7443b298010e",
+			"1c2f394d768a374860c323db636495c49f875050",
+			"9a3d0b06472e893ae98dd7addc15b34ce5ad8839",
+			"d6d3542cf72f2edb98bd4fdbceb69af8dccd35c5",
+			"affade73bdc47e21a511809d59224056a0fcf23c",
+			"50ce986563647e3a05d339ab6ef12ca49a03b84e",
+			"ac3f71c57ce9d1ef5953ba54051ee488e8fe9bd3",
+			"dccdbbd9319af73578587b313f06575ac6cdd0f5",
+			"cdf799c5b4a3671ee83debe86ca14fb01c81f222",
+			"6da037be7678ed9ab53d0e0e9d1a3ad1293c4d9d",
 		};
 		public override ChapterInfo Chapters
 		{
@@ -107,7 +107,7 @@ namespace AAXClean.Test
 		}
 
 		[TestMethod]
-		public void _7_WriteTags()
+		public async Task _7_WriteTags()
 		{
 			string tagstring = "this is a tag string";
 			Mp4File mp4File = null;
@@ -135,10 +135,8 @@ namespace AAXClean.Test
 				Aax.AppleTags.Cover = newPic;
 
 				FileStream tempfile = TestFiles.NewTempFile();
-				ConversionStatus result = Aax.ConvertToMp4a(tempfile);
+				await Aax.ConvertToMp4aAsync(tempfile);
 				Aax.Close();
-
-				Assert.AreEqual(ConversionStatus.NoErrorsDetected, result);
 
 				mp4File = new Mp4File(tempfile.Name);
 

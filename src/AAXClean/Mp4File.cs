@@ -4,12 +4,13 @@ using AAXClean.FrameFilters.Audio;
 using AAXClean.FrameFilters.Text;
 using Mpeg4Lib.Boxes;
 using Mpeg4Lib.Chunks;
+using Mpeg4Lib.Util;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Pipes;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace AAXClean
@@ -38,7 +39,7 @@ namespace AAXClean
 		_7350 = 7350
 	}
 
-	public class Mp4File : Box
+	public class Mp4File
 	{
 		public ChapterInfo Chapters { get; set; }
 		public AppleTags AppleTags { get; }
@@ -58,13 +59,14 @@ namespace AAXClean
 
 		private readonly TrackedReadStream inputStream;
 
-		public Mp4File(Stream file, long fileSize) : base(new BoxHeader(fileSize, "MPEG"), null)
+		public Mp4File(Stream file, long fileSize)
 		{
 			inputStream = new TrackedReadStream(file, fileSize);
-			LoadChildren(InputStream);
-			Ftyp = GetChild<FtypBox>();
-			Moov = GetChild<MoovBox>();
-			Mdat = GetChild<MdatBox>();
+
+			var boxes = Mpeg4Util.LoadTopLevelBoxes(inputStream);
+			Ftyp = boxes.OfType<FtypBox>().Single();
+			Moov = boxes.OfType<MoovBox>().Single();
+			Mdat = boxes.OfType<MdatBox>().Single();
 
 			FileType = Ftyp.MajorBrand switch
 			{
@@ -86,18 +88,48 @@ namespace AAXClean
 
 		public void Save()
 		{
-			if (Moov.Header.FilePosition < Mdat.Header.FilePosition)
-				throw new Exception("Does not support editing moov before mdat");
+			if (!InputStream.CanRead ||!InputStream.CanWrite || !InputStream.CanSeek)
+				throw new InvalidOperationException($"{nameof(InputStream)} must be readable, writable and seekable to save");
 
 			InputStream.Position = Moov.Header.FilePosition;
-			Moov.Save(InputStream);
 
-			if (InputStream.Position < InputStream.Length)
+			//Remove Free boxes and work with net size change
+			foreach (var box in Moov.GetFreeBoxes())
+				box.Parent.Children.Remove(box);
+
+			var sizeChange = Moov.RenderSize - Moov.Header.TotalBoxSize;
+
+			if (sizeChange == 0)
 			{
-				int freeSize = (int)Math.Max(8, InputStream.Length - InputStream.Position);
-
-				FreeBox.Create(freeSize, this).Save(InputStream);
+				Moov.Save(InputStream);
 			}
+			else if (Moov.Header.FilePosition > Mdat.Header.FilePosition)
+			{
+				//Moov is at the end, so just write it
+				Moov.Save(InputStream);
+				InputStream.SetLength(InputStream.Position);
+			}
+			else if (FreeBox.MinSize + sizeChange <= 0)
+			{
+				//Moov is at the beginning and srank more than the minimum Free box size
+				//We can accomodate the change with a Free box
+				FreeBox.Create((int)-sizeChange, Moov);
+				Moov.Save(InputStream);
+			}
+			else
+			{
+				//Moov is at the beginning and it either grew or it shrank less than FreeBox.MinSize
+				//Shift Mdat by sizeChange to fit the new Moov exactly.
+
+				Mdat.ShiftMdat(InputStream, sizeChange);
+				InputStream.SetLength(InputStream.Position);
+
+				InputStream.Position = Moov.Header.FilePosition;
+				Moov.ShiftChunkOffsets(sizeChange);
+				Moov.Save(InputStream);
+			}
+
+			InputStream.Close();
 		}
 
 		public Mp4Operation ConvertToMp4aAsync(Stream outputStream, ChapterInfo userChapters = null, bool trimOutputToChapters = false)
@@ -112,15 +144,14 @@ namespace AAXClean
 			{
 				f2.SetChapterDelegate(() => userChapters);
 
-				Action<Task> continuation = t =>
+				void continuation(Task t)
 				{
 					f1.Dispose();
-					f2.Dispose();
 					if (t.IsCompletedSuccessfully)
 						Chapters = f2.Chapters;
 
 					outputStream.Close();
-				};
+				}
 
 				return ProcessAudio(trimOutputToChapters, userChapters.StartOffset, userChapters.EndOffset, continuation, (Moov.AudioTrack, f1));
 			}
@@ -129,16 +160,15 @@ namespace AAXClean
 				ChapterFilter c1 = new(TimeScale);
 				f2.SetChapterDelegate(() => c1.Chapters);
 
-				Action<Task> continuation = t =>
+				void continuation(Task t)
 				{
 					f1.Dispose();
-					f2.Dispose();
 					c1.Dispose();
 					if (t.IsCompletedSuccessfully)
 						Chapters = f2.Chapters;
 
 					outputStream.Close();
-				};
+				}
 
 				return ProcessAudio(continuation, (Moov.AudioTrack, f1), (Moov.TextTrack, c1));
 			}
@@ -155,13 +185,9 @@ namespace AAXClean
 
 			f1.LinkTo(f2);
 
-			Action<Task> continuation = t =>
-			{
-				f1.Dispose();
-				f2.Dispose();
-			};
+			void continuation(Task t) => f1.Dispose();
 
-			return ProcessAudio(trimOutputToChapters, userChapters.StartOffset, userChapters.EndOffset, continuation ,(Moov.AudioTrack, f1));
+			return ProcessAudio(trimOutputToChapters, userChapters.StartOffset, userChapters.EndOffset, continuation, (Moov.AudioTrack, f1));
 		}
 
 		public ChapterInfo GetChapterInfo() => GetChapterInfoAsync().GetAwaiter().GetResult();
@@ -169,13 +195,13 @@ namespace AAXClean
 		{
 			ChapterFilter c1 = new(TimeScale);
 
-			Func<Task, ChapterInfo> continuation = t =>
-			{				
-				c1.Dispose();
+			ChapterInfo continuation(Task t)
+			{
 
 				Chapters ??= c1.Chapters;
-				return c1.Chapters;
-			};
+				c1.Dispose();
+				return Chapters;
+			}
 
 			return ProcessAudio(continuation, (Moov.TextTrack, c1));
 		}
@@ -225,7 +251,7 @@ namespace AAXClean
 		{
 			return ProcessAudio(false, TimeSpan.Zero, TimeSpan.Zero, continuation, filters);
 		}
-		
+
 		public Mp4Operation<TResult> ProcessAudio<TResult>(Func<Task, TResult> continuation, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
 		{
 			return ProcessAudio(false, TimeSpan.Zero, TimeSpan.Zero, continuation, filters);
@@ -238,14 +264,14 @@ namespace AAXClean
 				TotalDuration = Duration
 			};
 
-			startTime = doTimeFilter ? startTime: TimeSpan.Zero;
+			startTime = doTimeFilter ? startTime : TimeSpan.Zero;
 			endTime = doTimeFilter ? endTime : TimeSpan.MaxValue;
 
 			foreach ((TrakBox track, FrameFilterBase<FrameEntry> filter) in filters)
 				reader.AddTrack(track, filter);
 
 			reader.Initialize(startTime, endTime);
-			
+
 			var operation = new Mp4Operation(reader.RunAsync, this, continuation);
 			reader.OnProggressUpdateDelegate = operation.OnProggressUpdate;
 			return operation;
@@ -285,20 +311,5 @@ namespace AAXClean
 		{
 			InputStream?.Close();
 		}
-
-		private bool _disposed = false;
-		protected override void Dispose(bool disposing)
-		{
-			if (_disposed)
-				return;
-
-			if (disposing)
-				Close();
-
-			_disposed = true;
-			base.Dispose(disposing);
-		}
-
-		protected override void Render(Stream file) => throw new NotImplementedException();
 	}
 }

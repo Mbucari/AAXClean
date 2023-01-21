@@ -48,7 +48,6 @@ namespace AAXClean.Test
 		public abstract ChapterInfo Chapters { get; }
 		public abstract TestBookTags Tags { get; }
 		public abstract string SingleM4bHash { get; }
-		public abstract string PassthroughM4bHash { get; }
 		public abstract List<string> MultiM4bHashes { get; }
 
 		[TestMethod]
@@ -61,7 +60,6 @@ namespace AAXClean.Test
 				Assert.AreEqual(TimeScale, Aax.TimeScale);
 				Assert.AreEqual(AverageBitrate, Aax.AverageBitrate);
 				Assert.AreEqual(MaxBitrate, Aax.MaxBitrate);
-				Assert.AreEqual(RenderSize, Aax.RenderSize);
 				Assert.AreEqual(Duration, Aax.Duration);
 			}
 			finally
@@ -117,6 +115,10 @@ namespace AAXClean.Test
 					chs.AppendLine($"_chapters.AddChapter(\"{ch.Title}\", TimeSpan.FromTicks({ch.Duration.Ticks}));");
 				}
 #endif
+				//These 2 files have incorrect timed text entries, which is why they're in the test suite.
+				//Correct chapter info can be found through GetChaptersFromMetadata()
+				if (this is AC_AaxTest or BA_AaxTest)
+					return;
 				VerifyChapters(chapters);
 			}
 			finally
@@ -162,9 +164,7 @@ namespace AAXClean.Test
 			try
 			{
 				FileStream tempfile = TestFiles.NewTempFile();
-				ConversionStatus result = await Aax.ConvertToMp4aAsync(tempfile);
-
-				Assert.AreEqual(ConversionStatus.NoErrorsDetected, result);
+				await Aax.ConvertToMp4aAsync(tempfile);
 
 				using SHA1 sha = SHA1.Create();
 
@@ -201,8 +201,7 @@ namespace AAXClean.Test
 					tempFiles.Add(((FileStream)callback.OutputFile).Name);
 				}
 
-				var result = await Aax.ConvertToMultiMp4aAsync(Chapters, NewSplit);
-				Assert.AreEqual(ConversionStatus.NoErrorsDetected, result);
+				await Aax.ConvertToMultiMp4aAsync(Chapters, NewSplit);
 #if !DEBUG
 				Assert.AreEqual(MultiM4bHashes.Count, tempFiles.Count);
 #endif
@@ -249,9 +248,7 @@ namespace AAXClean.Test
 				newChapters.AddChapter("Ch4", TimeSpan.FromTicks(15000000000));
 				newChapters.AddChapter("Ch5", TimeSpan.FromTicks(30000000000));
 				newChapters.AddChapter("Ch6", TimeSpan.FromTicks(45000000000));
-				ConversionStatus result = await Aax.ConvertToMp4aAsync(tempfile, newChapters);
-
-				Assert.AreEqual(ConversionStatus.NoErrorsDetected, result);
+				await Aax.ConvertToMp4aAsync(tempfile, newChapters);
 
 				Mp4File mp4 = new(tempfile.Name);
 				var ch_2 = mp4.GetChaptersFromMetadata().ToList();
@@ -289,20 +286,16 @@ namespace AAXClean.Test
 			var aaxFile = Aax;
 			try
 			{
-				FileStream tempfile = TestFiles.NewTempFile();				
-				ConversionStatus result = ConversionStatus.NoErrorsDetected;
+				FileStream tempfile = TestFiles.NewTempFile();
 
-				async Task RunIt()
-				{
-					result = await aaxFile.ConvertToMp4aAsync(tempfile);
-				}
-				var convertTask = Task.Run(RunIt);
+				var convertTask = aaxFile.ConvertToMp4aAsync(tempfile);
+				convertTask.Start();
 
 				await Task.Delay(500);
-				await aaxFile.CancelAsync();
+				convertTask.Cancel();
 
 				await convertTask;
-				Assert.AreEqual(ConversionStatus.Cancelled, result);
+				Assert.IsTrue(convertTask.IsCanceled);
 
 				TestFiles.CloseAllFiles();
 				Aax.Close();
@@ -321,24 +314,20 @@ namespace AAXClean.Test
 			try
 			{
 				FileStream tempfile = TestFiles.NewTempFile();
-				ConversionStatus result = ConversionStatus.NoErrorsDetected;
+
 
 				void NewSplit(NewSplitCallback callback)
 				{
 					callback.OutputFile = TestFiles.NewTempFile();
 				}
 
-				async Task RunIt()
-				{
-					result = await aaxFile.ConvertToMultiMp4aAsync(Chapters, NewSplit);
-				}
-				var convertTask = Task.Run(RunIt);
-
+				var convertTask = aaxFile.ConvertToMultiMp4aAsync(Chapters, NewSplit);
+				convertTask.Start();
 				await Task.Delay(500);
-				await aaxFile.CancelAsync();
+				convertTask.Cancel();
 
 				await convertTask;
-				Assert.AreEqual(ConversionStatus.Cancelled, result);
+				Assert.IsTrue(convertTask.IsCanceled);
 
 				TestFiles.CloseAllFiles();
 				Aax.Close();

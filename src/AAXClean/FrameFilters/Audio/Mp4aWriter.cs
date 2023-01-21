@@ -8,7 +8,7 @@ namespace AAXClean.FrameFilters.Audio
 {
 	public class Mp4aWriter
 	{
-		internal Stream OutputFile { get; }
+		public Stream OutputFile { get; }
 
 		private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
 
@@ -25,6 +25,7 @@ namespace AAXClean.FrameFilters.Audio
 		private uint SamplesPerChunk = 0;
 		private uint CurrentChunk = 0;
 		private bool Closed;
+		private static readonly int[] asc_samplerates = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
 
 		public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov, bool co64)
 		{
@@ -46,6 +47,28 @@ namespace AAXClean.FrameFilters.Audio
 			OutputFile.WriteType("mdat");
 			if (IsCo64)
 				outputFile.WriteInt64BE(0);
+		}
+
+		public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov, bool co64, int sampleRate, int channels)
+			: this(outputFile, ftyp, moov, co64)
+		{
+			int sampleRateIndex = Array.IndexOf(asc_samplerates, sampleRate);
+
+			if (sampleRateIndex < 0)
+				throw new NotSupportedException($"Unsupported sample rate: {sampleRate}");
+			if (channels > 2)
+				throw new NotSupportedException($"Only supports maximum of 2-channel audio. (Channels={channels})");
+
+			Moov.AudioTrack.Mdia.Mdhd.Timescale = (uint)sampleRate;
+			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleRate = (ushort)sampleRate;
+			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.SamplingFrequencyIndex = sampleRateIndex;
+			//Channel Configuration only equals number of channels for stereo and mono.
+			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.ChannelConfiguration = channels;
+
+			if (Moov.TextTrack is not null)
+			{
+				Moov.TextTrack.Mdia.Mdhd.Timescale = (uint)sampleRate;
+			}
 		}
 
 		public void Close()
@@ -150,10 +173,9 @@ namespace AAXClean.FrameFilters.Audio
 
 			foreach (Chapter c in chapters)
 			{
-				chapterNames.EditOrAddTag("©nam", c.Title);
-				chapterNames.EditOrAddTag("©cmt", c.Title);
+				chapterNames.AddTag("©nam", c.Title);
+				chapterNames.AddTag("©cmt", c.Title);
 			}
-
 		}
 
 		public void RemoveTextTrack()

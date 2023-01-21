@@ -21,7 +21,7 @@ namespace AAXClean
 		public override bool CanRead => BaseStream.CanRead;
 		public override bool CanSeek => BaseStream.CanSeek;
 		public override long Length => BaseStreamLength;
-		public override bool CanWrite => false;
+		public override bool CanWrite => BaseStream.CanWrite;
 		public override long Position
 		{
 			get => CanSeek ? BaseStream.Position : ReadPosition;
@@ -71,9 +71,9 @@ namespace AAXClean
 		}
 
 		public override void SetLength(long value)
-			=> throw new NotSupportedException();
+			=> BaseStream.SetLength(value);
 
 		public override void Write(byte[] buffer, int offset, int count)
-			=> throw new NotSupportedException();
+			=> BaseStream.Write(buffer, offset, count);
 	}
 }

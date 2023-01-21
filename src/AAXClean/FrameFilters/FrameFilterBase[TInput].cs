@@ -10,7 +10,7 @@ namespace AAXClean.FrameFilters
 		protected bool Disposed { get; private set; }
 		protected abstract int InputBufferSize { get; }
 
-		private CancellationTokenSource CancellationTokenSource;
+		private CancellationToken CancellationToken;
 		private readonly Channel<(int numEntries, TInput[] entries)> FilterChannel;
 		private Task FilterLoop;
 		private TInput[] buffer;
@@ -22,36 +22,27 @@ namespace AAXClean.FrameFilters
 			buffer = new TInput[InputBufferSize];
 		}
 
-		public virtual void SetCancellationSource(CancellationTokenSource cancellationSource) => CancellationTokenSource = cancellationSource;
+		public virtual void SetCancellationToken(CancellationToken cancellationToken) => CancellationToken = cancellationToken;
 		protected abstract Task FlushAsync();
 		protected abstract Task HandleInputDataAsync(TInput input);
 
 		public async Task AddInputAsync(TInput input)
 		{
-			try
+			FilterLoop ??= Task.Run(Encoder, CancellationToken);
+
+			if (CancellationToken.IsCancellationRequested)
+				return;
+
+			buffer[bufferPosition++] = input;
+
+			if (bufferPosition == InputBufferSize)
 			{
-				FilterLoop ??= Task.Run(Encoder);
-
-				if (CancellationTokenSource.IsCancellationRequested)
-					return;
-
-				buffer[bufferPosition++] = input;
-
-				if (bufferPosition == InputBufferSize)
+				if (await FilterChannel.Writer.WaitToWriteAsync(CancellationToken))
 				{
-					if (await FilterChannel.Writer.WaitToWriteAsync(CancellationTokenSource.Token))
-					{
-						await FilterChannel.Writer.WriteAsync((bufferPosition, buffer), CancellationTokenSource.Token);
-						bufferPosition = 0;
-						buffer = new TInput[InputBufferSize];
-					}
+					await FilterChannel.Writer.WriteAsync((bufferPosition, buffer), CancellationToken);
+					bufferPosition = 0;
+					buffer = new TInput[InputBufferSize];
 				}
-			}
-			catch (OperationCanceledException) { }
-			catch
-			{
-				Cancel();
-				throw;
 			}
 		}
 
@@ -59,9 +50,9 @@ namespace AAXClean.FrameFilters
 		{
 			try
 			{
-				while (await FilterChannel.Reader.WaitToReadAsync(CancellationTokenSource.Token))
+				while (await FilterChannel.Reader.WaitToReadAsync(CancellationToken))
 				{
-					await foreach (var messages in FilterChannel.Reader.ReadAllAsync(CancellationTokenSource.Token))
+					await foreach (var messages in FilterChannel.Reader.ReadAllAsync(CancellationToken))
 					{
 						for (int i = 0; i < messages.numEntries; i++)
 							await HandleInputDataAsync(messages.entries[i]);
@@ -69,10 +60,9 @@ namespace AAXClean.FrameFilters
 				}
 				await FlushAsync();
 			}
-			catch (OperationCanceledException) { }
-			catch
+			catch (Exception ex)
 			{
-				Cancel();
+				FilterChannel.Writer.Complete(ex);
 				throw;
 			}
 		}
@@ -81,7 +71,7 @@ namespace AAXClean.FrameFilters
 		{
 			try
 			{
-				await FilterChannel.Writer.WriteAsync((bufferPosition, buffer), CancellationTokenSource.Token);
+				await FilterChannel.Writer.WriteAsync((bufferPosition, buffer), CancellationToken);
 				FilterChannel.Writer.Complete();
 			}
 			catch (OperationCanceledException) { }
@@ -90,7 +80,6 @@ namespace AAXClean.FrameFilters
 				await FilterLoop;
 		}
 
-		private void Cancel() => CancellationTokenSource?.Cancel();
 		public Task CompleteAsync() => CompleteInternalAsync();
 
 		public void Dispose()
@@ -104,7 +93,7 @@ namespace AAXClean.FrameFilters
 			if (disposing && !Disposed)
 			{
 				if (FilterLoop?.IsCompleted is false)
-					Cancel();
+					FilterChannel.Writer.TryComplete();
 			}
 			Disposed = true;
 		}
