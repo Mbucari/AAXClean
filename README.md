@@ -28,6 +28,11 @@ aaxFile.SetDecryptionKey(activation_bytes);
 ### Edit Metadata Tags:
 ```C#
 aaxFile.AppleTags.Generes = "Adventure"
+aaxFile.Save();
+```
+### Relocate the moov atom to the beginning of an mp4 file:
+```C#
+Mpeg4Util.RelocateMoovToBeginning(@"C:\audiobook.m4b");
 ```
 ### Output:
 ```C#
