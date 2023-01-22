@@ -47,7 +47,7 @@ namespace AAXClean
 		{
 			if (_readerTask is null)
 			{
-				_readerTask = _startAction(_cancellationSource);
+				_readerTask = Task.Run(() => _startAction(_cancellationSource));
 				SetContinuation(_readerTask);
 			}
 		}

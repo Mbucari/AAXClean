@@ -12,7 +12,7 @@ namespace Mpeg4Lib.Boxes
 			{
 				"free" or "skip" => new FreeBox(file, header, parent),
 				"ftyp" => new FtypBox(file, header, parent),
-				"mdat" => new MdatBox(file, header, parent),
+				"mdat" => new MdatBox(header, parent),
 				"moov" => new MoovBox(file, header, parent),
 				"mvhd" => new MvhdBox(file, header, parent),
 				"trak" => new TrakBox(file, header, parent),
