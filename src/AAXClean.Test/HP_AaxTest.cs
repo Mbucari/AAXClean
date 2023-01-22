@@ -18,34 +18,34 @@ namespace AAXClean.Test
 		public override int AudioChannels => 2;
 		public override int AudioSampleSize => 16;
 		public override uint TimeScale => 22050;
-		public override uint AverageBitrate => 62794u;
+		public override uint AverageBitrate => 64004u;
 		public override uint MaxBitrate => 64004u;
 		public override long RenderSize => 2876633L;
 		public override TimeSpan Duration => TimeSpan.FromTicks(299221159183);
-		public override string SingleM4bHash => "46f58df5d52cd762e5defcf749115cc943330581";
+		public override string SingleM4bHash => "889c4ef77388a1e2d7e50d01434f3c1763034819";
 		public override List<string> MultiM4bHashes => new()
 		{
-			"ad25f9e1220ce993e94970a3b5eae39235745302",
-			"f657d297d7219020838b7f8d35c41e547a613b6d",
-			"595ef44ed338d373a9a284175441c081ad4df0e8",
-			"bee722adafd02c5d2fcb17a880cf29114782bd2b",
-			"e4ca5ea2c1d5e01fc12d9553cad9a1944012f83a",
-			"e3edf6fcc2a4040b8d3e146c5da33b595eb98a4e",
-			"25c8334fd421f4154f31b0a41d12c12d373f0bd1",
-			"400024dbea3bac914418e5ebff7398684fec56cb",
-			"31a73c1c9adc4efdd7d304ce0bbc09612a162903",
-			"83d66e72b6068a083487ea966f2a64e880140348",
-			"2f3f654a9e48b9834a20706986b86054e8b24311",
-			"e475f92b8eda1d84d5930c19caba7443b298010e",
-			"1c2f394d768a374860c323db636495c49f875050",
-			"9a3d0b06472e893ae98dd7addc15b34ce5ad8839",
-			"d6d3542cf72f2edb98bd4fdbceb69af8dccd35c5",
-			"affade73bdc47e21a511809d59224056a0fcf23c",
-			"50ce986563647e3a05d339ab6ef12ca49a03b84e",
-			"ac3f71c57ce9d1ef5953ba54051ee488e8fe9bd3",
-			"dccdbbd9319af73578587b313f06575ac6cdd0f5",
-			"cdf799c5b4a3671ee83debe86ca14fb01c81f222",
-			"6da037be7678ed9ab53d0e0e9d1a3ad1293c4d9d",
+			"9a46ad8b9b32d2ac00ed9e0901b8bebd2f6fe530",
+			"5b5f09e593b63ddd4a9342983c213565689840ea",
+			"fee44deb689d40d72790f74c690c29787b097012",
+			"e57e6121820518586700c6f17525b3dd48bdccd8",
+			"40220c90974f64adfafcf703df282d7561fc74d9",
+			"13049262442922c63cb4b1a0e9e87e8e7070df5d",
+			"eb717b3eb1952d333ca3eb7d98b4f1fe8fb87e13",
+			"261ea605ebed33e260ca532309e438e0282d58cc",
+			"85c871088462cc9971c5299ddf56ecee6033a0f5",
+			"79538472acdd22ab04af908cc79832e79f8fbd06",
+			"0510f5723c6e55b741b5ea0d246df0e23b58ae84",
+			"b1886f26a3ba657bbde7bad0dc8ece0252174fc4",
+			"d1f5a335170b5fd1106dc05fc3891b3f8e985e0b",
+			"daa34f5a49de0ffbec906cd03ed2927f39747170",
+			"393b2e52ac66e9e440427522d25c4e40632aca0d",
+			"36f018d4dc8ae13db97c1f7029f99c172f09eee3",
+			"08ee7caa8bccaae5e2a399120333fe84a540b953",
+			"7f8d0e7c346057112d89de7a92659639c19c6fd8",
+			"2b5defb088a02f831ab25de6de5b62ef17b325f0",
+			"392039a831b2a08d958e92bc77767e9c5b672e9e",
+			"16c7ed7739220425dc32c3e9439c9d460d6833b4",
 		};
 		public override ChapterInfo Chapters
 		{

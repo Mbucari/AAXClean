@@ -8,7 +8,6 @@ using Mpeg4Lib.Util;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Pipes;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,19 +23,19 @@ namespace AAXClean
 
 	public enum SampleRate : int
 	{
-		_96000 = 96000,
-		_88200 = 88200,
-		_64000 = 64000,
-		_48000 = 48000,
-		_44100 = 44100,
-		_32000 = 32000,
-		_24000 = 24000,
-		_22050 = 22050,
-		_16000 = 16000,
-		_12000 = 12000,
-		_11025 = 11025,
-		_8000 = 8000,
-		_7350 = 7350
+		Hz_96000 = 96000,
+		Hz_88200 = 88200,
+		Hz_64000 = 64000,
+		Hz_48000 = 48000,
+		Hz_44100 = 44100,
+		Hz_32000 = 32000,
+		Hz_24000 = 24000,
+		Hz_22050 = 22050,
+		Hz_16000 = 16000,
+		Hz_12000 = 12000,
+		Hz_11025 = 11025,
+		Hz_8000 = 8000,
+		Hz_7350 = 7350
 	}
 
 	public class Mp4File
@@ -86,6 +85,9 @@ namespace AAXClean
 		public virtual FrameTransformBase<FrameEntry, FrameEntry> GetAudioFrameFilter()
 			=> new AacValidateFilter();
 
+		/// <summary>
+		/// Save all metadata changes to the input stream. Stream must be readable, writable, and seekable.
+		/// </summary>
 		public void Save()
 		{
 			if (!InputStream.CanRead ||!InputStream.CanWrite || !InputStream.CanSeek)
@@ -190,7 +192,6 @@ namespace AAXClean
 			return ProcessAudio(trimOutputToChapters, userChapters.StartOffset, userChapters.EndOffset, continuation, (Moov.AudioTrack, f1));
 		}
 
-		public ChapterInfo GetChapterInfo() => GetChapterInfoAsync().GetAwaiter().GetResult();
 		public Mp4Operation<ChapterInfo> GetChapterInfoAsync()
 		{
 			ChapterFilter c1 = new(TimeScale);
@@ -297,15 +298,6 @@ namespace AAXClean
 			return operation;
 		}
 
-		protected (long audioSize, uint avgBitrate) CalculateAudioSizeAndBitrate()
-		{
-			//Calculate the actual average bitrate because aaxc file is wrong.
-			long audioBits = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => (long)s) * 8;
-			double duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
-			uint avgBitrate = (uint)(audioBits * TimeScale / duration);
-
-			return (audioBits / 8, avgBitrate);
-		}
 
 		public void Close()
 		{

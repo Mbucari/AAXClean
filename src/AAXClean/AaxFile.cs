@@ -34,9 +34,6 @@ namespace AAXClean
 			//be performed unless re-writing the entire mpeg-4 file.
 			if (additionalFixups)
 			{
-				(_, uint avgBitrate) = CalculateAudioSizeAndBitrate();
-				Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
-
 				//Remove extra Free boxes
 				List<Box> children = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children;
 				for (int i = children.Count - 1; i >= 0; i--)
@@ -44,9 +41,6 @@ namespace AAXClean
 					if (children[i] is FreeBox)
 						children.RemoveAt(i);
 				}
-
-				//Add a btrt box to the audio sample description.
-				BtrtBox.Create(0, MaxBitrate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
 
 				Ftyp = FtypBox.Create(32, null);
 				Ftyp.CompatibleBrands.Clear();

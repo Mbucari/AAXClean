@@ -92,9 +92,7 @@ namespace AAXClean.FrameFilters.Audio
 			if (mdatSize > uint.MaxValue)
 				OutputFile.WriteInt64BE(mdatSize);
 
-
 			OutputFile.Position = mdatEnd;
-
 
 			Stsc.Samples.Add(new StscBox.StscChunkEntry(CurrentChunk, SamplesPerChunk, 1));
 
@@ -113,14 +111,24 @@ namespace AAXClean.FrameFilters.Audio
 			Moov.Mvhd.Duration = Moov.AudioTrack.Mdia.Mdhd.Duration * Moov.Mvhd.Timescale / Moov.AudioTrack.Mdia.Mdhd.Timescale;
 			Moov.AudioTrack.Tkhd.Duration = Moov.Mvhd.Duration;
 
-			uint maxBitRate = (uint)Stsz.SampleSizes.Max() * 8u * Moov.AudioTrack.Mdia.Mdhd.Timescale;
+			uint maxBitRate = (uint)Stsz.SampleSizes.Max() * 8u * Moov.AudioTrack.Mdia.Mdhd.Timescale / 1024;
 
-			long audioBits = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => (long)s) * 8;
-			double duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
-			uint avgBitrate = (uint)(audioBits * Moov.AudioTrack.Mdia.Mdhd.Timescale / duration);
+			(_, uint avgBitrate) = CalculateAudioSizeAndBitrate(Moov.AudioTrack.Mdia.Mdhd.Timescale);
 
 			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate = maxBitRate;
 			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
+
+			var btrt = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.GetChild<BtrtBox>();
+
+			if (btrt is not null)
+			{
+				btrt.MaxBitrate = maxBitRate;
+				btrt.AvgBitrate = avgBitrate;
+			}
+			else
+			{
+				BtrtBox.Create(0, maxBitRate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
+			}
 
 			if (Moov.TextTrack is not null)
 			{
@@ -130,6 +138,16 @@ namespace AAXClean.FrameFilters.Audio
 
 			Moov.Save(OutputFile);
 			Closed = true;
+
+			(long audioSize, uint avgBitrate) CalculateAudioSizeAndBitrate(uint timeScale)
+			{
+				//Calculate the actual average bitrate because aaxc file is wrong.
+				long audioBits = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => (long)s) * 8;
+				double duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
+				uint avgBitrate = (uint)(audioBits * timeScale / duration);
+
+				return (audioBits / 8, avgBitrate);
+			}
 		}
 
 		public void WriteChapters(ChapterInfo chapters)

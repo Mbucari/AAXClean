@@ -7,8 +7,8 @@ namespace Mpeg4Lib.Boxes
 	{
 		public override long RenderSize => base.RenderSize + 12;
 		public uint BufferSizeDB { get; }
-		public uint MaxBitrate { get; }
-		public uint AvgBitrate { get; }
+		public uint MaxBitrate { get; set; }
+		public uint AvgBitrate { get; set; }
 
 		public BtrtBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
 		{
