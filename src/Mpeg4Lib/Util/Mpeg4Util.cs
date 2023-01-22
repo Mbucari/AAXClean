@@ -20,7 +20,11 @@ namespace Mpeg4Lib.Util
 				)
 			)
 			{
-				boxes.Add(BoxFactory.CreateBox(file, null));
+				var box = BoxFactory.CreateBox(file, null);
+				boxes.Add(box);
+
+				if (box is MdatBox && !boxes.OfType<MoovBox>().Any())
+					file.Position = box.Header.FilePosition + box.Header.TotalBoxSize;
 			}
 			return boxes;
 		}

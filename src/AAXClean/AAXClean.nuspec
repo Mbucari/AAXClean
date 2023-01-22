@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<metadata>
 		<id>AAXClean</id>
-		<version>0.5.4</version>
+		<version>0.5.5</version>
 		<description>Decrypts Audible aax and aaxc files to mp4.</description>
 		<authors>MrGneissGuy</authors>
 		<repository type="git" url="https://github.com/Mbucari/AAXClean.git" branch="master" />
@@ -14,7 +14,7 @@
 	</metadata>
 	<dependencies>
 		<group targetFramework="net6.0">
-			<dependency id="Mpeg4Lib" version="0.1.4" />
+			<dependency id="Mpeg4Lib" version="0.1.5" />
 		</group>
 	</dependencies>
 	<files>
