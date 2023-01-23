@@ -216,6 +216,7 @@ namespace AAXClean.Test
 #if DEBUG
 				var hs = new System.Text.StringBuilder();
 
+				hs.AppendLine();
 				foreach (var h in hashes)
 				{
 					hs.AppendLine($"\"{h}\",");
@@ -292,7 +293,7 @@ namespace AAXClean.Test
 				convertTask.Start();
 
 				await Task.Delay(500);
-				convertTask.Cancel();
+				await convertTask.CancelAsync();
 
 				await convertTask;
 				Assert.IsTrue(convertTask.IsCanceled);
@@ -324,7 +325,7 @@ namespace AAXClean.Test
 				var convertTask = aaxFile.ConvertToMultiMp4aAsync(Chapters, NewSplit);
 				convertTask.Start();
 				await Task.Delay(500);
-				convertTask.Cancel();
+				await convertTask.CancelAsync();
 
 				await convertTask;
 				Assert.IsTrue(convertTask.IsCanceled);

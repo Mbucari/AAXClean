@@ -26,6 +26,8 @@ namespace AAXClean.FrameFilters.Audio
 		private uint SamplesPerChunk = 0;
 		private uint CurrentChunk = 0;
 		private bool Closed;
+		private bool Closing;
+		private object lockObj = new();
 		private static readonly int[] asc_samplerates = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
 
 		public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov)
@@ -70,6 +72,12 @@ namespace AAXClean.FrameFilters.Audio
 
 		public void Close()
 		{
+			lock(lockObj)
+			{
+				if (Closing) return;
+				Closing = true;
+			}
+
 			if (Closed || !OutputFile.CanWrite) return;
 
 			long mdatEnd = OutputFile.Position;
@@ -206,22 +214,27 @@ namespace AAXClean.FrameFilters.Audio
 
 		public void AddFrame(Span<byte> frame, bool newChunk)
 		{
-			if (newChunk)
+			lock (lockObj)
 			{
-				AudioChunks.Add(new ChunkOffsetEntry { EntryIndex = CurrentChunk, ChunkOffset = OutputFile.Position });
+				if (Closing) return;
 
-				if (SamplesPerChunk > 0 && SamplesPerChunk != LastSamplesPerChunk)
+				if (newChunk)
 				{
-					Stsc.Samples.Add(new StscBox.StscChunkEntry(CurrentChunk, SamplesPerChunk, 1));
+					AudioChunks.Add(new ChunkOffsetEntry { EntryIndex = CurrentChunk, ChunkOffset = OutputFile.Position });
 
-					LastSamplesPerChunk = SamplesPerChunk;
+					if (SamplesPerChunk > 0 && SamplesPerChunk != LastSamplesPerChunk)
+					{
+						Stsc.Samples.Add(new StscBox.StscChunkEntry(CurrentChunk, SamplesPerChunk, 1));
+
+						LastSamplesPerChunk = SamplesPerChunk;
+					}
+					SamplesPerChunk = 0;
+					CurrentChunk++;
 				}
-				SamplesPerChunk = 0;
-				CurrentChunk++;
-			}
 
-			Stsz.SampleSizes.Add(frame.Length);
-			SamplesPerChunk++;
+				Stsz.SampleSizes.Add(frame.Length);
+				SamplesPerChunk++;
+			}
 
 			OutputFile.Write(frame);
 		}
