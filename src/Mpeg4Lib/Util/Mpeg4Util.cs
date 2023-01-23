@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Mpeg4Lib.Util
 {
@@ -23,12 +24,13 @@ namespace Mpeg4Lib.Util
 				var box = BoxFactory.CreateBox(file, null);
 				boxes.Add(box);
 
+				//Moov is after Mdat, so we have to seek to get it.
 				if (box is MdatBox && !boxes.OfType<MoovBox>().Any())
 					file.Position = box.Header.FilePosition + box.Header.TotalBoxSize;
 			}
 			return boxes;
 		}
-		public static void RelocateMoovToBeginning(string mp4FilePath)
+		public static async Task RelocateMoovToBeginning(string mp4FilePath)
 		{
 			List<Box> boxes;
 
@@ -62,9 +64,9 @@ namespace Mpeg4Lib.Util
 
 				do
 				{
-					read = fileStream.Read(buffer2);
+					read = await fileStream.ReadAsync(buffer2);
 					fileStream.Position -= read;
-					fileStream.Write(buffer1, 0, read);
+					await fileStream.WriteAsync(buffer1, 0, read);
 
 					(buffer1, buffer2) = (buffer2, buffer1);
 				}

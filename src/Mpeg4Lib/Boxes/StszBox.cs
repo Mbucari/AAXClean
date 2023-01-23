@@ -84,19 +84,10 @@ namespace Mpeg4Lib.Boxes
 			}
 		}
 
-		private bool _disposed = false;
 		protected override void Dispose(bool disposing)
 		{
-			if (_disposed)
-				return;
-
-			if (disposing)
-			{
+			if (disposing && !Disposed)
 				SampleSizes.Clear();
-			}
-
-			_disposed = true;
-
 			base.Dispose(disposing);
 		}
 	}

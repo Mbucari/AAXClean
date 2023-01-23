@@ -5,18 +5,22 @@ using System.Linq;
 
 namespace Mpeg4Lib.Boxes
 {
-	public class Co64Box : FullBox
+	public class Co64Box : FullBox, IChunkOffsets
 	{
 		public override long RenderSize => base.RenderSize + 4 + ChunkOffsets.Count * 8;
 		public uint EntryCount { get; set; }
-		public List<ChunkOffsetEntry> ChunkOffsets { get; } = new List<ChunkOffsetEntry>();
+		public List<ChunkOffsetEntry> ChunkOffsets { get; private init; } = new List<ChunkOffsetEntry>();
 
-		public static Co64Box CreateBlank(Box parent)
+		public static Co64Box CreateBlank(Box parent, List<ChunkOffsetEntry> chunkOffsets)
 		{
 			int size = 4 + 12 /* empty Box size*/;
 			BoxHeader header = new BoxHeader((uint)size, "co64");
 
-			Co64Box co64Box = new Co64Box(new byte[] { 0, 0, 0, 0 }, header, parent);
+			Co64Box co64Box = new Co64Box(new byte[] { 0, 0, 0, 0 }, header, parent)
+			{
+				ChunkOffsets = chunkOffsets,
+				EntryCount = (uint)chunkOffsets.Count
+			};
 
 			parent.Children.Add(co64Box);
 			return co64Box;
@@ -51,19 +55,11 @@ namespace Mpeg4Lib.Boxes
 				file.WriteInt64BE(chunkOffset.ChunkOffset);
 			}
 		}
-		private bool _disposed = false;
+
 		protected override void Dispose(bool disposing)
 		{
-			if (_disposed)
-				return;
-
-			if (disposing)
-			{
+			if (disposing && !Disposed)
 				ChunkOffsets.Clear();
-			}
-
-			_disposed = true;
-
 			base.Dispose(disposing);
 		}
 	}

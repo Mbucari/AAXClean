@@ -5,18 +5,22 @@ using System.Linq;
 
 namespace Mpeg4Lib.Boxes
 {
-	public class StcoBox : FullBox
+	public class StcoBox : FullBox, IChunkOffsets
 	{
 		public override long RenderSize => base.RenderSize + 4 + ChunkOffsets.Count * 4;
 		public uint EntryCount { get; set; }
-		public List<ChunkOffsetEntry> ChunkOffsets { get; } = new List<ChunkOffsetEntry>();
+		public List<ChunkOffsetEntry> ChunkOffsets { get; private init; } = new List<ChunkOffsetEntry>();
 
-		public static StcoBox CreateBlank(Box parent)
+		public static StcoBox CreateBlank(Box parent, List<ChunkOffsetEntry> chunkOffsets)
 		{
 			int size = 4 + 12 /* empty Box size*/;
 			BoxHeader header = new BoxHeader((uint)size, "stco");
 
-			StcoBox stcoBox = new StcoBox(new byte[] { 0, 0, 0, 0 }, header, parent);
+			StcoBox stcoBox = new StcoBox(new byte[] { 0, 0, 0, 0 }, header, parent)
+			{
+				ChunkOffsets = chunkOffsets,
+				EntryCount = (uint)chunkOffsets.Count
+			};
 
 			parent.Children.Add(stcoBox);
 			return stcoBox;
@@ -60,19 +64,11 @@ namespace Mpeg4Lib.Boxes
 				file.WriteUInt32BE((uint)chunkOffset.ChunkOffset);
 			}
 		}
-		private bool _disposed = false;
+
 		protected override void Dispose(bool disposing)
 		{
-			if (_disposed)
-				return;
-
-			if (disposing)
-			{
+			if (disposing & !Disposed)
 				ChunkOffsets.Clear();
-			}
-
-			_disposed = true;
-
 			base.Dispose(disposing);
 		}
 	}

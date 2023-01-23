@@ -88,7 +88,7 @@ namespace AAXClean
 		/// <summary>
 		/// Save all metadata changes to the input stream. Stream must be readable, writable, and seekable.
 		/// </summary>
-		public void Save()
+		public async Task SaveAsync()
 		{
 			if (!InputStream.CanRead ||!InputStream.CanWrite || !InputStream.CanSeek)
 				throw new InvalidOperationException($"{nameof(InputStream)} must be readable, writable and seekable to save");
@@ -123,7 +123,7 @@ namespace AAXClean
 				//Moov is at the beginning and it either grew or it shrank less than FreeBox.MinSize
 				//Shift Mdat by sizeChange to fit the new Moov exactly.
 
-				Mdat.ShiftMdat(InputStream, sizeChange);
+				await Mdat.ShiftMdatAsync(InputStream, sizeChange);
 				InputStream.SetLength(InputStream.Position);
 
 				InputStream.Position = Moov.Header.FilePosition;
@@ -218,7 +218,7 @@ namespace AAXClean
 				?.GetChild<MetaBox>()
 				?.GetChild<AppleListBox>()
 				?.Children
-				?.Cast<AppleTagBox>()
+				?.OfType<AppleTagBox>()
 				?.Where(b => b.Header.Type == "©nam")
 				?.Select(b => Encoding.UTF8.GetString(b.Data.Data))
 				?.ToList();

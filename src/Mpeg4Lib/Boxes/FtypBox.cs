@@ -38,19 +38,10 @@ namespace Mpeg4Lib.Boxes
 				file.WriteType(brand);
 		}
 
-		private bool _disposed = false;
 		protected override void Dispose(bool disposing)
 		{
-			if (_disposed)
-				return;
-
-			if (disposing)
-			{
+			if (disposing && !Disposed)
 				CompatibleBrands.Clear();
-			}
-
-			_disposed = true;
-
 			base.Dispose(disposing);
 		}
 	}

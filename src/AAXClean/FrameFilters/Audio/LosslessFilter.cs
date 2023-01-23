@@ -18,7 +18,7 @@ namespace AAXClean.FrameFilters.Audio
 		public LosslessFilter(Stream outputStream, Mp4File mp4Audio)
 		{
 			long audioSize = mp4Audio.Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => (long)s);
-			Mp4writer = new Mp4aWriter(outputStream, mp4Audio.Ftyp, mp4Audio.Moov, audioSize > uint.MaxValue);
+			Mp4writer = new Mp4aWriter(outputStream, mp4Audio.Ftyp, mp4Audio.Moov);
 		}
 		public void SetChapterDelegate(Func<ChapterInfo> getChapterDelegate)
 		{

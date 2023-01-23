@@ -33,7 +33,7 @@ namespace Mpeg4Lib.Boxes
 
 		public IEnumerable<T> GetChildren<T>() where T : Box
 		{
-			return Children.Where(c => c is T).Cast<T>();
+			return Children.OfType<T>();
 		}
 
 		protected void LoadChildren(Stream file)
@@ -74,7 +74,7 @@ namespace Mpeg4Lib.Boxes
 			}
 		}
 
-		private bool _disposed = false;
+		protected bool Disposed = false;
 		public void Dispose()
 		{
 			Dispose(true);
@@ -82,7 +82,7 @@ namespace Mpeg4Lib.Boxes
 		}
 		protected virtual void Dispose(bool disposing)
 		{
-			if (disposing && !_disposed)
+			if (disposing && !Disposed)
 			{
 				foreach (Box child in Children)
 					child?.Dispose();
@@ -90,7 +90,7 @@ namespace Mpeg4Lib.Boxes
 				Children.Clear();
 			}
 
-			_disposed = true;
+			Disposed = true;
 		}
 	}
 }

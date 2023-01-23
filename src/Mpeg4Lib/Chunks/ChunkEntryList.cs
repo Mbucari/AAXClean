@@ -23,17 +23,8 @@ namespace Mpeg4Lib.Chunks
 		{
 			Track = track;
 			Stsz = Track.Mdia.Minf.Stbl.Stsz;
-
-			if (Track.Mdia.Minf.Stbl.Stco is not null)
-			{
-				ChunkTable = Track.Mdia.Minf.Stbl.Stco.ChunkOffsets;
-				EntryCount = (int)Track.Mdia.Minf.Stbl.Stco.EntryCount;
-			}
-			else
-			{
-				ChunkTable = Track.Mdia.Minf.Stbl.Co64.ChunkOffsets;
-				EntryCount = (int)Track.Mdia.Minf.Stbl.Co64.EntryCount;
-			}
+			ChunkTable = Track.Mdia.Minf.Stbl.COBox.ChunkOffsets;
+			EntryCount = (int)Track.Mdia.Minf.Stbl.COBox.EntryCount;
 
 			ChunkFrameTable = Track.Mdia.Minf.Stbl.Stsc.CalculateChunkFrameTable(EntryCount);
 		}

@@ -25,12 +25,7 @@ namespace Mpeg4Lib.Boxes
 		{
 			foreach (var track in Tracks)
 			{
-				var chunkOffsetEntries
-					= track.Mdia.Minf.Stbl.Stco is not null
-					? track.Mdia.Minf.Stbl.Stco.ChunkOffsets
-					: track.Mdia.Minf.Stbl.Co64.ChunkOffsets;
-
-				foreach (var co in chunkOffsetEntries)
+				foreach (var co in track.Mdia.Minf.Stbl.COBox.ChunkOffsets)
 					co.ChunkOffset += shiftVector;
 			}
 		}
