@@ -30,7 +30,7 @@ namespace Mpeg4Lib.Util
 			}
 			return boxes;
 		}
-		public static async Task RelocateMoovToBeginning(string mp4FilePath)
+		public static async Task RelocateMoovToBeginningAsync(string mp4FilePath)
 		{
 			List<Box> boxes;
 

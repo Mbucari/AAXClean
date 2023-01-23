@@ -40,7 +40,11 @@ namespace AAXClean
 		}
 
 		/// <summary>Cancel the operation</summary>
-		public void Cancel() => _cancellationSource.Cancel();
+		public Task CancelAsync()
+		{
+			_cancellationSource.Cancel();
+			return Continuation is null ? Task.CompletedTask : Continuation;
+		}
 
 		/// <summary>Start the Mp4 operation</summary>
 		public void Start()
