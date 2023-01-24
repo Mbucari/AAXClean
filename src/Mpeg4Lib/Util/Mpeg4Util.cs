@@ -32,6 +32,7 @@ namespace Mpeg4Lib.Util
 			}
 			return boxes;
 		}
+
 		public static async Task RelocateMoovToBeginningAsync(string mp4FilePath, CancellationToken cancellationToken, Action<TimeSpan, TimeSpan, double> progress)
 		{
 			List<Box> boxes;
@@ -76,15 +77,14 @@ namespace Mpeg4Lib.Util
 				{
 					if (cancellationToken.IsCancellationRequested) return;
 
-					read = await fileStream.ReadAsync(buffer2);
+					read = await fileStream.ReadAsync(buffer2, cancellationToken);
 					fileStream.Position -= read;
-					await fileStream.WriteAsync(buffer1, 0, read);
+					await fileStream.WriteAsync(buffer1, 0, read, cancellationToken);
 
 					movedMB += read;
 					if (DateTime.Now > nextUpdate)
 					{
 						var position = TimeSpan.FromSeconds(secondsPerMb * movedMB);
-						var ellapsed = DateTime.Now - startTime;
 						double speed = position / (DateTime.Now - startTime);
 
 						progress(totalDuration, position, speed);
@@ -96,7 +96,8 @@ namespace Mpeg4Lib.Util
 				}
 				while (read == moovSize);
 
-				progress(totalDuration, totalDuration, totalDuration / (DateTime.Now - startTime));
+				var finalPosition = TimeSpan.FromSeconds(secondsPerMb * movedMB);
+				progress(totalDuration, finalPosition, finalPosition / (DateTime.Now - startTime));
 			}
 			finally
 			{

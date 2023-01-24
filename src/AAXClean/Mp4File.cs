@@ -146,7 +146,6 @@ namespace AAXClean
 			}
 		}
 
-
 		public Mp4Operation ConvertToMp4aAsync(Stream outputStream, ChapterInfo userChapters = null, bool trimOutputToChapters = false)
 		{
 			FrameTransformBase<FrameEntry, FrameEntry> f1 = GetAudioFrameFilter();
