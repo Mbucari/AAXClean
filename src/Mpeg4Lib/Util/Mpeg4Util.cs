@@ -1,7 +1,9 @@
 ﻿using Mpeg4Lib.Boxes;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Mpeg4Lib.Util
@@ -30,7 +32,7 @@ namespace Mpeg4Lib.Util
 			}
 			return boxes;
 		}
-		public static async Task RelocateMoovToBeginningAsync(string mp4FilePath)
+		public static async Task RelocateMoovToBeginningAsync(string mp4FilePath, CancellationToken cancellationToken, Action<TimeSpan, TimeSpan, double> progress)
 		{
 			List<Box> boxes;
 
@@ -45,6 +47,12 @@ namespace Mpeg4Lib.Util
 				if (Moov.Header.FilePosition == ftypeSize) return;
 
 				long moovSize = Moov.RenderSize;
+				double duration = (double)Moov.AudioTrack.Mdia.Mdhd.Duration / Moov.AudioTrack.Mdia.Mdhd.Timescale;
+				long mdatSize = boxes.OfType<MdatBox>().Single().Header.TotalBoxSize;
+				TimeSpan totalDuration = TimeSpan.FromSeconds(duration);
+
+				double secondsPerMb = duration / mdatSize;
+				long movedMB = -moovSize;
 
 				Moov.ShiftChunkOffsets(moovSize);
 
@@ -61,16 +69,34 @@ namespace Mpeg4Lib.Util
 				};
 
 				int read;
+				DateTime startTime = DateTime.Now;
+				DateTime nextUpdate = startTime;
 
 				do
 				{
+					if (cancellationToken.IsCancellationRequested) return;
+
 					read = await fileStream.ReadAsync(buffer2);
 					fileStream.Position -= read;
 					await fileStream.WriteAsync(buffer1, 0, read);
 
+					movedMB += read;
+					if (DateTime.Now > nextUpdate)
+					{
+						var position = TimeSpan.FromSeconds(secondsPerMb * movedMB);
+						var ellapsed = DateTime.Now - startTime;
+						double speed = position / (DateTime.Now - startTime);
+
+						progress(totalDuration, position, speed);
+
+						nextUpdate = DateTime.Now.AddMilliseconds(200);
+					}
+
 					(buffer1, buffer2) = (buffer2, buffer1);
 				}
 				while (read == moovSize);
+
+				progress(totalDuration, totalDuration, totalDuration / (DateTime.Now - startTime));
 			}
 			finally
 			{

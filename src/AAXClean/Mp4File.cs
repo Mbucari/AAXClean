@@ -134,6 +134,19 @@ namespace AAXClean
 			InputStream.Close();
 		}
 
+		public static Mp4Operation RelocateMoovAsync(string mp4FilePath)
+		{
+			Mp4Operation moovMover = null;
+			moovMover = new Mp4Operation(t => Mpeg4Util.RelocateMoovToBeginningAsync(mp4FilePath, t.Token, progressAction), null,t => { } );
+			return moovMover;
+
+			void progressAction(TimeSpan totalDuration, TimeSpan processPosition, double processSpeed)
+			{
+				moovMover.OnProggressUpdate(new ConversionProgressEventArgs(totalDuration, processPosition, processSpeed));
+			}
+		}
+
+
 		public Mp4Operation ConvertToMp4aAsync(Stream outputStream, ChapterInfo userChapters = null, bool trimOutputToChapters = false)
 		{
 			FrameTransformBase<FrameEntry, FrameEntry> f1 = GetAudioFrameFilter();
