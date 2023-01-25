@@ -28,11 +28,11 @@ aaxFile.SetDecryptionKey(activation_bytes);
 ### Edit Metadata Tags:
 ```C#
 aaxFile.AppleTags.Generes = "Adventure"
-aaxFile.Save();
+await aaxFile.SaveAsync();
 ```
 ### Relocate the moov atom to the beginning of an mp4 file:
 ```C#
-Mpeg4Util.RelocateMoovToBeginning(@"C:\audiobook.m4b");
+await Mp4File.RelocateMoovAsync(@"C:\audiobook.m4b");
 ```
 ### Output:
 ```C#
@@ -53,7 +53,7 @@ private static void NewSplit(NewSplitCallback newSplitCallback)
 }
 ```
 ## Mp4Operation
-All `ConvertTo___Async()` methods return an `Mp4Operation`. `Mp4Operation` contains the conversion task that's created in a suspended state. The `Mp4Operation` can be started by calling `Start()` or by awaiting it, and it can be cancelled by calling `Cancel()`. If you run the task by calling `Start()`, you may access the running task at `Mp4Operation.OperationTask` The `Mp4Operation` also contains the operation's progress and has an event you may subscribe to for progress updates.
+All `ConvertTo___Async()` methods return an `Mp4Operation`. `Mp4Operation` contains the conversion task that's created in a suspended state. The `Mp4Operation` can be started by calling `Start()` or by awaiting it, and it can be cancelled by calling `CancelAsync()`. If you run the task by calling `Start()`, you may access the running task at `Mp4Operation.OperationTask` The `Mp4Operation` also contains the operation's progress and has an event you may subscribe to for progress updates.
 
 ## Successive Convert operations
 `Mp4File` is opened with a `Stream`, and it reads from this input stream when converting or running `GetChapterInfoAsync()`. If the `Stream` is seekable, multiple conversion operations may be performed on the same `Mp4File` instance. If the `Stream` is not seekable, each new operation must be run on a new instance with the `Stream.Position = 0`.
