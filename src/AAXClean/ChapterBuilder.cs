@@ -5,17 +5,16 @@ namespace AAXClean
 {
 	internal class ChapterBuilder : IDisposable
 	{
-		public double TimeScale { get; }
-		private bool disposed = false;
-		private readonly List<(uint chunkIndex, string title, long frameDelta)> Chapters = new();
+		public readonly double timeScale;
+		private readonly List<(uint chunkIndex, string title, long frameDelta)> chapters = new();
 		public ChapterBuilder(double timeScale)
 		{
-			TimeScale = timeScale;
+			this.timeScale = timeScale;
 		}
 
 		public void AddChapter(uint chunkIndex, string title, int frameDelta)
 		{
-			Chapters.Add((chunkIndex, title, frameDelta));
+			chapters.Add((chunkIndex, title, frameDelta));
 		}
 
 		/// <summary>
@@ -32,7 +31,7 @@ namespace AAXClean
 			//Create ChapterInfo by calculating each chapter's duration.
 			foreach ((string title, long frameEnd) in list)
 			{
-				cInfo.AddChapter(title, TimeSpan.FromSeconds((frameEnd - last) / TimeScale));
+				cInfo.AddChapter(title, TimeSpan.FromSeconds((frameEnd - last) / timeScale));
 				last = frameEnd;
 			}
 
@@ -43,13 +42,13 @@ namespace AAXClean
 		{
 			checked
 			{
-				Chapters.Sort((c1, c2) => c1.chunkIndex.CompareTo(c2.chunkIndex));
+				chapters.Sort((c1, c2) => c1.chunkIndex.CompareTo(c2.chunkIndex));
 				List<(string title, long chapterEndFrame)> list = new();
 
 				long last = 0;
 
 				//Calculate the frame position of the chapter's end.
-				foreach ((uint chunkIndex, string title, long frameDelta) in Chapters)
+				foreach ((uint chunkIndex, string title, long frameDelta) in chapters)
 				{
 					//If the frame delta is negative, assume the duration is 1 frame. This is what ffmpeg does.
 					long endFrame = last + (frameDelta < 0 ? 1 : frameDelta);
@@ -63,22 +62,28 @@ namespace AAXClean
 			}
 		}
 
+		#region IDisposable
+		private bool disposed = false;
 		public void Dispose()
 		{
-			Dispose(true);
+			Dispose(disposing: true);
 			GC.SuppressFinalize(this);
 		}
+
+		~ChapterBuilder()
+		{
+			Dispose(disposing: false);
+		}
+
 		private void Dispose(bool disposing)
 		{
-			if (!disposed)
+			if (disposing && !disposed)
 			{
-				if (disposing)
-				{
-					Chapters.Clear();
-				}
-
-				disposed = true;
+				chapters.Clear();
 			}
+
+			disposed = true;
 		}
+		#endregion
 	}
 }

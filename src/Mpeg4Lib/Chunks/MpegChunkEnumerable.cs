@@ -52,19 +52,7 @@ namespace Mpeg4Lib.Chunks
 			}
 			public TrackChunk Current { get; private set; }
 
-			object IEnumerator.Current => Current;
-
-			public void Dispose()
-			{
-				for (int i = 0; i < Tracks.Length; i++)
-				{
-					Tracks[i].ChunkEnumerator.Dispose();
-					//Do not dispose of Tracks[i].Handler or Tracks[i].ChunkEntryList.
-					//They are still used after the MpegChunkEnumerator disposes
-				}
-
-				GC.SuppressFinalize(this);
-			}
+			object IEnumerator.Current => Current;			
 
 			public bool MoveNext()
 			{
@@ -108,6 +96,34 @@ namespace Mpeg4Lib.Chunks
 				for (int i = 0; i < Tracks.Length; i++)
 					Tracks[i].ChunkEnumerator.Reset();
 			}
+
+			#region IDisposable
+			private bool disposed = false;
+			public void Dispose()
+			{
+				Dispose(disposing: true);
+				GC.SuppressFinalize(this);
+			}
+
+			~MpegChunkEnumerator()
+			{
+				Dispose(disposing: false);
+			}
+
+			private void Dispose(bool disposing)
+			{
+				if (disposing && !disposed)
+				{
+					for (int i = 0; i < Tracks.Length; i++)
+					{
+						Tracks[i].ChunkEnumerator.Dispose();
+						//Do not dispose of Tracks[i].Handler or Tracks[i].ChunkEntryList.
+						//They are still used after the MpegChunkEnumerator disposes
+					}
+				}
+				disposed = true;
+			}
+			#endregion
 		}
 		private class TrackEnum
 		{

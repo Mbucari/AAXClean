@@ -6,14 +6,17 @@ namespace AAXClean.FrameFilters
 	public abstract class FrameTransformBase<TInput, TOutput> : FrameFilterBase<TInput>
 	{
 		private FrameFilterBase<TOutput> Linked;
+
 		public override void SetCancellationToken(CancellationToken cancellationToken)
 		{
 			base.SetCancellationToken(cancellationToken);
 			Linked.SetCancellationToken(cancellationToken);
 		}
+
 		public void LinkTo(FrameFilterBase<TOutput> nextFilter) => Linked = nextFilter;
 		protected abstract TOutput PerformFiltering(TInput input);
 		protected virtual TOutput PerformFinalFiltering() => default;
+
 		protected sealed override async Task FlushAsync()
 		{
 			TOutput filteredData = PerformFinalFiltering();

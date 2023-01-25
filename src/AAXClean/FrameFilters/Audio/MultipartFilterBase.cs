@@ -11,11 +11,11 @@ namespace AAXClean.FrameFilters.Audio
 		protected readonly bool InputStereo;
 		protected readonly SampleRate InputSampleRate;
 
-		private readonly IEnumerator<Chapter> SplitChapters;
-		private uint StartSample;
-		private long EndSample = -1;
-		private long LastChunkIndex = -1;
-		private long CurrentSample = 0;
+		private readonly IEnumerator<Chapter> splitChapters;
+		private uint startSample;
+		private long endSample = -1;
+		private long lastChunkIndex = -1;
+		private long currentSample = 0;
 
 		public MultipartFilterBase(ChapterInfo splitChapters, SampleRate inputSampleRate, bool inputStereo)
 		{
@@ -24,7 +24,7 @@ namespace AAXClean.FrameFilters.Audio
 
 			InputSampleRate = inputSampleRate;
 			InputStereo = inputStereo;
-			SplitChapters = splitChapters.GetEnumerator();
+			this.splitChapters = splitChapters.GetEnumerator();
 		}
 
 		protected abstract void CloseCurrentWriter();
@@ -36,6 +36,7 @@ namespace AAXClean.FrameFilters.Audio
 			CloseCurrentWriter();
 			return Task.CompletedTask;
 		}
+
 		protected override Task PerformFilteringAsync(TInput input)
 		{
 			if (input.Chunk is null)
@@ -43,47 +44,47 @@ namespace AAXClean.FrameFilters.Audio
 				//This is the final flushed entry
 				WriteFrameToFile(input, false);
 			}
-			else if (CurrentSample > EndSample)
+			else if (currentSample > endSample)
 			{
 				CloseCurrentWriter();
 
 				if (GetNextChapter())
 				{
-					TCallback callback = new() { Chapter = SplitChapters.Current };
+					TCallback callback = new() { Chapter = splitChapters.Current };
 					CreateNewWriter(callback);
 					WriteFrameToFile(input, true);
-					LastChunkIndex = input.Chunk.ChunkIndex;
+					lastChunkIndex = input.Chunk.ChunkIndex;
 				}
 			}
-			else if (CurrentSample >= StartSample)
+			else if (currentSample >= startSample)
 			{
-				bool newChunk = input.Chunk.ChunkIndex > LastChunkIndex;
+				bool newChunk = input.Chunk.ChunkIndex > lastChunkIndex;
 				if (newChunk)
 				{
-					LastChunkIndex = input.Chunk.ChunkIndex;
+					lastChunkIndex = input.Chunk.ChunkIndex;
 				}
 				WriteFrameToFile(input, newChunk);
 			}
-			CurrentSample += input.SamplesInFrame;
+			currentSample += input.SamplesInFrame;
 
 			return Task.CompletedTask;
 		}
 
 		private bool GetNextChapter()
 		{
-			if (!SplitChapters.MoveNext())
+			if (!splitChapters.MoveNext())
 				return false;
 
-			StartSample = (uint)Math.Round(SplitChapters.Current.StartOffset.TotalSeconds * (int)InputSampleRate);
+			startSample = (uint)Math.Round(splitChapters.Current.StartOffset.TotalSeconds * (int)InputSampleRate);
 			//Depending on time precision, the final EndFrame may be less than the last audio frame in the source file
-			EndSample = (uint)Math.Round(SplitChapters.Current.EndOffset.TotalSeconds * (int)InputSampleRate);
+			endSample = (uint)Math.Round(splitChapters.Current.EndOffset.TotalSeconds * (int)InputSampleRate);
 			return true;
 		}
 
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing && !Disposed)
-				SplitChapters?.Dispose();
+				splitChapters?.Dispose();
 			base.Dispose(disposing);
 		}
 	}

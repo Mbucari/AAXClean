@@ -5,20 +5,22 @@ namespace AAXClean.FrameFilters.Audio
 {
 	internal sealed class LosslessMultipartFilter : MultipartFilterBase<FrameEntry, NewSplitCallback>
 	{
-		private Action<NewSplitCallback> NewFileCallback { get; }
-
-		private readonly FtypBox Ftyp;
-		private readonly MoovBox Moov;
-		private Mp4aWriter Mp4writer;
-		protected override int InputBufferSize => 1000;
 		public bool CurrentWriterOpen { get; private set; }
+		protected override int InputBufferSize => 1000;
+
+		private Mp4aWriter Mp4writer;
+		private readonly FtypBox ftyp;
+		private readonly MoovBox moov;
+		private readonly Action<NewSplitCallback> newFileCallback;
+
 		public LosslessMultipartFilter(ChapterInfo splitChapters, FtypBox ftyp, MoovBox moov, Action<NewSplitCallback> newFileCallback)
 			: base(splitChapters, (SampleRate)moov.AudioTrack.Mdia.Mdhd.Timescale, moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.ChannelCount == 2)
 		{
-			NewFileCallback = newFileCallback;
-			Ftyp = ftyp;
-			Moov = moov;
+			this.ftyp = ftyp;
+			this.moov = moov;
+			this.newFileCallback = newFileCallback;
 		}
+
 		protected override void CloseCurrentWriter()
 		{
 			if (!CurrentWriterOpen) return;
@@ -35,10 +37,10 @@ namespace AAXClean.FrameFilters.Audio
 
 		protected override void CreateNewWriter(NewSplitCallback callback)
 		{
-			NewFileCallback(callback);
+			newFileCallback(callback);
 			CurrentWriterOpen = true;
 
-			Mp4writer = new Mp4aWriter(callback.OutputFile, Ftyp, Moov);
+			Mp4writer = new Mp4aWriter(callback.OutputFile, ftyp, moov);
 			Mp4writer.RemoveTextTrack();
 
 			if (Mp4writer.Moov.ILst is not null)

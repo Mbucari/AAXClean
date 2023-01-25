@@ -51,17 +51,6 @@ namespace AAXClean
 			return totalRead;
 		}
 
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing)
-				BaseStream.Dispose();
-
-			base.Dispose(disposing);
-		}
-
-		public override void Close()
-			=> BaseStream.Close();
-
 		public override long Seek(long offset, SeekOrigin origin)
 		{
 			if (!CanSeek)
@@ -75,5 +64,13 @@ namespace AAXClean
 
 		public override void Write(byte[] buffer, int offset, int count)
 			=> BaseStream.Write(buffer, offset, count);
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+				BaseStream.Dispose();
+
+			base.Dispose(disposing);
+		}
 	}
 }

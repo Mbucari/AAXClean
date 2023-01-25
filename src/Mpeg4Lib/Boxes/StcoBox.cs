@@ -26,6 +26,7 @@ namespace Mpeg4Lib.Boxes
 			return stcoBox;
 		}
 		private StcoBox(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent) { }
+
 		public StcoBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
 		{
 			EntryCount = file.ReadUInt32BE();
@@ -53,6 +54,7 @@ namespace Mpeg4Lib.Boxes
 			//Load ChunkOffsets sorted by the offset
 			ChunkOffsets.Sort((c1, c2) => c1.ChunkOffset.CompareTo(c2.ChunkOffset));
 		}
+
 		protected override void Render(Stream file)
 		{
 			base.Render(file);

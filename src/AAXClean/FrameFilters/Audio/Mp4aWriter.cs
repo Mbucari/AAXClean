@@ -11,23 +11,23 @@ namespace AAXClean.FrameFilters.Audio
 	{
 		public Stream OutputFile { get; }
 
-		private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
-
-		private readonly long mdatStart;
 		public readonly MoovBox Moov;
-		private readonly SttsBox Stts;
-		private readonly StscBox Stsc;
-		private readonly StszBox Stsz;
-
-		private readonly List<ChunkOffsetEntry> AudioChunks = new();
-		private readonly List<ChunkOffsetEntry> TextChunks = new();
 
 		private long LastSamplesPerChunk = -1;
 		private uint SamplesPerChunk = 0;
 		private uint CurrentChunk = 0;
 		private bool Closed;
 		private bool Closing;
-		private object lockObj = new();
+
+		private readonly long mdatStart;
+		private readonly SttsBox Stts;
+		private readonly StscBox Stsc;
+		private readonly StszBox Stsz;
+		private readonly List<ChunkOffsetEntry> AudioChunks = new();
+		private readonly List<ChunkOffsetEntry> TextChunks = new();
+		private readonly object lockObj = new();
+
+		private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
 		private static readonly int[] asc_samplerates = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
 
 		public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov)
@@ -124,23 +124,25 @@ namespace AAXClean.FrameFilters.Audio
 			Moov.Mvhd.Duration = Moov.AudioTrack.Mdia.Mdhd.Duration * Moov.Mvhd.Timescale / Moov.AudioTrack.Mdia.Mdhd.Timescale;
 			Moov.AudioTrack.Tkhd.Duration = Moov.Mvhd.Duration;
 
-			uint maxBitRate = (uint)Stsz.SampleSizes.Max() * 8u * Moov.AudioTrack.Mdia.Mdhd.Timescale / 1024;
-
-			(_, uint avgBitrate) = CalculateAudioSizeAndBitrate(Moov.AudioTrack.Mdia.Mdhd.Timescale);
+			(uint maxBitRate, uint avgBitrate)
+				= CalculateBitrate(
+					Moov.AudioTrack.Mdia.Mdhd.Timescale,
+					Moov.AudioTrack.Mdia.Mdhd.Duration,
+					Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes);
 
 			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate = maxBitRate;
 			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
 
 			var btrt = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.GetChild<BtrtBox>();
 
-			if (btrt is not null)
+			if (btrt is null)
 			{
-				btrt.MaxBitrate = maxBitRate;
-				btrt.AvgBitrate = avgBitrate;
+				BtrtBox.Create(0, maxBitRate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
 			}
 			else
 			{
-				BtrtBox.Create(0, maxBitRate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
+				btrt.MaxBitrate = maxBitRate;
+				btrt.AvgBitrate = avgBitrate;
 			}
 
 			if (Moov.TextTrack is not null)
@@ -152,14 +154,30 @@ namespace AAXClean.FrameFilters.Audio
 			Moov.Save(OutputFile);
 			Closed = true;
 
-			(long audioSize, uint avgBitrate) CalculateAudioSizeAndBitrate(uint timeScale)
+			static (uint maxOneSecondBitrate, uint avgBitrate) CalculateBitrate(double timeScale, ulong duration, List<int> sampleSizes)
 			{
 				//Calculate the actual average bitrate because aaxc file is wrong.
-				long audioBits = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Sum(s => (long)s) * 8;
-				double duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
+				long audioBits = sampleSizes.Sum(s => (long)s) * 8;
 				uint avgBitrate = (uint)(audioBits * timeScale / duration);
 
-				return (audioBits / 8, avgBitrate);
+				int framesPerSec = (int)Math.Round(timeScale / AAC_TIME_DOMAIN_SAMPLES);
+				int currentMovingSum = sampleSizes.Take(framesPerSec).Sum();
+				int currentMax = currentMovingSum;
+
+				for (int i = framesPerSec; i < sampleSizes.Count; i++)
+				{
+					var lose = sampleSizes[i - framesPerSec];
+					var gain = sampleSizes[i];
+
+					currentMovingSum += gain - lose;
+
+					if (currentMovingSum > currentMax)
+						currentMax = currentMovingSum;
+				}
+
+				double maxOneSecondBitrate = currentMax * timeScale * 8 / framesPerSec / AAC_TIME_DOMAIN_SAMPLES;
+
+				return ((uint)Math.Round(maxOneSecondBitrate), avgBitrate);
 			}
 		}
 
@@ -237,17 +255,7 @@ namespace AAXClean.FrameFilters.Audio
 			}
 
 			OutputFile.Write(frame);
-		}
-
-		public void Dispose()
-		{
-			Close();
-			Stsc?.Samples.Clear();
-			Stsz?.SampleSizes.Clear();
-			AudioChunks.Clear();
-			TextChunks.Clear();
-			GC.SuppressFinalize(this);
-		}
+		}		
 
 		private static MoovBox MakeBlankMoov(MoovBox moov)
 		{
@@ -315,5 +323,31 @@ namespace AAXClean.FrameFilters.Audio
 
 			return newMoov;
 		}
+
+		#region IDisposable
+		private bool disposed = false;
+		public void Dispose()
+		{
+			Dispose(disposing: true);
+			GC.SuppressFinalize(this);
+		}
+
+		~Mp4aWriter()
+		{
+			Dispose(disposing: false);
+		}
+
+		private void Dispose(bool disposing)
+		{
+			if (disposing && !disposed)
+			{
+				Close();
+				Stsc?.Samples.Clear();
+				Stsz?.SampleSizes.Clear();
+				AudioChunks.Clear();
+				TextChunks.Clear();
+			}
+		}
+		#endregion
 	}
 }

@@ -5,7 +5,7 @@ namespace AAXClean.FrameFilters.Audio
 {
 	internal class AavdFilter : AacValidateFilter
 	{
-		private AesCryptoTransform Aes { get; }
+		private readonly AesCryptoTransform aesCryptoTransform;
 
 		public AavdFilter(byte[] key, byte[] iv)
 		{
@@ -14,13 +14,13 @@ namespace AAXClean.FrameFilters.Audio
 			if (iv is null || iv.Length != 16)
 				throw new ArgumentException($"{nameof(iv)} must be 16 bytes long.");
 
-			Aes = new AesCryptoTransform(key, iv);
+			aesCryptoTransform = new AesCryptoTransform(key, iv);
 		}
 		protected override bool ValidateFrame(Span<byte> frame)
 		{
 			if (frame.Length >= 0x10)
 			{
-				Aes.TransformFinal(frame.Slice(0, frame.Length & 0x7ffffff0), frame);
+				aesCryptoTransform.TransformFinal(frame.Slice(0, frame.Length & 0x7ffffff0), frame);
 			}
 
 			return base.ValidateFrame(frame);
@@ -28,7 +28,7 @@ namespace AAXClean.FrameFilters.Audio
 		protected override void Dispose(bool disposing)
 		{
 			if (disposing && !Disposed)
-				Aes.Dispose();
+				aesCryptoTransform.Dispose();
 			base.Dispose(disposing);
 		}
 	}

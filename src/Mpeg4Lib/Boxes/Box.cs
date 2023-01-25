@@ -77,7 +77,7 @@ namespace Mpeg4Lib.Boxes
 		protected bool Disposed = false;
 		public void Dispose()
 		{
-			Dispose(true);
+			Dispose(disposing: true);
 			GC.SuppressFinalize(this);
 		}
 		protected virtual void Dispose(bool disposing)
@@ -91,6 +91,10 @@ namespace Mpeg4Lib.Boxes
 			}
 
 			Disposed = true;
+		}
+		~Box()
+		{
+			Dispose(disposing: false);
 		}
 	}
 }

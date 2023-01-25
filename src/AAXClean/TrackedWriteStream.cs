@@ -37,17 +37,6 @@ namespace AAXClean
 		public override int Read(byte[] buffer, int offset, int count)
 			=> throw new NotImplementedException();
 
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing)
-				BaseStream.Dispose();
-
-			base.Dispose(disposing);
-		}
-
-		public override void Close()
-			=> BaseStream.Close();
-
 		public override long Seek(long offset, SeekOrigin origin)
 		{
 			if (!CanSeek)
@@ -63,6 +52,14 @@ namespace AAXClean
 		{
 			BaseStream.Write(buffer, offset, count);
 			WritePosition += count;
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+				BaseStream.Dispose();
+
+			base.Dispose(disposing);
 		}
 	}
 }
