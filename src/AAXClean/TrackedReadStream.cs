@@ -8,9 +8,9 @@ namespace AAXClean
 	/// </summary>
 	internal class TrackedReadStream : Stream
 	{
+		private long ReadPosition = 0;
 		private readonly Stream BaseStream;
 		private readonly long BaseStreamLength;
-		private long ReadPosition = 0;
 
 		public TrackedReadStream(Stream baseStream, long streamLength)
 		{

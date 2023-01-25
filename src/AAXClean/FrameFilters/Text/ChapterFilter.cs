@@ -6,14 +6,15 @@ namespace AAXClean.FrameFilters.Text
 {
 	public class ChapterFilter : FrameFinalBase<FrameEntry>
 	{
+		protected override int InputBufferSize => 200;
 		protected override Task FlushAsync() => Task.CompletedTask;
 		public ChapterInfo Chapters => Builder.ToChapterInfo();
 		private readonly ChapterBuilder Builder;
+
 		public ChapterFilter(uint timeScale)
 		{
 			Builder = new ChapterBuilder(timeScale);
 		}
-		protected override int InputBufferSize => 200;
 
 		protected override void Dispose(bool disposing)
 		{

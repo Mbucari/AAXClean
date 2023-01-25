@@ -74,12 +74,19 @@ namespace Mpeg4Lib.Boxes
 			}
 		}
 
+		#region IDisposable
 		protected bool Disposed = false;
 		public void Dispose()
 		{
 			Dispose(disposing: true);
 			GC.SuppressFinalize(this);
 		}
+
+		~Box()
+		{
+			Dispose(disposing: false);
+		}
+
 		protected virtual void Dispose(bool disposing)
 		{
 			if (disposing && !Disposed)
@@ -92,9 +99,6 @@ namespace Mpeg4Lib.Boxes
 
 			Disposed = true;
 		}
-		~Box()
-		{
-			Dispose(disposing: false);
-		}
+		#endregion
 	}
 }
