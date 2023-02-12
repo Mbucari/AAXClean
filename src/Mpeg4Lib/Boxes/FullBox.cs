@@ -20,7 +20,7 @@ namespace Mpeg4Lib.Boxes
 		}
 		protected override void Render(Stream file)
 		{
-			file.WriteDWord(VersionFlags);
+			file.Write(VersionFlags);
 		}
 	}
 

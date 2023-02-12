@@ -14,7 +14,7 @@ namespace AAXClean.FrameFilters
 		}
 
 		public void LinkTo(FrameFilterBase<TOutput> nextFilter) => Linked = nextFilter;
-		protected abstract TOutput PerformFiltering(TInput input);
+		public abstract TOutput PerformFiltering(TInput input);
 		protected virtual TOutput PerformFinalFiltering() => default;
 
 		protected sealed override async Task FlushAsync()

@@ -40,7 +40,7 @@ namespace Mpeg4Lib.Boxes
 		{
 			base.Render(file);
 			file.WriteUInt32BE(PreDefined);
-			file.WriteDWord(Encoding.ASCII.GetBytes(HandlerType));
+			file.Write(Encoding.ASCII.GetBytes(HandlerType));
 			file.Write(Reserved);
 			file.Write(Encoding.ASCII.GetBytes(HandlerName));
 			if (HasNullTerminator)

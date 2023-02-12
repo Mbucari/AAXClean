@@ -45,54 +45,63 @@ namespace Mpeg4Lib.Util
 			}
 			if (inputStream.Read(chunkBuffer) != chunkBuffer.Length)
 				throw new EndOfStreamException($"Stream ended at position {inputStream.Position} before all {chunkBuffer.Length} bytes were read.");
-		}		
+		}
 
 		public static void WriteType(this Stream stream, string type)
 		{
 			if (type?.Length != 4)
 				throw new ArgumentException("Type must be 4 chas long.");
 
-			stream.WriteDWord(new byte[] { (byte)type[0], (byte)type[1], (byte)type[2], (byte)type[3] });
+			stream.Write(stackalloc byte[] { (byte)type[0], (byte)type[1], (byte)type[2], (byte)type[3] });
 		}
+
 		public static void WriteInt16BE(this Stream stream, short value)
-		{
-			stream.WriteUInt16BE((ushort)value);
-		}
-		public static void WriteUInt16BE(this Stream stream, ushort value)
-		{
-			stream.WriteWord(new byte[] { (byte)(value >> 8), (byte)value });
-		}
+			=> stream.WriteUInt16BE((ushort)value);
 		public static void WriteInt32BE(this Stream stream, int value)
-		{
-			stream.WriteUInt32BE((uint)value);
-		}
-		public static void WriteUInt32BE(this Stream stream, uint value)
-		{
-			stream.WriteDWord(new byte[] { (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value });
-		}
+			=> stream.WriteUInt32BE((uint)value);
 		public static void WriteInt64BE(this Stream stream, long value)
-		{
-			stream.WriteUInt64BE((ulong)value);
-		}
+			=> stream.WriteUInt64BE((ulong)value);
+
+		public static void WriteUInt16BE(this Stream stream, ushort value)
+			=> stream.Write(stackalloc byte[] { (byte)(value >> 8), (byte)value });
+		public static void WriteUInt32BE(this Stream stream, uint value)
+			=> stream.Write(stackalloc byte[] { (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value });
 		public static void WriteUInt64BE(this Stream stream, ulong value)
+			=> stream.Write(stackalloc byte[] { (byte)(value >> 56), (byte)(value >> 48), (byte)(value >> 40), (byte)(value >> 32), (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value });
+
+		public static ushort ReadUInt16BE(this Stream stream) => (ushort)stream.ReadInt16BE();
+		public static uint ReadUInt32BE(this Stream stream) => (uint)stream.ReadInt32BE();
+		public static long ReadInt64BE(this Stream stream) => (long)stream.ReadUInt64BE();
+
+		public static short ReadInt16BE(this Stream stream)
 		{
-			stream.WriteQWord(new byte[] { (byte)(value >> 56), (byte)(value >> 48), (byte)(value >> 40), (byte)(value >> 32), (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value });
+			Span<byte> word = stackalloc byte[2];
+			stream.Read(word, word.Length);
+
+			return (short)(word[0] << 8 | word[1]);
 		}
-		public static void WriteWord(this Stream stream, byte[] word)
+		public static int ReadInt32BE(this Stream stream)
 		{
-			if (word.Length != 2) throw new ArgumentException("Word must be 2 bytes.");
-			stream.Write(word);
+			Span<byte> dword = stackalloc byte[4];
+			stream.Read(dword, dword.Length);
+
+			return dword[0] << 24 | dword[1] << 16 | dword[2] << 8 | dword[3];
 		}
-		public static void WriteDWord(this Stream stream, byte[] dWord)
+		public static ulong ReadUInt64BE(this Stream stream)
 		{
-			if (dWord.Length != 4) throw new ArgumentException("DWord must be 4 bytes.");
-			stream.Write(dWord);
+			Span<byte> qword = stackalloc byte[8];
+			stream.Read(qword, qword.Length);
+
+			return (ulong)qword[0] << 56 | (ulong)qword[1] << 48 | (ulong)qword[2] << 40 | (ulong)qword[3] << 32 | (ulong)qword[4] << 24 | (ulong)qword[5] << 16 | (ulong)qword[6] << 8 | qword[7];
 		}
-		public static void WriteQWord(this Stream stream, byte[] qWord)
+		public static string ReadType(this Stream stream)
 		{
-			if (qWord.Length != 8) throw new ArgumentException("QWord must be 8 bytes.");
-			stream.Write(qWord);
+			Span<byte> dword = stackalloc byte[4];
+			stream.Read(dword, dword.Length);
+
+			return new string(new char[] { (char)dword[0], (char)dword[1], (char)dword[2], (char)dword[3] });
 		}
+
 		public static byte[] ReadBlock(this Stream stream, int length)
 		{
 			if (length < 0)
@@ -101,59 +110,21 @@ namespace Mpeg4Lib.Util
 			if (length == 0)
 				return Array.Empty<byte>();
 
-
 			byte[] buffer = new byte[length];
-			int read = 0, needed = length;
-			int count;
-			do
-			{
-				count = stream.Read(buffer, read, needed);
-				read += count;
-				needed -= count;
-			} while (needed > 0 && count != 0);
+			stream.Read(buffer, length);
 
-			if (needed > 0)
-				throw new EndOfStreamException($"Stream ended before all {length} bytes could be read");
 			return buffer;
 		}
-		public static ushort ReadUInt16BE(this Stream stream)
-		{
-			return (ushort)stream.ReadInt16BE();
-		}
-		public static short ReadInt16BE(this Stream stream)
-		{
-			byte[] qword = stream.ReadWord();
 
-			return (short)(qword[0] << 8 | qword[1]);
-		}
-		public static uint ReadUInt32BE(this Stream stream)
+		private static int Read(this Stream stream, Span<byte> buffer, int size)
 		{
-			return (uint)stream.ReadInt32BE();
-		}
-		public static int ReadInt32BE(this Stream stream)
-		{
-			byte[] qword = stream.ReadDWord();
+			if (buffer.Length < size)
+				throw new ArgumentException($"{nameof(buffer)} must be a minimum of {size} bytes");
 
-			return qword[0] << 24 | qword[1] << 16 | qword[2] << 8 | qword[3];
-		}
-		public static ulong ReadUInt64BE(this Stream stream)
-		{
-			byte[] qword = stream.ReadQWord();
+			if (stream.Read(buffer[..size]) != size)
+				throw new EndOfStreamException($"Stream ended before all {size} bytes could be read");
 
-			return (ulong)qword[0] << 56 | (ulong)qword[1] << 48 | (ulong)qword[2] << 40 | (ulong)qword[3] << 32 | (ulong)qword[4] << 24 | (ulong)qword[5] << 16 | (ulong)qword[6] << 8 | qword[7];
-		}
-		public static long ReadInt64BE(this Stream stream)
-		{
-			return (long)stream.ReadUInt64BE();
-		}
-		public static byte[] ReadWord(this Stream stream) => stream.ReadBlock(2);
-		public static byte[] ReadDWord(this Stream stream) => stream.ReadBlock(4);
-		public static byte[] ReadQWord(this Stream stream) => stream.ReadBlock(8);
-		public static string ReadType(this Stream stream)
-		{
-			byte[] qword = stream.ReadDWord();
-
-			return new string(new char[] { (char)qword[0], (char)qword[1], (char)qword[2], (char)qword[3] });
+			return size;
 		}
 	}
 }

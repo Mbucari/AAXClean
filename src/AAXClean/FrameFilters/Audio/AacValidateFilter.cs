@@ -5,7 +5,7 @@ namespace AAXClean.FrameFilters.Audio
 	internal class AacValidateFilter : FrameTransformBase<FrameEntry, FrameEntry>
 	{
 		protected override int InputBufferSize => 1000;
-		protected override FrameEntry PerformFiltering(FrameEntry input)
+		public override FrameEntry PerformFiltering(FrameEntry input)
 		{
 			if (!ValidateFrame(input.FrameData.Span))
 				throw new Exception("Aac error!");
