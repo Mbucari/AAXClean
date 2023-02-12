@@ -19,6 +19,7 @@
 
 	<PropertyGroup>
 		<PublishReadyToRun>true</PublishReadyToRun>
+		<DebugType>embedded</DebugType>
 	</PropertyGroup>
 
 </Project>
