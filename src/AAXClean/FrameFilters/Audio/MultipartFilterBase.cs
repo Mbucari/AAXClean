@@ -12,7 +12,6 @@ namespace AAXClean.FrameFilters.Audio
 		protected readonly SampleRate InputSampleRate;
 
 		private readonly IEnumerator<Chapter> splitChapters;
-		private uint startSample;
 		private long endSample = -1;
 		private long lastChunkIndex = -1;
 		private long currentSample = 0;
@@ -56,7 +55,7 @@ namespace AAXClean.FrameFilters.Audio
 					lastChunkIndex = input.Chunk.ChunkIndex;
 				}
 			}
-			else if (currentSample >= startSample)
+			else
 			{
 				bool newChunk = input.Chunk.ChunkIndex > lastChunkIndex;
 				if (newChunk)
@@ -75,7 +74,6 @@ namespace AAXClean.FrameFilters.Audio
 			if (!splitChapters.MoveNext())
 				return false;
 
-			startSample = (uint)Math.Round(splitChapters.Current.StartOffset.TotalSeconds * (int)InputSampleRate);
 			//Depending on time precision, the final EndFrame may be less than the last audio frame in the source file
 			endSample = (uint)Math.Round(splitChapters.Current.EndOffset.TotalSeconds * (int)InputSampleRate);
 			return true;
