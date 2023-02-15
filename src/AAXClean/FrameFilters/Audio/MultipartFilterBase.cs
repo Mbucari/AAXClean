@@ -75,7 +75,7 @@ namespace AAXClean.FrameFilters.Audio
 				return false;
 
 			//Depending on time precision, the final EndFrame may be less than the last audio frame in the source file
-			endSample = (uint)Math.Round(splitChapters.Current.EndOffset.TotalSeconds * (int)InputSampleRate);
+			endSample = (long)Math.Round(splitChapters.Current.EndOffset.TotalSeconds * (int)InputSampleRate);
 			return true;
 		}
 
