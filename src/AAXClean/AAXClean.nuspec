@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<metadata>
 		<id>AAXClean</id>
-		<version>0.5.13</version>
+		<version>0.5.14</version>
 		<description>Decrypts Audible aax and aaxc files to mp4.</description>
 		<authors>MrGneissGuy</authors>
 		<repository type="git" url="https://github.com/Mbucari/AAXClean.git" branch="master" />
