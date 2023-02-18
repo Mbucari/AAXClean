@@ -12,9 +12,10 @@ namespace AAXClean.FrameFilters.Audio
 		protected readonly SampleRate InputSampleRate;
 
 		private readonly IEnumerator<Chapter> splitChapters;
+		private long startSample;
 		private long endSample = -1;
 		private long lastChunkIndex = -1;
-		private long currentSample = 0;
+		private long currentSample;
 
 		public MultipartFilterBase(ChapterInfo splitChapters, SampleRate inputSampleRate, bool inputStereo)
 		{
@@ -23,6 +24,7 @@ namespace AAXClean.FrameFilters.Audio
 
 			InputSampleRate = inputSampleRate;
 			InputStereo = inputStereo;
+			startSample = currentSample = timeToSaple(splitChapters.StartOffset);
 			this.splitChapters = splitChapters.GetEnumerator();
 		}
 
@@ -55,7 +57,7 @@ namespace AAXClean.FrameFilters.Audio
 					lastChunkIndex = input.Chunk.ChunkIndex;
 				}
 			}
-			else
+			else if (currentSample >= startSample)
 			{
 				bool newChunk = input.Chunk.ChunkIndex > lastChunkIndex;
 				if (newChunk)
@@ -74,10 +76,13 @@ namespace AAXClean.FrameFilters.Audio
 			if (!splitChapters.MoveNext())
 				return false;
 
+			startSample = timeToSaple(splitChapters.Current.StartOffset);
 			//Depending on time precision, the final EndFrame may be less than the last audio frame in the source file
-			endSample = (long)Math.Round(splitChapters.Current.EndOffset.TotalSeconds * (int)InputSampleRate);
+			endSample = timeToSaple(splitChapters.Current.EndOffset);
 			return true;
 		}
+
+		private long timeToSaple(TimeSpan time) => (long)Math.Round(time.TotalSeconds * (int)InputSampleRate);
 
 		protected override void Dispose(bool disposing)
 		{
