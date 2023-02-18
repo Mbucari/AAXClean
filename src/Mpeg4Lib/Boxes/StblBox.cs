@@ -11,7 +11,7 @@ namespace Mpeg4Lib.Boxes
 		public StsdBox Stsd => GetChild<StsdBox>();
 		public SttsBox Stts => GetChild<SttsBox>();
 		public IChunkOffsets COBox => GetChild<StcoBox>() ?? (IChunkOffsets)GetChild<Co64Box>();
-		public StszBox Stsz => GetChild<StszBox>();
+		public StszBase Stsz => GetChild<StszBase>();
 		public StscBox Stsc => GetChild<StscBox>();
 
 		protected override void Render(Stream file)
