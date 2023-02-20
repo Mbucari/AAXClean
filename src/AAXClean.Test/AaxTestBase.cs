@@ -81,7 +81,7 @@ namespace AAXClean.Test
 				Assert.AreEqual(Tags.Generes, Aax.AppleTags.Generes);
 				Assert.AreEqual(Tags.LongDescription, Aax.AppleTags.LongDescription);
 				Assert.AreEqual(Tags.Narrator, Aax.AppleTags.Narrator);
-				Assert.AreEqual(Tags.Performers, Aax.AppleTags.Performers);
+				Assert.AreEqual(Tags.Performers, Aax.AppleTags.Artist);
 				Assert.AreEqual(Tags.ProductID, Aax.AppleTags.ProductID);
 				Assert.AreEqual(Tags.Publisher, Aax.AppleTags.Publisher);
 				Assert.AreEqual(Tags.ReleaseDate, Aax.AppleTags.ReleaseDate);

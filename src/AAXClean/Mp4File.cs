@@ -310,7 +310,6 @@ namespace AAXClean
 			return operation;
 		}
 
-
 		public void Close()
 		{
 			InputStream?.Close();

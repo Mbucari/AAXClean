@@ -34,7 +34,7 @@ namespace Mpeg4Lib.Boxes
 				throw new ArgumentException($"{nameof(boxSize)} must be at least 8 bytes.");
 
 			if (string.IsNullOrEmpty(boxType) || Encoding.ASCII.GetByteCount(boxType) != 4)
-				throw new ArgumentException($"{nameof(boxType)} must be a 4-byte long UTF-8 string.");
+				throw new ArgumentException($"{nameof(boxType)} must be a 4-byte long ASCII string.");
 
 			FilePosition = 0;
 

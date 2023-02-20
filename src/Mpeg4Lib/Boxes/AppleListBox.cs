@@ -23,24 +23,21 @@ namespace Mpeg4Lib.Boxes
 
 		public IEnumerable<AppleTagBox> Tags => GetChildren<AppleTagBox>();
 
-		protected override void Render(Stream file)
+		protected override void Render(Stream file) { }
+
+		public void AddTag(string name, string data)
 		{
-			return;
+			AppleTagBox.Create(this, name, Encoding.UTF8.GetBytes(data), AppleDataType.Utf_8);
 		}
 
 		public void AddTag(string name, byte[] data, AppleDataType type)
 		{
 			AppleTagBox.Create(this, name, data, type);
-		}
-		
-		public void AddTag(string name, string data)
-		{
-			AppleTagBox.Create(this, name, Encoding.ASCII.GetBytes(data), AppleDataType.ContainsText);
-		}
+		}		
 
 		public void EditOrAddTag(string name, string data)
 		{
-			EditOrAddTag(name, Encoding.ASCII.GetBytes(data), AppleDataType.ContainsText);
+			EditOrAddTag(name, Encoding.UTF8.GetBytes(data), AppleDataType.Utf_8);
 		}
 
 		public void EditOrAddTag(string name, byte[] data)
@@ -56,7 +53,7 @@ namespace Mpeg4Lib.Boxes
 			{
 				AddTag(name, data, type);
 			}
-			else if (tag.Data.DataType == type)
+			else if (tag?.Data.DataType == type)
 			{
 				tag.Data.Data = data;
 			}
@@ -71,16 +68,10 @@ namespace Mpeg4Lib.Boxes
 		}
 
 		public byte[] GetTagBytes(string name)
-		{
-			AppleTagBox tag = Tags.Where(t => t.Header.Type == name).FirstOrDefault();
-
-			if (tag is null) return null;
-
-			AppleDataBox tagData = tag.GetChild<AppleDataBox>();
-
-			if (tagData is null) return null;
-
-			return tagData.Data;
-		}
+			=> Tags
+			.Where(t => t.Header.Type == name)
+			.FirstOrDefault()
+			?.GetChild<AppleDataBox>()
+			?.Data;		
 	}
 }

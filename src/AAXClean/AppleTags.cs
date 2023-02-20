@@ -15,7 +15,7 @@ namespace AAXClean
 		}
 
 		public AppleListBox AppleListBox => IList;
-		public string FirstAuthor => Performers?.Split(';')?[0];
+		public string FirstAuthor => Artist?.Split(';')?[0];
 		public string TitleSansUnabridged => Title?.Replace(" (Unabridged)", "");
 
 		public string BookCopyright => _copyright is not null && _copyright.Length > 0 ? _copyright[0] : default;
@@ -23,7 +23,7 @@ namespace AAXClean
 		private string[] _copyright => Copyright?.Replace("&#169;", "©")?.Split(';');
 
 		public string Title { get => IList.GetTagString("©nam"); set => IList.EditOrAddTag("©nam", value); }
-		public string Performers { get => IList.GetTagString("©ART"); set => IList.EditOrAddTag("©ART", value); }
+		public string Artist { get => IList.GetTagString("©ART"); set => IList.EditOrAddTag("©ART", value); }
 		public string AlbumArtists { get => IList.GetTagString("aART"); set => IList.EditOrAddTag("aART", value); }
 		public string Album { get => IList.GetTagString("©alb"); set => IList.EditOrAddTag("©alb", value); }
 		public string Generes { get => IList.GetTagString("©gen"); set => IList.EditOrAddTag("©gen", value); }
@@ -37,7 +37,8 @@ namespace AAXClean
 		public string Asin { get => IList.GetTagString("CDEK"); set => IList.EditOrAddTag("CDEK", value); }
 		public string ReleaseDate { get => IList.GetTagString("rldt"); set => IList.EditOrAddTag("rldt", value); }
 		public string Acr { get => IList.GetTagString("AACR"); set => IList.EditOrAddTag("AACR", value); }
-		public byte[] Cover { get => IList.GetTagBytes("covr"); set => IList.EditOrAddTag("covr", value, AppleDataType.ContainsJpegData); }
+		public string Version { get => IList.GetTagString("VERS"); set => IList.EditOrAddTag("VERS", value); }
+		public byte[] Cover { get => IList.GetTagBytes("covr"); set => IList.EditOrAddTag("covr", value, AppleDataType.JPEG); }
 
 		public (int trackNum, int trackCount) Tracks
 		{

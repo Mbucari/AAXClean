@@ -121,7 +121,7 @@ namespace AAXClean.Test
 				Aax.AppleTags.Generes = tagstring;
 				Aax.AppleTags.LongDescription = tagstring;
 				Aax.AppleTags.Narrator = tagstring;
-				Aax.AppleTags.Performers = tagstring;
+				Aax.AppleTags.Artist = tagstring;
 				Aax.AppleTags.ProductID = tagstring;
 				Aax.AppleTags.Publisher = tagstring;
 				Aax.AppleTags.ReleaseDate = tagstring;
@@ -148,7 +148,7 @@ namespace AAXClean.Test
 				Assert.AreEqual(tagstring, mp4File.AppleTags.Generes);
 				Assert.AreEqual(tagstring, mp4File.AppleTags.LongDescription);
 				Assert.AreEqual(tagstring, mp4File.AppleTags.Narrator);
-				Assert.AreEqual(tagstring, mp4File.AppleTags.Performers);
+				Assert.AreEqual(tagstring, mp4File.AppleTags.Artist);
 				Assert.AreEqual(tagstring, mp4File.AppleTags.ProductID);
 				Assert.AreEqual(tagstring, mp4File.AppleTags.Publisher);
 				Assert.AreEqual(tagstring, mp4File.AppleTags.ReleaseDate);
