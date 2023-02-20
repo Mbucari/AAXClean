@@ -12,7 +12,7 @@ namespace Mpeg4Lib.Boxes
 		public byte[] Checksum { get; }
 		private readonly byte[] endBlob;
 
-		public AdrmBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
+		public AdrmBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
 		{
 			beginBlob = file.ReadBlock(8);
 			DrmBlob = file.ReadBlock(56);

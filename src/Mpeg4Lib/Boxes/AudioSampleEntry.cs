@@ -17,7 +17,7 @@ namespace Mpeg4Lib.Boxes
 
 		public EsdsBox Esds => GetChild<EsdsBox>();
 
-		public AudioSampleEntry(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
+		public AudioSampleEntry(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
 		{
 			reserved = file.ReadBlock(8);
 			ChannelCount = file.ReadUInt16BE();

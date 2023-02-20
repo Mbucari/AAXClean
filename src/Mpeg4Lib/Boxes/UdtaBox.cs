@@ -4,7 +4,7 @@ namespace Mpeg4Lib.Boxes
 {
 	public class UdtaBox : Box
 	{
-		public UdtaBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
+		public UdtaBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
 		{
 			LoadChildren(file);
 		}

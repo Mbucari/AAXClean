@@ -6,7 +6,7 @@ namespace Mpeg4Lib.Boxes
 {
 	public class MoovBox : Box
 	{
-		public MoovBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
+		public MoovBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
 		{
 			LoadChildren(file);
 		}

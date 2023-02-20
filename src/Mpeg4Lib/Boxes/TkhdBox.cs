@@ -20,7 +20,7 @@ namespace Mpeg4Lib.Boxes
 		public uint Width { get; }
 		public uint Height { get; }
 
-		public TkhdBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
+		public TkhdBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
 		{
 			if (Header.Version == 0)
 			{

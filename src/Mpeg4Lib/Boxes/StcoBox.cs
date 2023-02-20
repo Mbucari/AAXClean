@@ -11,7 +11,7 @@ namespace Mpeg4Lib.Boxes
 		public uint EntryCount { get; set; }
 		public List<ChunkOffsetEntry> ChunkOffsets { get; private init; } = new List<ChunkOffsetEntry>();
 
-		public static StcoBox CreateBlank(Box parent, List<ChunkOffsetEntry> chunkOffsets)
+		public static StcoBox CreateBlank(IBox parent, List<ChunkOffsetEntry> chunkOffsets)
 		{
 			int size = 4 + 12 /* empty Box size*/;
 			BoxHeader header = new BoxHeader((uint)size, "stco");
@@ -25,9 +25,9 @@ namespace Mpeg4Lib.Boxes
 			parent.Children.Add(stcoBox);
 			return stcoBox;
 		}
-		private StcoBox(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent) { }
+		private StcoBox(byte[] versionFlags, BoxHeader header, IBox parent) : base(versionFlags, header, parent) { }
 
-		public StcoBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
+		public StcoBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
 		{
 			EntryCount = file.ReadUInt32BE();
 

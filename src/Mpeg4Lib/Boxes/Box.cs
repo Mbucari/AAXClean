@@ -6,32 +6,32 @@ using System.Linq;
 
 namespace Mpeg4Lib.Boxes
 {
-	public abstract class Box : IDisposable
+	public abstract class Box : IBox
 	{
-		public Box Parent { get; }
+		public IBox Parent { get; }
 		public BoxHeader Header { get; }
-		public List<Box> Children { get; } = new List<Box>();
+		public List<IBox> Children { get; } = new List<IBox>();
 		public virtual long RenderSize => 8 + Children.Sum(b => b.RenderSize);
 
-		public Box(BoxHeader header, Box parent)
+		public Box(BoxHeader header, IBox parent)
 		{
 			Header = header;
 			Parent = parent;
 		}
 		protected abstract void Render(Stream file);
-		public T GetChild<T>() where T : Box
+		public T GetChild<T>() where T : IBox
 		{
 			IEnumerable<T> children = GetChildren<T>();
 
 			return children.Count() switch
 			{
-				0 => null,
+				0 => default,
 				1 => children.First(),
 				_ => throw new InvalidOperationException($"{GetType().Name} has {children.Count()} children of type {typeof(T)}. Call {nameof(GetChildren)} instead."),
 			};
 		}
 
-		public IEnumerable<T> GetChildren<T>() where T : Box
+		public IEnumerable<T> GetChildren<T>() where T : IBox
 		{
 			return Children.OfType<T>();
 		}
@@ -42,7 +42,7 @@ namespace Mpeg4Lib.Boxes
 
 			while (file.Position < endPos)
 			{
-				Box child = BoxFactory.CreateBox(file, this);
+				IBox child = BoxFactory.CreateBox(file, this);
 
 				if (child.Header.TotalBoxSize == 0)
 					break;
@@ -68,7 +68,7 @@ namespace Mpeg4Lib.Boxes
 
 			Render(file);
 
-			foreach (Box child in Children)
+			foreach (var child in Children)
 			{
 				child.Save(file);
 			}
@@ -91,7 +91,7 @@ namespace Mpeg4Lib.Boxes
 		{
 			if (disposing && !Disposed)
 			{
-				foreach (Box child in Children)
+				foreach (IBox child in Children)
 					child?.Dispose();
 
 				Children.Clear();

@@ -10,7 +10,7 @@ namespace Mpeg4Lib.Boxes
 		public uint Flags { get; }
 		public byte[] Data { get; set; }
 
-		public static void Create(Box parent, byte[] data, AppleDataType type)
+		public static void Create(IBox parent, byte[] data, AppleDataType type)
 		{
 			int size = data.Length + 8 /* empty Box size*/;
 			BoxHeader header = new BoxHeader((uint)size, "data");
@@ -19,13 +19,13 @@ namespace Mpeg4Lib.Boxes
 
 			parent.Children.Add(dataBox);
 		}
-		private AppleDataBox(BoxHeader header, Box parent, byte[] data, AppleDataType type) : base(header, parent)
+		private AppleDataBox(BoxHeader header, IBox parent, byte[] data, AppleDataType type) : base(header, parent)
 		{
 			DataType = type;
 			Flags = 0;
 			Data = data;
 		}
-		public AppleDataBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
+		public AppleDataBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
 		{
 			DataType = (AppleDataType)file.ReadUInt32BE();
 			Flags = file.ReadUInt32BE();

@@ -7,7 +7,7 @@ namespace Mpeg4Lib.Boxes
 {
 	public class AppleListBox : Box
 	{
-		public AppleListBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
+		public AppleListBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
 		{
 			long endPos = Header.FilePosition + Header.TotalBoxSize;
 

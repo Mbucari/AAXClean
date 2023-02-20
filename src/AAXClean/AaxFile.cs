@@ -35,7 +35,7 @@ namespace AAXClean
 			if (additionalFixups)
 			{
 				//Remove extra Free boxes
-				List<Box> children = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children;
+				List<IBox> children = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children;
 				for (int i = children.Count - 1; i >= 0; i--)
 				{
 					if (children[i] is FreeBox)
@@ -121,7 +121,7 @@ namespace AAXClean
 
 			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children.Remove(adrm);
 
-			Box aabd = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children.FirstOrDefault(b => b.Header.Type == "aabd");
+			IBox aabd = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children.FirstOrDefault(b => b.Header.Type == "aabd");
 			if (aabd is not null)
 				Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children.Remove(aabd);
 

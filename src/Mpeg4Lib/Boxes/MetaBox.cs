@@ -4,7 +4,7 @@ namespace Mpeg4Lib.Boxes
 {
 	public class MetaBox : FullBox
 	{
-		public MetaBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
+		public MetaBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
 		{
 			LoadChildren(file);
 		}

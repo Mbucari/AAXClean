@@ -7,11 +7,11 @@ namespace Mpeg4Lib.Boxes
 {
 	public class SttsBox : FullBox
 	{
-		public override long RenderSize => base.RenderSize + 4 + Samples.Count * 2 * 4;
-		public uint EntryCount { get; set; }
+		public override long RenderSize => base.RenderSize + 4 + EntryCount * 2 * 4;
+		public int EntryCount => Samples.Count;
 		public List<SampleEntry> Samples { get; } = new List<SampleEntry>();
 
-		public static SttsBox CreateBlank(Box parent)
+		public static SttsBox CreateBlank(IBox parent)
 		{
 			int size = 4 + 12 /* empty Box size*/;
 			BoxHeader header = new BoxHeader((uint)size, "stts");
@@ -21,13 +21,13 @@ namespace Mpeg4Lib.Boxes
 			parent.Children.Add(sttsBox);
 			return sttsBox;
 		}
-		private SttsBox(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent) { }
+		private SttsBox(byte[] versionFlags, BoxHeader header, IBox parent) : base(versionFlags, header, parent) { }
 
-		public SttsBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
+		public SttsBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
 		{
-			EntryCount = file.ReadUInt32BE();
+			var entryCount = file.ReadUInt32BE();
 
-			for (int i = 0; i < EntryCount; i++)
+			for (int i = 0; i < entryCount; i++)
 			{
 				Samples.Add(new SampleEntry(file));
 			}

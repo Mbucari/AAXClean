@@ -4,7 +4,7 @@ namespace Mpeg4Lib.Boxes
 {
 	public class MdiaBox : Box
 	{
-		public MdiaBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
+		public MdiaBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
 		{
 			LoadChildren(file);
 		}

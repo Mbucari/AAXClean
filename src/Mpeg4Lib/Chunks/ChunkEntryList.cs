@@ -11,7 +11,7 @@ namespace Mpeg4Lib.Chunks
 	{
 		private readonly IReadOnlyList<ChunkOffsetEntry> ChunkTable;
 		private readonly int EntryCount;
-		private readonly StszBase Stsz;
+		private readonly IStszBox Stsz;
 		private readonly (uint firstFrameIndex, uint numFrames)[] ChunkFrameTable;
 		private delegate ChunkEntry ChunkEntryDelegate(int chunkIndex);
 

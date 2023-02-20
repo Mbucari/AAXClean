@@ -11,7 +11,7 @@ namespace Mpeg4Lib.Boxes
 		public uint EntryCount { get; set; }
 		public List<ChunkOffsetEntry> ChunkOffsets { get; private init; } = new List<ChunkOffsetEntry>();
 
-		public static Co64Box CreateBlank(Box parent, List<ChunkOffsetEntry> chunkOffsets)
+		public static Co64Box CreateBlank(IBox parent, List<ChunkOffsetEntry> chunkOffsets)
 		{
 			int size = 4 + 12 /* empty Box size*/;
 			BoxHeader header = new BoxHeader((uint)size, "co64");
@@ -26,9 +26,9 @@ namespace Mpeg4Lib.Boxes
 			return co64Box;
 		}
 
-		private Co64Box(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent) { }
+		private Co64Box(byte[] versionFlags, BoxHeader header, IBox parent) : base(versionFlags, header, parent) { }
 
-		public Co64Box(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
+		public Co64Box(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
 		{
 			EntryCount = file.ReadUInt32BE();
 

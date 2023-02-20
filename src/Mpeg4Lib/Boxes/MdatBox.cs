@@ -6,7 +6,7 @@ namespace Mpeg4Lib.Boxes
 {
 	public class MdatBox : Box
 	{
-		public MdatBox(BoxHeader header, Box parent) : base(header, parent) { }
+		public MdatBox(BoxHeader header, IBox parent) : base(header, parent) { }
 
 		/// <summary>
 		/// Shifts the position of the mdat atom in the stream. When Completed, <see cref="Stream.Position"/> is at the end of the mdat atom.

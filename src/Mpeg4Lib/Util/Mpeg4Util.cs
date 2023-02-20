@@ -10,9 +10,9 @@ namespace Mpeg4Lib.Util
 {
 	public static class Mpeg4Util
 	{
-		public static List<Box> LoadTopLevelBoxes(Stream file)
+		public static List<IBox> LoadTopLevelBoxes(Stream file)
 		{
-			List<Box> boxes = new();
+			List<IBox> boxes = new();
 
 			while (
 				file.Position < file.Length
@@ -35,7 +35,7 @@ namespace Mpeg4Lib.Util
 
 		public static async Task RelocateMoovToBeginningAsync(string mp4FilePath, CancellationToken cancellationToken, Action<TimeSpan, TimeSpan, double> progress)
 		{
-			List<Box> boxes;
+			List<IBox> boxes;
 
 			using (FileStream fileStream = File.OpenRead(mp4FilePath))
 				boxes = LoadTopLevelBoxes(fileStream);
@@ -101,7 +101,7 @@ namespace Mpeg4Lib.Util
 			}
 			finally
 			{
-				foreach (Box box in boxes)
+				foreach (IBox box in boxes)
 					box.Dispose();
 			}
 		}

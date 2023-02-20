@@ -2,7 +2,7 @@
 
 namespace Mpeg4Lib.Boxes
 {
-	public interface IChunkOffsets
+	public interface IChunkOffsets : IBox
 	{
 		uint EntryCount { get; set; }
 		List<ChunkOffsetEntry> ChunkOffsets { get; }

@@ -11,7 +11,7 @@ namespace Mpeg4Lib.Boxes
 		public uint Timescale { get; set; }
 		public ulong Duration { get; set; }
 		private readonly byte[] Blob;
-		public MdhdBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
+		public MdhdBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
 		{
 			if (Version == 0)
 			{

@@ -8,7 +8,7 @@ namespace Mpeg4Lib.Boxes
 		public override long RenderSize => base.RenderSize + 4;
 		public uint EntryCount { get; }
 
-		public StsdBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
+		public StsdBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
 		{
 			EntryCount = file.ReadUInt32BE();
 

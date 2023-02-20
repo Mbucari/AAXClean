@@ -6,11 +6,11 @@ namespace Mpeg4Lib.Boxes
 {
 	public class StscBox : FullBox
 	{
-		public override long RenderSize => base.RenderSize + 4 + Samples.Count * 3 * 4;
-		public uint EntryCount { get; set; }
+		public override long RenderSize => base.RenderSize + 4 + EntryCount * 3 * 4;
+		public int EntryCount => Samples.Count;
 		public List<StscChunkEntry> Samples { get; } = new List<StscChunkEntry>();
 
-		public static StscBox CreateBlank(Box parent)
+		public static StscBox CreateBlank(IBox parent)
 		{
 			int size = 4 + 12 /* empty Box size*/;
 			BoxHeader header = new BoxHeader((uint)size, "stsc");
@@ -21,18 +21,18 @@ namespace Mpeg4Lib.Boxes
 			return stscBox;
 		}
 
-		private StscBox(byte[] versionFlags, BoxHeader header, Box parent) : base(versionFlags, header, parent) { }
+		private StscBox(byte[] versionFlags, BoxHeader header, IBox parent) : base(versionFlags, header, parent) { }
 		/// <summary>
 		/// 
 		/// </summary>
 		/// <param name="file"></param>
 		/// <param name="header"></param>
 		/// <param name="parent"></param>
-		public StscBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
+		public StscBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
 		{
-			EntryCount = file.ReadUInt32BE();
+			var entryCount = file.ReadUInt32BE();
 
-			for (int i = 0; i < EntryCount; i++)
+			for (int i = 0; i < entryCount; i++)
 			{
 				Samples.Add(new StscChunkEntry(file));
 			}

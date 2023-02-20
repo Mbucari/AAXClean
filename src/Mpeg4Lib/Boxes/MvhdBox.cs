@@ -18,7 +18,7 @@ namespace Mpeg4Lib.Boxes
 		public byte[] Pre_defined { get; }
 		public uint NextTrackID { get; set; }
 
-		public MvhdBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
+		public MvhdBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
 		{
 			if (Header.Version == 0)
 			{

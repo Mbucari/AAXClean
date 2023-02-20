@@ -11,15 +11,15 @@ namespace Mpeg4Lib.Boxes
 		public int MajorVersion { get; set; }
 		public List<string> CompatibleBrands { get; } = new List<string>();
 
-		public static FtypBox Create(int size, Box parent)
+		public static FtypBox Create(int size, IBox parent)
 		{
 			BoxHeader header = new BoxHeader((uint)size, "ftyp");
 			FtypBox ftyp = new FtypBox(header, parent);
 			return ftyp;
 		}
 
-		private FtypBox(BoxHeader header, Box parent) : base(header, parent) { }
-		public FtypBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
+		private FtypBox(BoxHeader header, IBox parent) : base(header, parent) { }
+		public FtypBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
 		{
 			long endPos = header.FilePosition + header.TotalBoxSize;
 

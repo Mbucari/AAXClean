@@ -13,7 +13,7 @@ namespace Mpeg4Lib.Boxes
 		public string HandlerType { get; }
 		private readonly byte[] Reserved;
 		public string HandlerName { get; }
-		public HdlrBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
+		public HdlrBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
 		{
 			long endPos = Header.FilePosition + Header.TotalBoxSize;
 

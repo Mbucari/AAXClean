@@ -11,7 +11,7 @@ namespace Mpeg4Lib.Boxes
 		public override long RenderSize => base.RenderSize + ES_Descriptor.RenderSize;
 		public ES_Descriptor ES_Descriptor { get; }
 
-		public EsdsBox(Stream file, BoxHeader header, Box parent) : base(file, header, parent)
+		public EsdsBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
 		{
 
 			ES_Descriptor = DescriptorFactory.CreateDescriptor(file) as ES_Descriptor;

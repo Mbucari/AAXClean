@@ -5,7 +5,7 @@ namespace Mpeg4Lib.Boxes
 	public static class BoxFactory
 	{
 		public static bool Read16bitSampleSizes { get; set; } = false;
-		public static Box CreateBox(Stream file, Box parent)
+		public static IBox CreateBox(Stream file, IBox parent)
 		{
 			BoxHeader header = new(file);
 
@@ -29,7 +29,8 @@ namespace Mpeg4Lib.Boxes
 				"adrm" => new AdrmBox(file, header, parent),
 				"stts" => new SttsBox(file, header, parent),
 				"stsc" => new StscBox(file, header, parent),
-				"stsz" => Read16bitSampleSizes ? new Stsz16(file, header, parent) : new Stsz32(file, header, parent),
+				"stsz" => new StszBox(file, header, parent),
+				"stz2" => new Stz2Box(file, header, parent),
 				"stco" => new StcoBox(file, header, parent),
 				"co64" => new Co64Box(file, header, parent),
 				"udta" => new UdtaBox(file, header, parent),

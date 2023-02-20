@@ -23,9 +23,11 @@ namespace AAXClean.FrameFilters.Audio
 		private readonly long mdatStart;
 		private readonly SttsBox Stts;
 		private readonly StscBox Stsc;
-		private readonly StszBase Stsz;
 		private readonly List<ChunkOffsetEntry> AudioChunks = new();
 		private readonly List<ChunkOffsetEntry> TextChunks = new();
+		//Since we're only working with audio files, no frame will ever be larger than ushort.MaxValue.
+		//Use shorts to save memory.
+		private readonly List<ushort> AudioSampleSizes = new();
 		private readonly object lockObj = new();
 
 		private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
@@ -38,7 +40,6 @@ namespace AAXClean.FrameFilters.Audio
 
 			Stts = Moov.AudioTrack.Mdia.Minf.Stbl.Stts;
 			Stsc = Moov.AudioTrack.Mdia.Minf.Stbl.Stsc;
-			Stsz = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz;
 
 			ftyp.Save(OutputFile);
 			mdatStart = OutputFile.Position;
@@ -49,7 +50,7 @@ namespace AAXClean.FrameFilters.Audio
 			OutputFile.WriteInt64BE(0);
 		}
 
-		public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov, bool co64, int sampleRate, int channels)
+		public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov, int sampleRate, int channels)
 			: this(outputFile, ftyp, moov)
 		{
 			int sampleRateIndex = Array.IndexOf(asc_samplerates, sampleRate);
@@ -100,13 +101,11 @@ namespace AAXClean.FrameFilters.Audio
 
 			OutputFile.Position = mdatEnd;
 
+
 			Stsc.Samples.Add(new StscBox.StscChunkEntry(CurrentChunk, SamplesPerChunk, 1));
+			Stts.Samples.Add(new SttsBox.SampleEntry((uint)AudioSampleSizes.Count, AAC_TIME_DOMAIN_SAMPLES));
 
-			Stts.EntryCount = 1;
-			Stts.Samples.Add(new SttsBox.SampleEntry((uint)Stsz.SampleSizes.Count, AAC_TIME_DOMAIN_SAMPLES));
-
-			Stsz.SampleCount = (uint)Stsz.SampleSizes.Count;
-			Stsc.EntryCount = (uint)Stsc.Samples.Count;
+			IStszBox stsz = StszBox.CreateBlank(Moov.AudioTrack.Mdia.Minf.Stbl, AudioSampleSizes);
 
 			if (mdatSize > uint.MaxValue)
 				Co64Box.CreateBlank(Moov.AudioTrack.Mdia.Minf.Stbl, AudioChunks);
@@ -121,7 +120,7 @@ namespace AAXClean.FrameFilters.Audio
 					StcoBox.CreateBlank(Moov.TextTrack.Mdia.Minf.Stbl, TextChunks);
 			}
 
-			Moov.AudioTrack.Mdia.Mdhd.Duration = (ulong)Stsz.SampleCount * AAC_TIME_DOMAIN_SAMPLES;
+			Moov.AudioTrack.Mdia.Mdhd.Duration = (ulong)stsz.SampleCount * AAC_TIME_DOMAIN_SAMPLES;
 			Moov.Mvhd.Duration = Moov.AudioTrack.Mdia.Mdhd.Duration * Moov.Mvhd.Timescale / Moov.AudioTrack.Mdia.Mdhd.Timescale;
 			Moov.AudioTrack.Tkhd.Duration = Moov.Mvhd.Duration;
 
@@ -155,7 +154,7 @@ namespace AAXClean.FrameFilters.Audio
 			Moov.Save(OutputFile);
 			Closed = true;
 
-			static (uint maxOneSecondBitrate, uint avgBitrate) CalculateBitrate(double timeScale, ulong duration, StszBase stsz)
+			static (uint maxOneSecondBitrate, uint avgBitrate) CalculateBitrate(double timeScale, ulong duration, IStszBox stsz)
 			{
 				//Calculate the actual average bitrate because aaxc file is wrong.
 				long audioBits = stsz.TotalSize * 8;
@@ -165,7 +164,7 @@ namespace AAXClean.FrameFilters.Audio
 				long currentMovingSum = stsz.SumFirstNSizes(framesPerSec);
 				long currentMax = currentMovingSum;
 
-				for (int i = framesPerSec; i < stsz.SampleSizes.Count; i++)
+				for (int i = framesPerSec; i < stsz.SampleCount; i++)
 				{
 					var lose = stsz.GetSizeAtIndex(i - framesPerSec);
 					var gain = stsz.GetSizeAtIndex(i);
@@ -186,23 +185,23 @@ namespace AAXClean.FrameFilters.Audio
 		{
 			if (Moov.TextTrack is null) return;
 
-			Moov.TextTrack.Mdia.Minf.Stbl.Stsc.EntryCount = 1;
 			Moov.TextTrack.Mdia.Minf.Stbl.Stsc.Samples.Add(new StscBox.StscChunkEntry(1, 1, 1));
 
 			uint entIndex = 0;
+			List<int> sampleSizes = new();
 			foreach (Chapter c in chapters)
 			{
 				uint sampleDelta = (uint)(c.Duration.TotalSeconds * Moov.AudioTrack.Mdia.Mdhd.Timescale);
 
 				Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(sampleCount: 1, sampleDelta));
-				Moov.TextTrack.Mdia.Minf.Stbl.Stsz.AddSampleSize(c.RenderSize);
+				sampleSizes.Add(c.RenderSize);
 
 				TextChunks.Add(new ChunkOffsetEntry { EntryIndex = entIndex++, ChunkOffset = OutputFile.Position });
 
 				c.WriteChapter(OutputFile);
 			}
-			Moov.TextTrack.Mdia.Minf.Stbl.Stts.EntryCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Count;
-			Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleCount = (uint)Moov.TextTrack.Mdia.Minf.Stbl.Stsz.SampleSizes.Count;
+
+			StszBox.CreateBlank(Moov.TextTrack.Mdia.Minf.Stbl, sampleSizes);
 
 			AppleListBox chapterNames =
 				Moov.TextTrack
@@ -251,7 +250,7 @@ namespace AAXClean.FrameFilters.Audio
 					CurrentChunk++;
 				}
 
-				Stsz.AddSampleSize((short)frame.Length);
+				AudioSampleSizes.Add((ushort)frame.Length);
 				SamplesPerChunk++;
 			}
 
@@ -262,8 +261,8 @@ namespace AAXClean.FrameFilters.Audio
 		{
 			SttsBox t1 = null;
 			StscBox t2 = null;
-			StszBase t3 = null;
-			Box t4 = null;
+			IStszBox t3 = null;
+			IChunkOffsets t4 = null;
 
 			bool hasTextTrack = false;
 			if (moov.TextTrack != null)
@@ -272,7 +271,7 @@ namespace AAXClean.FrameFilters.Audio
 				t1 = moov.TextTrack.Mdia.Minf.Stbl.Stts;
 				t2 = moov.TextTrack.Mdia.Minf.Stbl.Stsc;
 				t3 = moov.TextTrack.Mdia.Minf.Stbl.Stsz;
-				t4 = (Box)moov.TextTrack.Mdia.Minf.Stbl.COBox;
+				t4 = moov.TextTrack.Mdia.Minf.Stbl.COBox;
 
 				moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t1);
 				moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t2);
@@ -282,8 +281,8 @@ namespace AAXClean.FrameFilters.Audio
 
 			SttsBox a1 = moov.AudioTrack.Mdia.Minf.Stbl.Stts;
 			StscBox a2 = moov.AudioTrack.Mdia.Minf.Stbl.Stsc;
-			StszBase a3 = moov.AudioTrack.Mdia.Minf.Stbl.Stsz;
-			Box a4 = (Box)moov.AudioTrack.Mdia.Minf.Stbl.COBox;
+			IStszBox a3 = moov.AudioTrack.Mdia.Minf.Stbl.Stsz;
+			IChunkOffsets a4 = moov.AudioTrack.Mdia.Minf.Stbl.COBox;
 
 			moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a1);
 			moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a2);
@@ -311,15 +310,16 @@ namespace AAXClean.FrameFilters.Audio
 
 			MoovBox newMoov = new(ms, new BoxHeader(ms), null);
 
+			// Create chunk offset and sample size boxes when closing the file
+			// so we know whether to create stco/co64 and stsz/stz2
+
 			SttsBox.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
 			StscBox.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
-			Stsz32.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
 
 			if (hasTextTrack)
 			{
 				SttsBox.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);
 				StscBox.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);
-				Stsz32.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);
 			}
 
 			return newMoov;
@@ -344,7 +344,7 @@ namespace AAXClean.FrameFilters.Audio
 			{
 				Close();
 				Stsc?.Samples.Clear();
-				Stsz?.SampleSizes.Clear();
+				AudioSampleSizes.Clear();
 				AudioChunks.Clear();
 				TextChunks.Clear();
 			}

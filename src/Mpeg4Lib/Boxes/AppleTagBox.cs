@@ -15,9 +15,9 @@ namespace Mpeg4Lib.Boxes
 			parent.Children.Add(tagBox);
 		}
 
-		private AppleTagBox(BoxHeader header, Box parent) : base(header, parent) { }
+		private AppleTagBox(BoxHeader header, IBox parent) : base(header, parent) { }
 
-		public AppleTagBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
+		public AppleTagBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
 		{
 			LoadChildren(file);
 		}

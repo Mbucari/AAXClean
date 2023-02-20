@@ -7,7 +7,7 @@ namespace Mpeg4Lib.Boxes
 	{
 		public override long RenderSize => base.RenderSize + Data.Length;
 		public byte[] Data { get; }
-		public UnknownBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
+		public UnknownBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
 		{
 			Data = file.ReadBlock((int)(Header.TotalBoxSize - header.HeaderSize));
 		}

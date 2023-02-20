@@ -10,7 +10,7 @@ namespace Mpeg4Lib.Boxes
 		public uint MaxBitrate { get; set; }
 		public uint AvgBitrate { get; set; }
 
-		public BtrtBox(Stream file, BoxHeader header, Box parent) : base(header, parent)
+		public BtrtBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
 		{
 			BufferSizeDB = file.ReadUInt32BE();
 			MaxBitrate = file.ReadUInt32BE();
@@ -25,7 +25,7 @@ namespace Mpeg4Lib.Boxes
 			return btrt;
 		}
 
-		private BtrtBox(uint bufferSizeDB, uint maxBitrate, uint avgBitrate, BoxHeader header, Box parent) : base(header, parent)
+		private BtrtBox(uint bufferSizeDB, uint maxBitrate, uint avgBitrate, BoxHeader header, IBox parent) : base(header, parent)
 		{
 			BufferSizeDB = bufferSizeDB;
 			MaxBitrate = maxBitrate;

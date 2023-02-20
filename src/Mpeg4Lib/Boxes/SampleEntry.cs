@@ -9,7 +9,7 @@ namespace Mpeg4Lib.Boxes
 
 		private readonly byte[] Reserved;
 		public ushort DataReferenceIndex { get; }
-		public SampleEntry(Stream file, BoxHeader header, Box parent) : base(header, parent)
+		public SampleEntry(Stream file, BoxHeader header, IBox parent) : base(header, parent)
 		{
 			Reserved = file.ReadBlock(6);
 			DataReferenceIndex = file.ReadUInt16BE();
