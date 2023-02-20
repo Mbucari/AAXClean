@@ -4,7 +4,6 @@ namespace Mpeg4Lib.Boxes
 {
 	public static class BoxFactory
 	{
-		public static bool Read16bitSampleSizes { get; set; } = false;
 		public static IBox CreateBox(Stream file, IBox parent)
 		{
 			BoxHeader header = new(file);
