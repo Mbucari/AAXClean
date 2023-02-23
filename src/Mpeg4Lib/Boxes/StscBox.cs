@@ -4,6 +4,12 @@ using System.IO;
 
 namespace Mpeg4Lib.Boxes
 {
+	public readonly record struct ChunkFrames
+	{
+		public uint FirstFrameIndex { get; internal init; }
+		public uint NumberOfFrames { get; internal init; }
+	}
+
 	public class StscBox : FullBox
 	{
 		public override long RenderSize => base.RenderSize + 4 + EntryCount * 3 * 4;
@@ -43,9 +49,9 @@ namespace Mpeg4Lib.Boxes
 		/// </summary>
 		/// <param name="numChunks">The number of chunks in the track</param>
 		/// <returns>A zero-base table of frame indices and sizes for each chunk index</returns>
-		public (uint firstFrameIndex, uint numFrames)[] CalculateChunkFrameTable(int numChunks)
+		public ChunkFrames[] CalculateChunkFrameTable(int numChunks)
 		{
-			(uint firstFrameIndex, uint numFrames)[] table = new (uint, uint)[numChunks];
+			ChunkFrames[] table = new ChunkFrames[numChunks];
 
 			uint firstFrameIndex = 0;
 			int lastStscIndex = 0;
@@ -55,7 +61,7 @@ namespace Mpeg4Lib.Boxes
 				if (lastStscIndex + 1 < Samples.Count && chunk == Samples[lastStscIndex + 1].FirstChunk)
 					lastStscIndex++;
 
-				table[chunk - 1] = (firstFrameIndex, Samples[lastStscIndex].SamplesPerChunk);
+				table[chunk - 1] = new() { FirstFrameIndex = firstFrameIndex, NumberOfFrames = Samples[lastStscIndex].SamplesPerChunk };
 				firstFrameIndex += Samples[lastStscIndex].SamplesPerChunk;
 			}
 

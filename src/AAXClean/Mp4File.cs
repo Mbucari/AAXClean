@@ -45,12 +45,13 @@ namespace AAXClean
 		public Stream InputStream => inputStream;
 		public FileType FileType { get; }
 		public TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.AudioTrack.Mdia.Mdhd.Duration / TimeScale);
-		public uint MaxBitrate => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate;
-		public uint AverageBitrate => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate;
-		public uint TimeScale => Moov.AudioTrack.Mdia.Mdhd.Timescale;
+		public int MaxBitrate => (int)Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate;
+		public int AverageBitrate => (int)Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate;
+		public int TimeScale => (int)Moov.AudioTrack.Mdia.Mdhd.Timescale;
 		public int AudioChannels => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.ChannelConfiguration;
-		public ushort AudioSampleSize => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleSize;
+		public int AudioSampleSize => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleSize;
 		public byte[] AscBlob => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.AscBlob;
+		public SampleRate SampleRate => Enum.GetValues<SampleRate>()[^(Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.SamplingFrequencyIndex + 1)];
 
 		public FtypBox Ftyp { get; set; }
 		public MoovBox Moov { get; }
@@ -76,6 +77,7 @@ namespace AAXClean
 
 			if (Moov.ILst is not null)
 				AppleTags = new AppleTags(Moov.ILst);
+
 		}
 		public Mp4File(Stream file) : this(file, file.Length) { }
 
@@ -142,53 +144,53 @@ namespace AAXClean
 
 			void progressAction(TimeSpan totalDuration, TimeSpan processPosition, double processSpeed)
 			{
-				moovMover.OnProggressUpdate(new ConversionProgressEventArgs(totalDuration, processPosition, processSpeed));
+				moovMover.OnProggressUpdate(new ConversionProgressEventArgs(TimeSpan.Zero, totalDuration, processPosition, processSpeed));
 			}
 		}
 
-		public Mp4Operation ConvertToMp4aAsync(Stream outputStream, ChapterInfo userChapters = null, bool trimOutputToChapters = false)
+		public Mp4Operation ConvertToMp4aAsync(Stream outputStream, ChapterInfo userChapters = null)
 		{
-			FrameTransformBase<FrameEntry, FrameEntry> f1 = GetAudioFrameFilter();
+			var start = userChapters?.StartOffset ?? TimeSpan.Zero;
+			var end = userChapters?.EndOffset ?? TimeSpan.MaxValue;
 
-			LosslessFilter f2 = new(outputStream, this);
+			FrameTransformBase<FrameEntry, FrameEntry> filter1 = GetAudioFrameFilter();
 
-			f1.LinkTo(f2);
+			ChapterQueue chapterQueue = new(SampleRate, SampleRate);
+			LosslessFilter filter2 = new(outputStream, this, chapterQueue);
 
-			if (Moov.TextTrack is null || userChapters is not null)
+			filter1.LinkTo(filter2);
+
+			if (Moov.TextTrack is not null && userChapters is not null)
+				chapterQueue.AddRange(userChapters);
+
+			if (Moov.TextTrack is not null && userChapters is null)
 			{
-				f2.SetChapterDelegate(() => userChapters);
+				ChapterFilter c1 = new();
+
+				c1.ChapterRead += (_, e) => chapterQueue.Add(e);
 
 				void continuation(Task t)
 				{
-					f1.Dispose();
-					if (t.IsCompletedSuccessfully)
-						Chapters = f2.Chapters;
-
+					filter1.Dispose();
+					c1.Dispose();
 					outputStream.Close();
 				}
 
-				return ProcessAudio(trimOutputToChapters, userChapters.StartOffset, userChapters.EndOffset, continuation, (Moov.AudioTrack, f1));
+				return ProcessAudio(start, end, continuation, (Moov.AudioTrack, filter1), (Moov.TextTrack, c1));
 			}
 			else
 			{
-				ChapterFilter c1 = new(TimeScale);
-				f2.SetChapterDelegate(() => c1.Chapters);
-
 				void continuation(Task t)
 				{
-					f1.Dispose();
-					c1.Dispose();
-					if (t.IsCompletedSuccessfully)
-						Chapters = f2.Chapters;
-
+					filter1.Dispose();
 					outputStream.Close();
 				}
 
-				return ProcessAudio(continuation, (Moov.AudioTrack, f1), (Moov.TextTrack, c1));
-			}
+				return ProcessAudio(start, end, continuation, (Moov.AudioTrack, filter1));
+			}			
 		}
 
-		public Mp4Operation ConvertToMultiMp4aAsync(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback, bool trimOutputToChapters = false)
+		public Mp4Operation ConvertToMultiMp4aAsync(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback)
 		{
 			FrameTransformBase<FrameEntry, FrameEntry> f1 = GetAudioFrameFilter();
 			LosslessMultipartFilter f2 = new
@@ -201,22 +203,30 @@ namespace AAXClean
 
 			void continuation(Task t) => f1.Dispose();
 
-			return ProcessAudio(trimOutputToChapters, userChapters.StartOffset, userChapters.EndOffset, continuation, (Moov.AudioTrack, f1));
+			return ProcessAudio(userChapters.StartOffset, userChapters.EndOffset, continuation, (Moov.AudioTrack, f1));
 		}
 
 		public Mp4Operation<ChapterInfo> GetChapterInfoAsync()
 		{
-			ChapterFilter c1 = new(TimeScale);
+			ChapterFilter chapterFilter = new();
+
+			ChapterQueue chapterQueue = new(SampleRate, SampleRate);
+			chapterFilter.ChapterRead += (s, e) => chapterQueue.Add(e);
 
 			ChapterInfo continuation(Task t)
 			{
+				ChapterInfo chapters = new();
 
-				Chapters ??= c1.Chapters;
-				c1.Dispose();
-				return Chapters;
+				while(chapterQueue.TryGetNextChapter(out var ch))
+					chapters.AddChapter(ch.Title, TimeSpan.FromSeconds(ch.SamplesInFrame / (double)SampleRate));
+
+				chapterFilter.Dispose();
+
+				Chapters ??= chapters;
+				return chapters;
 			}
 
-			return ProcessAudio(continuation, (Moov.TextTrack, c1));
+			return ProcessAudio(TimeSpan.Zero, TimeSpan.MaxValue, continuation, (Moov.TextTrack, chapterFilter));
 		}
 
 		public ChapterInfo GetChaptersFromMetadata()
@@ -241,75 +251,54 @@ namespace AAXClean
 
 			if (sampleTimes.Count != chapterNames.Count) return null;
 
-			ChunkEntryList cEntryList = new(textTrak);
+			var cEntryList = new ChunkEntryList(textTrak).OrderBy(s => s.ChunkOffset).ToList();
 
 			if (cEntryList.Count != chapterNames.Count) return null;
 
-			ChapterBuilder builder = new(TimeScale);
+			ChapterInfo chapterInfo = new();
+
+			int subtractNext = 0;
 
 			for (int i = 0; i < chapterNames.Count; i++)
 			{
-				ChunkEntry cEntry = cEntryList[i];
-				builder.AddChapter(cEntry.ChunkIndex, chapterNames[(int)cEntry.ChunkIndex], (int)sampleTimes[i].FrameDelta);
+				var sif = (int)sampleTimes[i].FrameDelta;
+
+				TimeSpan duration = TimeSpan.FromSeconds(Math.Max(0d, sif + subtractNext) / TimeScale);
+				chapterInfo.AddChapter(chapterNames[(int)cEntryList[i].ChunkIndex], duration);
+				subtractNext = sif < 0 ? sif : 0;
 			}
 
-			ChapterInfo chlist = builder.ToChapterInfo();
+			Chapters ??= chapterInfo;
 
-			Chapters ??= chlist;
-
-			return chlist;
+			return chapterInfo;
 		}
 
-		public Mp4Operation ProcessAudio(Action<Task> continuation, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
+		static TimeSpan Min(TimeSpan t1, TimeSpan t2) => t1 > t2 ? t2 : t1;
+		public Mp4Operation ProcessAudio(TimeSpan startTime, TimeSpan endTime, Action<Task> continuation, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
 		{
-			return ProcessAudio(false, TimeSpan.Zero, TimeSpan.Zero, continuation, filters);
-		}
-
-		public Mp4Operation<TResult> ProcessAudio<TResult>(Func<Task, TResult> continuation, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
-		{
-			return ProcessAudio(false, TimeSpan.Zero, TimeSpan.Zero, continuation, filters);
-		}
-
-		public Mp4Operation ProcessAudio(bool doTimeFilter, TimeSpan startTime, TimeSpan endTime, Action<Task> continuation, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
-		{
-			CunkReader reader = new(InputStream)
-			{
-				TotalDuration = Duration
-			};
-
-			startTime = doTimeFilter ? startTime : TimeSpan.Zero;
-			endTime = doTimeFilter ? endTime : TimeSpan.MaxValue;
+			CunkReader reader = new(InputStream, startTime, Min(Duration, endTime));
 
 			foreach ((TrakBox track, FrameFilterBase<FrameEntry> filter) in filters)
 				reader.AddTrack(track, filter);
-
-			reader.Initialize(startTime, endTime);
 
 			var operation = new Mp4Operation(reader.RunAsync, this, continuation);
 			reader.OnProggressUpdateDelegate = operation.OnProggressUpdate;
 			return operation;
 		}
 
-		public Mp4Operation<TResult> ProcessAudio<TResult>(bool doTimeFilter, TimeSpan startTime, TimeSpan endTime, Func<Task, TResult> continuation, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
+		public Mp4Operation<TResult> ProcessAudio<TResult>(TimeSpan startTime, TimeSpan endTime, Func<Task, TResult> continuation, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
 		{
-			CunkReader reader = new(InputStream)
-			{
-				TotalDuration = Duration
-			};
-
-			startTime = doTimeFilter ? startTime : TimeSpan.Zero;
-			endTime = doTimeFilter ? endTime : TimeSpan.MaxValue;
+			CunkReader reader = new(InputStream, startTime, Min(Duration, endTime));
 
 			foreach ((TrakBox track, FrameFilterBase<FrameEntry> filter) in filters)
 				reader.AddTrack(track, filter);
-
-			reader.Initialize(startTime, endTime);
 
 			var operation = new Mp4Operation<TResult>(reader.RunAsync, this, continuation);
 			reader.OnProggressUpdateDelegate = operation.OnProggressUpdate;
 			return operation;
 		}
 
+		[Obsolete("Call Close() on the input stream")]
 		public void Close()
 		{
 			InputStream?.Close();

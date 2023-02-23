@@ -25,7 +25,7 @@ namespace AAXClean.FrameFilters
 		protected abstract Task FlushAsync();
 		protected abstract Task HandleInputDataAsync(TInput input);
 
-		public async Task AddInputAsync(TInput input)
+		public virtual async Task AddInputAsync(TInput input)
 		{
 			filterLoop ??= Task.Run(Encoder, CancellationToken);
 

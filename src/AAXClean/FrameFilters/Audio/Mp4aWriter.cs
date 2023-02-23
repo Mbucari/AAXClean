@@ -28,6 +28,7 @@ namespace AAXClean.FrameFilters.Audio
 		//Since we're only working with audio files, no frame will ever be larger than ushort.MaxValue.
 		//Use shorts to save memory.
 		private readonly List<ushort> AudioSampleSizes = new();
+		private readonly List<int> TextSampleSizes = new();
 		private readonly object lockObj = new();
 
 		private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
@@ -101,6 +102,7 @@ namespace AAXClean.FrameFilters.Audio
 
 			OutputFile.Position = mdatEnd;
 
+			WriteChapterMetadata(chapterTitles);
 
 			Stsc.Samples.Add(new StscBox.StscChunkEntry(CurrentChunk, SamplesPerChunk, 1));
 			Stts.Samples.Add(new SttsBox.SampleEntry((uint)AudioSampleSizes.Count, AAC_TIME_DOMAIN_SAMPLES));
@@ -181,27 +183,30 @@ namespace AAXClean.FrameFilters.Audio
 			}
 		}
 
-		public void WriteChapters(ChapterInfo chapters)
+		private readonly List<string> chapterTitles = new();
+
+		public void WriteChapter(ChapterEntry entry)
 		{
 			if (Moov.TextTrack is null) return;
 
-			Moov.TextTrack.Mdia.Minf.Stbl.Stsc.Samples.Add(new StscBox.StscChunkEntry(1, 1, 1));
+			if (Moov.TextTrack.Mdia.Minf.Stbl.Stsz is null)
+				StszBox.CreateBlank(Moov.TextTrack.Mdia.Minf.Stbl, TextSampleSizes);
 
-			uint entIndex = 0;
-			List<int> sampleSizes = new();
-			foreach (Chapter c in chapters)
-			{
-				uint sampleDelta = (uint)(c.Duration.TotalSeconds * Moov.AudioTrack.Mdia.Mdhd.Timescale);
+			if (!Moov.TextTrack.Mdia.Minf.Stbl.Stsc.Samples.Any())
+				Moov.TextTrack.Mdia.Minf.Stbl.Stsc.Samples.Add(new StscBox.StscChunkEntry(1, 1, 1));
 
-				Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(sampleCount: 1, sampleDelta));
-				sampleSizes.Add(c.RenderSize);
+			chapterTitles.Add(entry.Title);
 
-				TextChunks.Add(new ChunkOffsetEntry { EntryIndex = entIndex++, ChunkOffset = OutputFile.Position });
+			Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(sampleCount: 1, entry.SamplesInFrame));
+			TextSampleSizes.Add(entry.FrameData.Length);
+			TextChunks.Add(new ChunkOffsetEntry { EntryIndex = (uint)TextChunks.Count, ChunkOffset = OutputFile.Position });
 
-				c.WriteChapter(OutputFile);
-			}
+			OutputFile.Write(entry.FrameData.Span);
+		}
 
-			StszBox.CreateBlank(Moov.TextTrack.Mdia.Minf.Stbl, sampleSizes);
+		private void WriteChapterMetadata(IEnumerable<string> chapterTitles)
+		{
+			if (Moov.TextTrack is null) return;
 
 			AppleListBox chapterNames =
 				Moov.TextTrack
@@ -213,10 +218,10 @@ namespace AAXClean.FrameFilters.Audio
 
 			chapterNames.Children.Clear();
 
-			foreach (Chapter c in chapters)
+			foreach (var title in chapterTitles)
 			{
-				chapterNames.AddTag("©nam", c.Title);
-				chapterNames.AddTag("©cmt", c.Title);
+				chapterNames.AddTag("©nam", title);
+				chapterNames.AddTag("©cmt", title);
 			}
 		}
 

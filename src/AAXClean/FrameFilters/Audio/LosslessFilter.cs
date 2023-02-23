@@ -8,32 +8,40 @@ namespace AAXClean.FrameFilters.Audio
 	internal class LosslessFilter : FrameFinalBase<FrameEntry>
 	{
 		public bool Closed { get; private set; }
-		public ChapterInfo Chapters => getChapterDelegate?.Invoke();
 		protected override int InputBufferSize => 1000;
 
 		private long lastChunkIndex = -1;
-		private Func<ChapterInfo> getChapterDelegate;
-		private readonly Mp4aWriter mp4writer;
+		public readonly Mp4aWriter Mp4aWriter;
+		private readonly ChapterQueue ChapterQueue;
 
-		public LosslessFilter(Stream outputStream, Mp4File mp4Audio)
+		public LosslessFilter(Stream outputStream, Mp4File mp4Audio, ChapterQueue chapterQueue)
 		{
-			mp4writer = new Mp4aWriter(outputStream, mp4Audio.Ftyp, mp4Audio.Moov);
-		}
-
-		public void SetChapterDelegate(Func<ChapterInfo> getChapterDelegate)
-		{
-			this.getChapterDelegate = getChapterDelegate;
+			Mp4aWriter = new Mp4aWriter(outputStream, mp4Audio.Ftyp, mp4Audio.Moov);
+			ChapterQueue = chapterQueue;
 		}
 
 		protected override Task FlushAsync()
 		{
+			//Write any remaining chapters
+			while (ChapterQueue.TryGetNextChapter(out var chapterEntry))
+				Mp4aWriter.WriteChapter(chapterEntry);
+
 			CloseWriter();
 			return Task.CompletedTask;
 		}
 
 		protected override Task PerformFilteringAsync(FrameEntry input)
 		{
-			mp4writer.AddFrame(input.FrameData.Span, input.Chunk.ChunkIndex > lastChunkIndex);
+			bool newChunk = input.Chunk.ChunkIndex > lastChunkIndex;
+
+			//Write chapters as soon as they're available.
+			while (ChapterQueue.TryGetNextChapter(out var chapterEntry))
+			{
+				Mp4aWriter.WriteChapter(chapterEntry);
+				newChunk = true;
+			}
+
+			Mp4aWriter.AddFrame(input.FrameData.Span, newChunk);
 			lastChunkIndex = input.Chunk.ChunkIndex;
 			return Task.CompletedTask;
 		}
@@ -41,13 +49,7 @@ namespace AAXClean.FrameFilters.Audio
 		private void CloseWriter()
 		{
 			if (Closed) return;
-			ChapterInfo chinf = Chapters;
-			if (chinf is not null)
-			{
-				mp4writer.WriteChapters(chinf);
-			}
-			mp4writer.Close();
-			mp4writer.OutputFile.Close();
+			Mp4aWriter.Close();
 			Closed = true;
 		}
 
@@ -56,7 +58,7 @@ namespace AAXClean.FrameFilters.Audio
 			if (disposing && !Disposed)
 			{
 				CloseWriter();
-				mp4writer?.Dispose();
+				Mp4aWriter?.Dispose();
 			}
 			base.Dispose(disposing);
 		}

@@ -12,12 +12,11 @@ namespace Mpeg4Lib.Chunks
 		private readonly IReadOnlyList<ChunkOffsetEntry> ChunkTable;
 		private readonly int EntryCount;
 		private readonly IStszBox Stsz;
-		private readonly (uint firstFrameIndex, uint numFrames)[] ChunkFrameTable;
-		private delegate ChunkEntry ChunkEntryDelegate(int chunkIndex);
+		private readonly ChunkFrames[] ChunkFrameTable;
 
 		public TrakBox Track { get; }
 		public int Count => EntryCount;
-		public ChunkEntry this[int chunkIndex] => GetChunkEntry(chunkIndex);
+		public ChunkEntry this[int chunkIndex] => GetChunkEntry(chunkIndex, ChunkTable, Stsz, ChunkFrameTable);
 
 		public ChunkEntryList(TrakBox track)
 		{
@@ -25,26 +24,29 @@ namespace Mpeg4Lib.Chunks
 			Stsz = Track.Mdia.Minf.Stbl.Stsz;
 			ChunkTable = Track.Mdia.Minf.Stbl.COBox.ChunkOffsets;
 			EntryCount = (int)Track.Mdia.Minf.Stbl.COBox.EntryCount;
-
 			ChunkFrameTable = Track.Mdia.Minf.Stbl.Stsc.CalculateChunkFrameTable(EntryCount);
 		}
 
 		public IEnumerator<ChunkEntry> GetEnumerator()
-			=> new TrachChunkEnumerator(EntryCount, GetChunkEntry);
+			=> new TrachChunkEnumerator(EntryCount, ChunkTable, Stsz, ChunkFrameTable);
 
 		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-		private ChunkEntry GetChunkEntry(int chunkIndex)
+		private static ChunkEntry GetChunkEntry(
+			int chunkIndex,
+			IReadOnlyList<ChunkOffsetEntry> chunkTable,
+			IStszBox stsz,
+			ChunkFrames[] chunkFrameTable)
 		{
-			ChunkOffsetEntry cEntry = ChunkTable[chunkIndex];
+			ChunkOffsetEntry cEntry = chunkTable[chunkIndex];
 
-			(uint firstFrameIndex, uint numFrames) = ChunkFrameTable[cEntry.EntryIndex];
+			var chunkFrames = chunkFrameTable[cEntry.EntryIndex];
 
-			(int[] frameSizes, int totalChunkSize) = Stsz.GetFrameSizes(firstFrameIndex, numFrames);
+			(int[] frameSizes, int totalChunkSize) = stsz.GetFrameSizes(chunkFrames.FirstFrameIndex, chunkFrames.NumberOfFrames);
 
 			return new ChunkEntry
 			{
-				FirstFrameIndex = firstFrameIndex,
+				FirstFrameIndex = chunkFrames.FirstFrameIndex,
 				FrameSizes = frameSizes,
 				ChunkIndex = cEntry.EntryIndex,
 				ChunkSize = totalChunkSize,
@@ -57,14 +59,18 @@ namespace Mpeg4Lib.Chunks
 		/// </summary>
 		private class TrachChunkEnumerator : IEnumerator<ChunkEntry>
 		{
+			private readonly IReadOnlyList<ChunkOffsetEntry> ChunkTable;
 			private readonly int EntryCount;
-			private readonly ChunkEntryDelegate GetChunkEntry;
+			private readonly IStszBox Stsz;
+			private readonly ChunkFrames[] ChunkFrameTable;
 			private int CurrentChunkIndex = 0;
 
-			public TrachChunkEnumerator(int entryCount, ChunkEntryDelegate chunkEntryDelegate)
+			public TrachChunkEnumerator(int entryCount, IReadOnlyList<ChunkOffsetEntry> chunkTable, IStszBox stsz, ChunkFrames[] chunkFrameTable)
 			{
 				EntryCount = entryCount;
-				GetChunkEntry = chunkEntryDelegate;
+				ChunkTable = chunkTable;
+				Stsz = stsz;
+				ChunkFrameTable = chunkFrameTable;
 			}
 
 			public ChunkEntry Current { get; private set; }
@@ -77,7 +83,7 @@ namespace Mpeg4Lib.Chunks
 			{
 				if (CurrentChunkIndex >= EntryCount) return false;
 
-				Current = GetChunkEntry(CurrentChunkIndex++);
+				Current = GetChunkEntry(CurrentChunkIndex++, ChunkTable, Stsz, ChunkFrameTable);
 
 				return true;
 			}

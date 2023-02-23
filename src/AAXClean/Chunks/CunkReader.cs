@@ -36,10 +36,13 @@ namespace AAXClean.Chunks
 		private uint[] StartFrames;
 		private uint[] EndFrames;
 		internal Action<ConversionProgressEventArgs> OnProggressUpdateDelegate { get; set; }
-		internal TimeSpan TotalDuration { get; set; }
-		internal CunkReader(Stream inputStream)
+		internal TimeSpan StartTime { get; set; }
+		internal TimeSpan EndTime { get; set; }
+		internal CunkReader(Stream inputStream, TimeSpan startTime, TimeSpan endTime)
 		{
 			InputStream = inputStream;
+			StartTime = startTime;
+			EndTime = endTime;
 		}
 
 		internal void AddTrack(TrakBox trak, FrameFilterBase<FrameEntry> filter)
@@ -48,24 +51,26 @@ namespace AAXClean.Chunks
 			FirstFilters.Add(filter);
 		}
 
-		public void Initialize(TimeSpan startTime, TimeSpan endTime)
+		public void Initialize()
 		{
 			LastFrameProcessed = new uint[Tracks.Count];
 			Stts = Tracks.Select(t => t.Mdia.Minf.Stbl.Stts).ToArray();
 			TimeScales = Tracks.Select(t => t.Mdia.Mdhd.Timescale).ToArray();
 
-			StartFrames = TimeScales.Select(ts => (uint)(startTime.TotalSeconds / ACC_SAMPLES_PER_FRAME * ts)).ToArray();
-			EndFrames = TimeScales.Select(ts => (uint)Math.Min(endTime.TotalSeconds / ACC_SAMPLES_PER_FRAME * ts, uint.MaxValue)).ToArray();
+			StartFrames = TimeScales.Select(ts => (uint)Math.Round(StartTime.TotalSeconds / ACC_SAMPLES_PER_FRAME * ts)).ToArray();
+			EndFrames = TimeScales.Select(ts => (uint)Math.Round(Math.Min(EndTime.TotalSeconds / ACC_SAMPLES_PER_FRAME * ts, uint.MaxValue))).ToArray();
 		}
 
 		internal async Task RunAsync(CancellationTokenSource cancellationSource)
 		{
+			Initialize();
+
 			//All filters share the came cancellation source.
 			foreach (var filter in FirstFilters)
 				filter.SetCancellationToken(cancellationSource.Token);
 
-			DateTime beginProcess = DateTime.Now;
-			DateTime nextUpdate = beginProcess;
+			beginProcess = DateTime.Now;
+			nextUpdate = beginProcess;
 
 			try
 			{
@@ -80,16 +85,6 @@ namespace AAXClean.Chunks
 					InputStream.ReadNextChunk(c.Entry.ChunkOffset, chunkdata.Span);
 
 					await DispatchChunk(c.TrackNum, c.Entry, chunkdata);
-
-					//Throttle update so it doesn't bog down UI
-					if (DateTime.Now > nextUpdate)
-					{
-						TimeSpan position = ProcessPosition(c.TrackNum);
-						double speed = position / (DateTime.Now - beginProcess);
-						OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs(TotalDuration, position, speed));
-
-						nextUpdate = DateTime.Now.AddMilliseconds(300);
-					}
 				}
 			}
 			catch (OperationCanceledException) { }
@@ -100,13 +95,16 @@ namespace AAXClean.Chunks
 			}
 			finally
 			{
-				OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs(TotalDuration, TotalDuration, TotalDuration / (DateTime.Now - beginProcess)));
+				OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs(StartTime, EndTime, EndTime, (EndTime - StartTime) / (DateTime.Now - beginProcess)));
 
 				//Always call CompleteAsync() on all filters so that every
 				//FilterLoop gets awaited and any exceptions are thrown.
 				await Task.WhenAll(FirstFilters.Select(f => f.CompleteAsync()));
 			}
 		}
+
+		private DateTime beginProcess;
+		private DateTime nextUpdate;
 
 		private TimeSpan ProcessPosition(int trackNum)
 			=> Stts[trackNum].FrameToTime(TimeScales[trackNum], LastFrameProcessed[trackNum]);
@@ -121,6 +119,16 @@ namespace AAXClean.Chunks
 
 				if (!frameIndex.Between(StartFrames[trackIndex], EndFrames[trackIndex]))
 					continue;
+
+				//Throttle update so it doesn't bog down UI
+				if (DateTime.Now > nextUpdate)
+				{
+					TimeSpan position = ProcessPosition(trackIndex);
+					double speed = (position - StartTime) / (DateTime.Now - beginProcess);
+					OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs(StartTime, EndTime, position, speed));
+
+					nextUpdate = DateTime.Now.AddMilliseconds(100);
+				}
 
 				var frameDelta = Stts[trackIndex].FrameToFrameDelta(frameIndex);
 
