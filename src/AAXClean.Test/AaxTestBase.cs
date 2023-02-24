@@ -40,9 +40,9 @@ namespace AAXClean.Test
 		public abstract string AaxFile { get; }
 		public abstract int AudioChannels { get; }
 		public abstract int AudioSampleSize { get; }
-		public abstract uint TimeScale { get; }
-		public abstract uint AverageBitrate { get; }
-		public abstract uint MaxBitrate { get; }
+		public abstract int TimeScale { get; }
+		public abstract int AverageBitrate { get; }
+		public abstract int MaxBitrate { get; }
 		public abstract long RenderSize { get; }
 		public abstract TimeSpan Duration { get; }
 		public abstract ChapterInfo Chapters { get; }
@@ -64,7 +64,7 @@ namespace AAXClean.Test
 			}
 			finally
 			{
-				Aax.Close();
+				Aax.InputStream.Close();
 			}
 		}
 
@@ -95,7 +95,7 @@ namespace AAXClean.Test
 			}
 			finally
 			{
-				Aax.Close();
+				Aax.InputStream.Close();
 			}
 		}
 
@@ -123,7 +123,7 @@ namespace AAXClean.Test
 			}
 			finally
 			{
-				Aax.Close();
+				Aax.InputStream.Close();
 			}
 		}
 
@@ -134,11 +134,19 @@ namespace AAXClean.Test
 			{
 				Assert.IsNull(Aax.Chapters);
 				ChapterInfo chapters = Aax.GetChaptersFromMetadata();
+#if DEBUG
+				var chs = new System.Text.StringBuilder();
+
+				foreach (var ch in chapters.Chapters)
+				{
+					chs.AppendLine($"{{ \"{ch.Title}\", TimeSpan.FromTicks({ch.Duration.Ticks}) }},");
+				}
+#endif
 				VerifyChapters(chapters);
 			}
 			finally
 			{
-				Aax.Close();
+				Aax.InputStream.Close();
 			}
 		}
 
@@ -164,7 +172,7 @@ namespace AAXClean.Test
 			try
 			{
 				FileStream tempfile = TestFiles.NewTempFile();
-				await Aax.ConvertToMp4aAsync(tempfile);
+				await Aax.ConvertToMp4aAsync(tempfile, Aax.GetChaptersFromMetadata());
 
 				using SHA1 sha = SHA1.Create();
 
@@ -185,7 +193,7 @@ namespace AAXClean.Test
 			finally
 			{
 				TestFiles.CloseAllFiles();
-				Aax.Close();
+				Aax.InputStream.Close();
 			}
 		}
 
@@ -231,7 +239,7 @@ namespace AAXClean.Test
 			finally
 			{
 				TestFiles.CloseAllFiles();
-				Aax.Close();
+				Aax.InputStream.Close();
 			}
 
 		}
@@ -254,7 +262,7 @@ namespace AAXClean.Test
 				Mp4File mp4 = new(tempfile.Name);
 				var ch_2 = mp4.GetChaptersFromMetadata().ToList();
 				var ch_3 = (await mp4.GetChapterInfoAsync()).ToList();
-				mp4.Close();
+				mp4.InputStream.Close();
 
 				var ch_1 = newChapters.ToList();
 				Assert.AreEqual(ch_1.Count, ch_2.Count, 0, "Compare to GetChaptersFromMetadata()");
@@ -299,12 +307,12 @@ namespace AAXClean.Test
 				Assert.IsTrue(convertTask.IsCanceled);
 
 				TestFiles.CloseAllFiles();
-				Aax.Close();
+				Aax.InputStream.Close();
 			}
 			finally
 			{
 				TestFiles.CloseAllFiles();
-				aaxFile.Close();
+				aaxFile.InputStream.Close();
 			}
 		}
 
@@ -315,7 +323,6 @@ namespace AAXClean.Test
 			try
 			{
 				FileStream tempfile = TestFiles.NewTempFile();
-
 
 				void NewSplit(NewSplitCallback callback)
 				{
@@ -331,12 +338,12 @@ namespace AAXClean.Test
 				Assert.IsTrue(convertTask.IsCanceled);
 
 				TestFiles.CloseAllFiles();
-				Aax.Close();
+				Aax.InputStream.Close();
 			}
 			finally
 			{
 				TestFiles.CloseAllFiles();
-				aaxFile.Close();
+				aaxFile.InputStream.Close();
 			}
 		}
 	}

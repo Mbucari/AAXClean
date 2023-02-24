@@ -23,6 +23,7 @@ namespace AAXClean
 
 			_chapterList.Add(new Chapter(title, starttime, duration));
 		}
+		public void Add(string title, TimeSpan duration) => AddChapter(title, duration);
 
 		public IEnumerator<Chapter> GetEnumerator()
 		{

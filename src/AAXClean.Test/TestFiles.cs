@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 
 namespace AAXClean.Test
@@ -37,7 +38,7 @@ namespace AAXClean.Test
 
 		public static void CloseAllFiles()
 		{
-			foreach (FileStream fs in OpenTempFiles)
+			foreach (FileStream fs in OpenTempFiles.ToList())
 			{
 				fs.Close();
 				File.Delete(fs.Name);
