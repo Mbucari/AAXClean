@@ -23,7 +23,7 @@ namespace Mpeg4Lib.Boxes
 			if (TotalBoxSize == 1)
 			{
 				Version = 1;
-				TotalBoxSize = (long)file.ReadUInt64BE();
+				TotalBoxSize = file.ReadInt64BE();
 				HeaderSize += 8;
 			}
 		}
@@ -41,7 +41,7 @@ namespace Mpeg4Lib.Boxes
 			Version = boxSize > uint.MaxValue ? 1 : 0;
 			TotalBoxSize = boxSize;
 			Type = boxType;
-			HeaderSize = (boxSize > uint.MaxValue ? 16u : 8u);
+			HeaderSize = boxSize > uint.MaxValue ? 16u : 8u;
 		}
 
 		public override string ToString()

@@ -71,7 +71,7 @@ namespace Mpeg4Lib.Util
 
 		public static ushort ReadUInt16BE(this Stream stream) => (ushort)stream.ReadInt16BE();
 		public static uint ReadUInt32BE(this Stream stream) => (uint)stream.ReadInt32BE();
-		public static long ReadInt64BE(this Stream stream) => (long)stream.ReadUInt64BE();
+		public static ulong ReadUInt64BE(this Stream stream) => (ulong)stream.ReadInt64BE();
 
 		public static short ReadInt16BE(this Stream stream)
 		{
@@ -87,19 +87,19 @@ namespace Mpeg4Lib.Util
 
 			return dword[0] << 24 | dword[1] << 16 | dword[2] << 8 | dword[3];
 		}
-		public static ulong ReadUInt64BE(this Stream stream)
+		public static long ReadInt64BE(this Stream stream)
 		{
 			Span<byte> qword = stackalloc byte[8];
 			stream.Read(qword, qword.Length);
 
-			return (ulong)qword[0] << 56 | (ulong)qword[1] << 48 | (ulong)qword[2] << 40 | (ulong)qword[3] << 32 | (ulong)qword[4] << 24 | (ulong)qword[5] << 16 | (ulong)qword[6] << 8 | qword[7];
+			return (long)(qword[0] << 24 | qword[1] << 16 | qword[2] << 8 | qword[3]) << 32 | (long)(qword[4] << 24 | qword[5] << 16 | qword[6] << 8 | qword[7]);
 		}
 		public static string ReadType(this Stream stream)
 		{
 			Span<byte> dword = stackalloc byte[4];
 			stream.Read(dword, dword.Length);
 
-			return new string(new char[] { (char)dword[0], (char)dword[1], (char)dword[2], (char)dword[3] });
+			return new string(stackalloc char[] { (char)dword[0], (char)dword[1], (char)dword[2], (char)dword[3] });
 		}
 
 		public static byte[] ReadBlock(this Stream stream, int length)
