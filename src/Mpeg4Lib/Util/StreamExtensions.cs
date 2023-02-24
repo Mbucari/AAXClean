@@ -1,5 +1,6 @@
 ﻿using Mpeg4Lib.Boxes;
 using System;
+using System.Data;
 using System.IO;
 
 namespace Mpeg4Lib.Util
@@ -92,7 +93,7 @@ namespace Mpeg4Lib.Util
 			Span<byte> qword = stackalloc byte[8];
 			stream.Read(qword, qword.Length);
 
-			return (long)(qword[0] << 24 | qword[1] << 16 | qword[2] << 8 | qword[3]) << 32 | (long)(qword[4] << 24 | qword[5] << 16 | qword[6] << 8 | qword[7]);
+			return ((long)(qword[0] << 24 | qword[1] << 16 | qword[2] << 8 | qword[3]) << 32) | ((qword[4] << 24 | qword[5] << 16 | qword[6] << 8 | qword[7]) & uint.MaxValue);
 		}
 		public static string ReadType(this Stream stream)
 		{
