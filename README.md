@@ -9,6 +9,17 @@ Include the [AAXClean](https://www.nuget.org/packages/AAXClean/) NuGet package t
 
 To convert audiobooks to Mp3, use [AAXClean.Codecs](https://github.com/Mbucari/AAXClean.Codecs).
 
+## Instantiation
+
+AaxFile has two constructors:
+```C#
+public AaxFile(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read);
+public AaxFile(Stream file);
+public AaxFile(Stream file, long fileSize, bool additionalFixups = true)
+```
+
+The first two constructors use the third constructor. AAXClean needs to know the total file size length, so if it's instantiated with a stream that cannot seek, you must specify the file size. If the stream is a network stream, get the file size from the content-length header.
+
 ## Usage:
 
 ```C# 
