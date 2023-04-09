@@ -13,7 +13,7 @@ namespace Mpeg4Lib.Boxes
 		public ulong Duration { get; set; }
 		public ulong Reserved2 { get; }
 		public short Layer { get; }
-		public short AlternateGroup { get; }
+		public short AlternateGroup { get; set; }
 		public short Volume { get; }
 		public ushort Reserved3 { get; }
 		public byte[] Matrix { get; }

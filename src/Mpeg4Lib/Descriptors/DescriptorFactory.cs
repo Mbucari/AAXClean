@@ -13,6 +13,7 @@ namespace Mpeg4Lib.Descriptors
 				3 => new ES_Descriptor(file),
 				4 => new DecoderConfigDescriptor(file),
 				5 => new AudioSpecificConfig(file),
+				6 => new SLConfigDescriptor(file),
 				_ => new UnknownDescriptor((byte)tagID, file),
 			};
 		}

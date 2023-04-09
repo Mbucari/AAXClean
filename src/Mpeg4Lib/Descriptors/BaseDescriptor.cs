@@ -61,7 +61,7 @@ namespace Mpeg4Lib.Descriptors
 		public void Save(Stream file)
 		{
 			file.WriteByte(TagID);
-			EncodeSize(file, Size, SizeBytes);
+			EncodeSize(file, (int)RenderSize - SizeBytes - 1, SizeBytes);
 
 			Render(file);
 

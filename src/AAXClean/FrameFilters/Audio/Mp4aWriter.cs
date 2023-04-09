@@ -63,14 +63,21 @@ namespace AAXClean.FrameFilters.Audio
 
 			Moov.AudioTrack.Mdia.Mdhd.Timescale = (uint)sampleRate;
 			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleRate = (ushort)sampleRate;
-			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.SamplingFrequencyIndex = sampleRateIndex;
-			//Channel Configuration only equals number of channels for stereo and mono.
-			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.ChannelConfiguration = channels;
+			if (Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig is not null)
+			{
+				Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.SamplingFrequencyIndex = sampleRateIndex;
+				//Channel Configuration only equals number of channels for stereo and mono.
+				Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.ChannelConfiguration = channels;
+			}
 
 			if (Moov.TextTrack is not null)
 			{
 				Moov.TextTrack.Mdia.Mdhd.Timescale = (uint)sampleRate;
 			}
+		}
+		protected virtual void SaveMoov()
+		{
+			Moov.Save(OutputFile);
 		}
 
 		public void Close()
@@ -137,23 +144,13 @@ namespace AAXClean.FrameFilters.Audio
 
 			var btrt = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.GetChild<BtrtBox>();
 
-			if (btrt is null)
-			{
-				BtrtBox.Create(0, maxBitRate, avgBitrate, Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry);
-			}
-			else
-			{
-				btrt.MaxBitrate = maxBitRate;
-				btrt.AvgBitrate = avgBitrate;
-			}
 
 			if (Moov.TextTrack is not null)
 			{
 				Moov.TextTrack.Mdia.Mdhd.Duration = Moov.AudioTrack.Mdia.Mdhd.Duration;
 				Moov.TextTrack.Tkhd.Duration = Moov.Mvhd.Duration;
 			}
-
-			Moov.Save(OutputFile);
+			SaveMoov();
 			Closed = true;
 
 			static (uint maxOneSecondBitrate, uint avgBitrate) CalculateBitrate(double timeScale, ulong duration, IStszBox stsz)
@@ -313,7 +310,7 @@ namespace AAXClean.FrameFilters.Audio
 
 			ms.Position = 0;
 
-			MoovBox newMoov = new(ms, new BoxHeader(ms), null);
+			MoovBox newMoov = BoxFactory.CreateBox(ms, null) as MoovBox;
 
 			// Create chunk offset and sample size boxes when closing the file
 			// so we know whether to create stco/co64 and stsz/stz2

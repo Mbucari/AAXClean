@@ -32,7 +32,7 @@ namespace AAXClean
 		}
 		public override string ToString()
 		{
-			return $"{Title} {{{StartOffset.TotalSeconds:F6} - {EndOffset.TotalSeconds:F6}}}";
+			return $"{Title} {{{StartOffset} - {EndOffset}}}";
 		}
 
 		//This is constant folr UTF-8 text
