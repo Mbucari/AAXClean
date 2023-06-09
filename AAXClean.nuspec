@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<metadata>
 		<id>AAXClean</id>
-		<version>1.0.3</version>
+		<version>0.0.0</version>
 		<description>Decrypts Audible aax and aaxc files to mp4.</description>
 		<authors>MrGneissGuy</authors>
 		<repository type="git" url="https://github.com/Mbucari/AAXClean.git" branch="master" />
@@ -10,7 +10,10 @@
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
 		<Tags>Audible AAC AAXC m4b audiobook</Tags>
         <language>en-US</language>
-		<releaseNotes>* Exposed Apple List Box to add custom tags</releaseNotes>
+		<readme>docs\README.md</readme>	
+	<dependencies>
+		<group targetFramework="net6.0" />
+	</dependencies>
 	</metadata>
 	<dependencies>
 		<group targetFramework="net6.0">
@@ -19,6 +22,7 @@
 	</dependencies>
 	<files>
 		<file src="src\AAXClean\bin\Release\net6.0\AAXClean.dll" target="lib\net6.0\AAXClean.dll" />
-		<file src="src\AAXClean\bin\Release\net6.0\Mpeg4Lib.dll" target="lib\net6.0\Mpeg4Lib.dll" />
+		<file src="src\AAXClean\bin\Release\net6.0\Mpeg4Lib.dll" target="lib\net6.0\Mpeg4Lib.dll" />		
+		<file src="README.md" target="docs\" />
 	</files>
 </Project>

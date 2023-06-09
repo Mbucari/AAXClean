@@ -1,53 +1,19 @@
-name: publish to nuget
+# validate.yml
+# Validates that Libation will build on a pull request or push to master. 
+---
+name: validate
+
 on:
   push:
-    branches:
-      - master # Default release branch
+    branches: [master]
+  pull_request:
+    branches: [master]
+
 jobs:
-  publish:
-    name: build, pack & publish
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup dotnet
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 6.0.x		  
-      # Publish
-      - name: publish on version change
-        id: publish_nuget
-        uses: Mbucari/publish-nuget@master
-        with:
-          # Filepath of the project to be packaged, relative to root of repository
-          PROJECT_FILE_PATH: src/AAXClean/AAXClean.csproj
-          
-          # NuGet package id, used for version detection & defaults to project name
-          PACKAGE_NAME: AAXClean
-          
-          BUILD_PLATFORM: AnyCPU
-          BUILD_CONFIGURATION: Release
-          NUSPEC_FILE: ../../AAXClean.nuspec
-          
-          # Filepath with version info, relative to root of repository & defaults to PROJECT_FILE_PATH
-          # VERSION_FILE_PATH: Directory.Build.props
-
-          # Regex pattern to extract version info in a capturing group
-          VERSION_REGEX: ^\s*<Version>(.*)<\/Version>\s*$
-          
-          # Useful with external providers like Nerdbank.GitVersioning, ignores VERSION_FILE_PATH & VERSION_REGEX
-          # VERSION_STATIC: 1.0.0
-
-          # Flag to toggle git tagging, enabled by default
-          # TAG_COMMIT: true
-
-          # Format of the git tag, [*] gets replaced with actual version
-          # TAG_FORMAT: v*
-
-          # API key to authenticate with NuGet server
-          NUGET_KEY: ${{secrets.AAXClean_NUGET_API_KEY}}
-
-          # NuGet server uri hosting the packages, defaults to https://api.nuget.org
-          # NUGET_SOURCE: https://api.nuget.org
-
-          # Flag to toggle pushing symbols along with nuget package to the server, disabled by default
-          INCLUDE_SYMBOLS: false
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      project_file: ./src/AAXClean/AAXClean.csproj
+      nuspec_file: ./AAXClean.nuspec
+    secrets:
+      nuget_token: ${{ secrets.AAXCLEAN_NUGET_API_KEY }}

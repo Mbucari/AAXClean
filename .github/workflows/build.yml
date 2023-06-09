@@ -1,0 +1,78 @@
+# build-windows.yml
+# Reusable workflow that builds the Windows versions of Libation.
+---
+name: build
+
+on:
+  workflow_call:
+    inputs:
+      version_override:
+        type: string
+        description: 'Version number override'
+        required: false
+      project_file:
+        type: string
+        description: 'Path to the .csproj file'
+        required: true
+      nuspec_file:
+        type: string
+        description: 'Path to the .nuspec file'
+        required: true
+    secrets:
+      nuget_token:
+        description: 'Nuget Api authentication token'
+        required: false      
+
+env:
+  DOTNET_CONFIGURATION: 'Release'
+  DOTNET_VERSION: '6.0.x'
+  NUGET_SOURCE: 'https://api.nuget.org/v3/index.json'
+
+jobs:
+  build:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.nuget_token }}
+          
+      - name: Get version
+        id: get_version
+        working-directory: 
+        run: |
+          inputVersion="${{ inputs.version_override }}"
+          if [[ "${#inputVersion}" -gt 0 ]]
+          then
+            version="${inputVersion}"
+          else
+            version="$(grep -Eio -m 1 '<Version>.*</Version>' ${{ inputs.project_file }} | sed -r 's/<\/?Version>//g')"
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build and Pack
+        id: build_pack
+        run: |
+          nuspec_relative=$(realpath --relative-to="$(dirname ${{ inputs.project_file }})" "${{ inputs.nuspec_file }}")
+          dotnet build ${{ inputs.project_file }} -c ${{ env.DOTNET_CONFIGURATION }}
+          dotnet pack ${{ inputs.project_file }} --no-build -c ${{ env.DOTNET_CONFIGURATION }} -o . -p:NuspecFile="$nuspec_relative" -p:NuspecProperties="version=${{ steps.get_version.outputs.version }}"
+          nupkg=$(ls *.nupkg)
+          echo "nupkg=${nupkg}" >> "${GITHUB_OUTPUT}"
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: '${{ steps.build_pack.outputs.nupkg }}'
+          path: ./${{ steps.build_pack.outputs.nupkg }}
+          if-no-files-found: error
+          retention-days: 7
+          
+      - name: Publish nupkg
+        continue-on-error : true
+        run: |
+          dotnet nuget push '${{ steps.build_pack.outputs.nupkg }}' -s ${{ env.NUGET_SOURCE }} -k ${{ secrets.nuget_token }} --skip-duplicate
+              
