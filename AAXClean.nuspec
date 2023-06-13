@@ -7,10 +7,11 @@
 		<repository type="git" url="https://github.com/Mbucari/AAXClean.git" branch="master" />
 		<projectUrl>https://github.com/Mbucari/AAXClean</projectUrl>
 		<description>Decrypts Audible aax and aaxc files to mp4.</description>
-        <requireLicenseAcceptance>false</requireLicenseAcceptance>
 		<Tags>Audible AAC AAXC m4b audiobook</Tags>
         <language>en-US</language>
 		<readme>docs\README.md</readme>	
+		<license type="file">LICENSE.txt</license>
+		<requireLicenseAcceptance>false</requireLicenseAcceptance>
 	<dependencies>
 		<group targetFramework="net6.0" />
 	</dependencies>
@@ -22,7 +23,8 @@
 	</dependencies>
 	<files>
 		<file src="src\AAXClean\bin\Release\net6.0\AAXClean.dll" target="lib\net6.0\AAXClean.dll" />
-		<file src="src\AAXClean\bin\Release\net6.0\Mpeg4Lib.dll" target="lib\net6.0\Mpeg4Lib.dll" />		
+		<file src="src\AAXClean\bin\Release\net6.0\Mpeg4Lib.dll" target="lib\net6.0\Mpeg4Lib.dll" />
 		<file src="README.md" target="docs\" />
+		<file src="LICENSE.txt" target="LICENSE.txt" />
 	</files>
 </Project>

@@ -15,6 +15,10 @@
 	<RepositoryUrl>https://github.com/Mbucari/AAXClean</RepositoryUrl>
 	<RepositoryType>Git</RepositoryType>
 	<PackageTags>Audible AAC AAXC m4b audiobook</PackageTags>
+	<PublishRepositoryUrl>true</PublishRepositoryUrl>
+	<EmbedUntrackedSources>true</EmbedUntrackedSources>
+	<DebugType>embedded</DebugType>
+	<RepositoryType>Git</RepositoryType>
 	<NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
@@ -25,6 +29,7 @@
   
   <ItemGroup>
     <ProjectReference Include="..\Mpeg4Lib\Mpeg4Lib.csproj" />
+  	<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
   </ItemGroup>
 	
 </Project>
