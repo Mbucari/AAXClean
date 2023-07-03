@@ -29,7 +29,7 @@ namespace Mpeg4Lib.Boxes
 		{
 			DataType = (AppleDataType)file.ReadUInt32BE();
 			Flags = file.ReadUInt32BE();
-			long length = Header.FilePosition + Header.TotalBoxSize - file.Position;
+			long length = RemainingBoxLength(file);
 			Data = file.ReadBlock((int)length);
 		}
 		protected override void Render(Stream file)

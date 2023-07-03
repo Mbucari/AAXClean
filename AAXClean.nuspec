@@ -18,7 +18,7 @@
 	</metadata>
 	<dependencies>
 		<group targetFramework="net6.0">
-			<dependency id="Mpeg4Lib" version="0.1.12" />
+			<dependency id="Mpeg4Lib" version="0.1.20" />
 		</group>
 	</dependencies>
 	<files>

@@ -36,6 +36,8 @@ namespace Mpeg4Lib.Boxes
 				"meta" => new MetaBox(file, header, parent),
 				"ilst" => new AppleListBox(file, header, parent),
 				"data" => new AppleDataBox(file, header, parent),
+				"mean" => new MeanBox(file, header, parent),
+				"name" => new NameBox(file, header, parent),
 				_ => new UnknownBox(file, header, parent),
 			};
 		}

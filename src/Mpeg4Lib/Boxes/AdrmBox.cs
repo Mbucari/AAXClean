@@ -18,7 +18,7 @@ namespace Mpeg4Lib.Boxes
 			DrmBlob = file.ReadBlock(56);
 			middleBlob = file.ReadBlock(4);
 			Checksum = file.ReadBlock(20);
-			long len = Header.FilePosition + Header.TotalBoxSize - file.Position;
+			long len = RemainingBoxLength(file);
 			endBlob = file.ReadBlock((int)len);
 		}
 

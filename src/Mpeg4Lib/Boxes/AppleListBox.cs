@@ -13,10 +13,16 @@ namespace Mpeg4Lib.Boxes
 
 			while (file.Position < endPos)
 			{
-				AppleTagBox appleTag = new AppleTagBox(file, new BoxHeader(file), this);
+				BoxHeader tagBoxHeader = new BoxHeader(file);
+
+				AppleTagBox appleTag
+					= tagBoxHeader.Type == "----"
+					? new FreeformTagBox(file, tagBoxHeader, this)
+					: new AppleTagBox(file, tagBoxHeader, this);
 
 				if (appleTag.Header.TotalBoxSize == 0)
 					break;
+
 				Children.Add(appleTag);
 			}
 		}
@@ -33,7 +39,7 @@ namespace Mpeg4Lib.Boxes
 		public void AddTag(string name, byte[] data, AppleDataType type)
 		{
 			AppleTagBox.Create(this, name, data, type);
-		}		
+		}
 
 		public void EditOrAddTag(string name, string data)
 		{
@@ -59,6 +65,44 @@ namespace Mpeg4Lib.Boxes
 			}
 		}
 
+		public void AddFreeformTag(string domain, string name, string data)
+		{
+			FreeformTagBox.Create(this, domain, name, Encoding.UTF8.GetBytes(data), AppleDataType.Utf_8);
+		}
+
+		public void AddFreeformTag(string domain, string name, byte[] data, AppleDataType type)
+		{
+			FreeformTagBox.Create(this, domain, name, data, type);
+		}
+
+		public void EditOrAddFreeformTag(string domain, string name, string data)
+		{
+			EditOrAddFreeformTag(domain, name, Encoding.UTF8.GetBytes(data), AppleDataType.Utf_8);
+		}
+
+		public void EditOrAddFreeformTag(string domain, string name, byte[] data)
+		{
+			EditOrAddFreeformTag(domain, name, data, AppleDataType.ContainsData);
+		}
+
+		public void EditOrAddFreeformTag(string domain, string name, byte[] data, AppleDataType type)
+		{
+			FreeformTagBox tag
+				= Tags
+				.OfType<FreeformTagBox>()
+				.Where(t => t.Mean.ReverseDnsDomain == domain && t.Name.Name == name)
+				.FirstOrDefault();
+
+			if (tag is null)
+			{
+				AddFreeformTag(domain, name, data, type);
+			}
+			else if (tag?.Data.DataType == type)
+			{
+				tag.Data.Data = data;
+			}
+		}
+
 		public string GetTagString(string name)
 		{
 			byte[] tag = GetTagBytes(name);
@@ -72,6 +116,22 @@ namespace Mpeg4Lib.Boxes
 			.Where(t => t.Header.Type == name)
 			.FirstOrDefault()
 			?.GetChild<AppleDataBox>()
-			?.Data;		
+			?.Data;
+
+		public string GetFreeformTagString(string domain, string name)
+		{
+			byte[] tag = GetFreeformTagBytes(domain, name);
+			if (tag is null) return null;
+
+			return Encoding.UTF8.GetString(tag);
+		}
+
+		public byte[] GetFreeformTagBytes(string domain, string name)
+			=> Tags
+			.OfType<FreeformTagBox>()
+			.Where(t => t.Mean.ReverseDnsDomain == domain && t.Name.Name == name)
+			.FirstOrDefault()
+			?.GetChild<AppleDataBox>()
+			?.Data;
 	}
 }

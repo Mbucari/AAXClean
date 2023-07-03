@@ -13,6 +13,8 @@ namespace Mpeg4Lib.Boxes
 		public List<IBox> Children { get; } = new List<IBox>();
 		public virtual long RenderSize => 8 + Children.Sum(b => b.RenderSize);
 
+		protected long RemainingBoxLength(Stream file) => Header.FilePosition + Header.TotalBoxSize - file.Position;
+
 		public Box(BoxHeader header, IBox parent)
 		{
 			Header = header;
