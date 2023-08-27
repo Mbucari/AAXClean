@@ -1,5 +1,7 @@
 ﻿using Mpeg4Lib.Boxes;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace AAXClean
@@ -40,12 +42,13 @@ namespace AAXClean
 		public string Version { get => IList.GetTagString("VERS"); set => IList.EditOrAddTag("VERS", value); }
 		public byte[] Cover { get => IList.GetTagBytes("covr"); set => IList.EditOrAddTag("covr", value, AppleDataType.JPEG); }
 
-		public (int trackNum, int trackCount) Tracks
+		[DisallowNull]
+		public (int trackNum, int trackCount)? Tracks
 		{
 			get
 			{
 				var data = IList.GetTagBytes("trkn");
-				if (data is null) return (1, 1);
+				if (data is null) return null;
 
 				int trackNum = (data[2] << 8) | data[3];
 				int trackCount = (data[4] << 8) | data[5];
@@ -54,16 +57,44 @@ namespace AAXClean
 			}
 			set
 			{
+				if (value is not (int trackNum, int trackCount))
+					throw new ArgumentNullException(nameof(Tracks), "Cannot set to null");
+
 				var data = new byte[8];
 
-				data[3] = (byte)value.trackNum;
-				data[2] = (byte)(value.trackNum >> 8);
+				data[3] = (byte)trackNum;
+				data[2] = (byte)(trackNum >> 8);
 
-				data[5] = (byte)value.trackCount;
-				data[4] = (byte)(value.trackCount >> 8);
+				data[5] = (byte)trackCount;
+				data[4] = (byte)(trackCount >> 8);
 
 				IList.EditOrAddTag("trkn", data);
 			}
+		}
+
+		public static AppleTags FromFile(string mp4File)
+		{
+			using var file = System.IO.File.Open(mp4File, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read);
+
+			BoxHeader header;
+			do
+			{
+				header = new BoxHeader(file);
+
+				if (header.Type is "moov")
+					continue;
+				else if (header.Type is "udta")
+					break;
+				else
+					file.Position += header.TotalBoxSize - header.HeaderSize;
+
+			}while(file.Position < file.Length);
+
+			if (header?.Type is not "udta") return null;
+
+			var ilst = new UdtaBox(file, header, null)?.GetChild<MetaBox>()?.GetChild<AppleListBox>();
+
+			return ilst is null ? null : new AppleTags(ilst);
 		}
 	}
 }
