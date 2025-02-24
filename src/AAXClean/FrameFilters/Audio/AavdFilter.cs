@@ -20,7 +20,7 @@ namespace AAXClean.FrameFilters.Audio
 		{
 			if (frame.Length >= 0x10)
 			{
-				aesCryptoTransform.TransformFinal(frame.Slice(0, frame.Length & 0x7ffffff0), frame);
+				aesCryptoTransform.DecryptCbc(frame.Slice(0, frame.Length & 0x7ffffff0), frame);
 			}
 
 			return base.ValidateFrame(frame);

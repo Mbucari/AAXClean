@@ -2,7 +2,7 @@
 
   <PropertyGroup>
 	<TargetFrameworks>net9.0;net8.0</TargetFrameworks>
-    <Version>1.1.4</Version>
+    <Version>1.1.5</Version>
     <Authors>MrGneissGuy</Authors>
     <Company>Just Me, Inc.</Company>
     <Description>Decrypts Audible aax and aaxc files to mp4.</Description>
@@ -27,12 +27,12 @@
 	  <DebugType>embedded</DebugType>
   </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
   
   <ItemGroup>
     <ProjectReference Include="..\Mpeg4Lib\Mpeg4Lib.csproj" />
