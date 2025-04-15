@@ -1,0 +1,25 @@
+﻿using Mpeg4Lib.Util;
+using System.IO;
+
+namespace Mpeg4Lib.Boxes;
+
+public class TfdtBox : FullBox
+{
+    public override long RenderSize => base.RenderSize + (Header.Version == 1 ? 8 : 4);
+    public long BaseMediaDecodeTime { get; }
+    public TfdtBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
+    {
+        if (header.Version == 1)
+            BaseMediaDecodeTime = file.ReadInt64BE();
+        else
+            BaseMediaDecodeTime = file.ReadUInt32BE();
+    }
+    protected override void Render(Stream file)
+    {
+        base.Render(file);
+        if (Header.Version == 1)
+            file.WriteInt64BE(BaseMediaDecodeTime);
+        else
+            file.WriteUInt32BE((uint)BaseMediaDecodeTime);
+    }
+}

@@ -26,7 +26,7 @@ namespace AAXClean
 			set
 			{
 				if (!CanSeek)
-					throw new NotImplementedException();
+					throw new NotSupportedException();
 				BaseStream.Position = value;
 			}
 		}
@@ -35,18 +35,18 @@ namespace AAXClean
 			=> BaseStream.Flush();
 
 		public override int Read(byte[] buffer, int offset, int count)
-			=> throw new NotImplementedException();
+			=> throw new NotSupportedException();
 
 		public override long Seek(long offset, SeekOrigin origin)
 		{
 			if (!CanSeek)
-				throw new NotImplementedException();
+				throw new NotSupportedException();
 
 			return BaseStream.Seek(offset, origin);
 		}
 
 		public override void SetLength(long value)
-			=> throw new NotImplementedException();
+			=> throw new NotSupportedException();
 
 		public override void Write(byte[] buffer, int offset, int count)
 		{

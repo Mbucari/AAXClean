@@ -1,10 +1,11 @@
 ﻿using Mpeg4Lib.Boxes;
+using Mpeg4Lib.Descriptors;
 using Mpeg4Lib.Util;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace AAXClean.FrameFilters.Audio
 {
@@ -32,7 +33,6 @@ namespace AAXClean.FrameFilters.Audio
 		private readonly object lockObj = new();
 
 		private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
-		private static readonly int[] asc_samplerates = { 96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350 };
 
 		public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov)
 		{
@@ -51,30 +51,28 @@ namespace AAXClean.FrameFilters.Audio
 			OutputFile.WriteInt64BE(0);
 		}
 
-		public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov, int sampleRate, int channels)
+		public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov, byte[] ascBytes)
 			: this(outputFile, ftyp, moov)
 		{
-			int sampleRateIndex = Array.IndexOf(asc_samplerates, sampleRate);
+			ArgumentNullException.ThrowIfNull(ascBytes, nameof(ascBytes));
 
-			if (sampleRateIndex < 0)
-				throw new NotSupportedException($"Unsupported sample rate: {sampleRate}");
-			if (channels > 2)
-				throw new NotSupportedException($"Only supports maximum of 2-channel audio. (Channels={channels})");
+			var asc = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig;
+            if (asc is null)
+				throw new Exception("No AudioSpecificConfig found in the audio sample entry.");
+			asc.AscBlob = ascBytes;
 
-			Moov.AudioTrack.Mdia.Mdhd.Timescale = (uint)sampleRate;
-			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleRate = (ushort)sampleRate;
-			if (Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig is not null)
-			{
-				Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.SamplingFrequencyIndex = sampleRateIndex;
-				//Channel Configuration only equals number of channels for stereo and mono.
-				Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.ChannelConfiguration = channels;
-			}
+            if (asc.ChannelConfiguration > 2)
+				throw new NotSupportedException($"Only supports maximum of 2-channel audio. (Channels={asc.ChannelConfiguration})");
+
+			Moov.AudioTrack.Mdia.Mdhd.Timescale = (uint)asc.SamplingFrequency;
+			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleRate = (ushort)asc.SamplingFrequency;
 
 			if (Moov.TextTrack is not null)
 			{
-				Moov.TextTrack.Mdia.Mdhd.Timescale = (uint)sampleRate;
+				Moov.TextTrack.Mdia.Mdhd.Timescale = Moov.AudioTrack.Mdia.Mdhd.Timescale;
 			}
 		}
+
 		protected virtual void SaveMoov()
 		{
 			Moov.Save(OutputFile);

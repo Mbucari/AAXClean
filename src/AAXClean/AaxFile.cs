@@ -26,9 +26,9 @@ namespace AAXClean
 			OriginalMoovSize = Moov.Header.TotalBoxSize;
 
 			//This is the flag that, if set, prevents cover art from loading on android.
-			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.DependsOnCoreCoder = 0;
+			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.DependsOnCoreCoder = false;
 			//Must change the audio type from aavd to mp4a
-			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Header.Type = "mp4a";
+			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Header.ChangeAtomName("mp4a");
 
 			//These actions will alter the mpeg-4 size and should not
 			//be performed unless re-writing the entire mpeg-4 file.

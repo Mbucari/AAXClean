@@ -18,7 +18,8 @@ namespace AAXClean
 	{
 		Aax,
 		Aaxc,
-		Mpeg4
+		Mpeg4,
+		Dash
 	}
 
 	public enum SampleRate : int
@@ -44,41 +45,46 @@ namespace AAXClean
 		public AppleTags AppleTags { get; }
 		public Stream InputStream => inputStream;
 		public FileType FileType { get; }
-		public TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.AudioTrack.Mdia.Mdhd.Duration / TimeScale);
+		public virtual TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.AudioTrack.Mdia.Mdhd.Duration / TimeScale);
 		public int MaxBitrate => (int)Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate;
 		public int AverageBitrate => (int)Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate;
 		public int TimeScale => (int)Moov.AudioTrack.Mdia.Mdhd.Timescale;
+		public int AudioObjectType => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.AudioObjectType;
 		public int AudioChannels => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.ChannelConfiguration;
 		public int AudioSampleSize => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleSize;
 		public byte[] AscBlob => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.AscBlob;
-		public SampleRate SampleRate => Enum.GetValues<SampleRate>()[^(Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.SamplingFrequencyIndex + 1)];
+		public SampleRate SampleRate => (SampleRate)Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.SamplingFrequency;
 
 		public FtypBox Ftyp { get; set; }
 		public MoovBox Moov { get; }
 		public MdatBox Mdat { get; }
 
 		private readonly TrackedReadStream inputStream;
+		protected readonly List<IBox> topLevelBoxes;
 
 		public Mp4File(Stream file, long fileSize)
 		{
 			inputStream = new TrackedReadStream(file, fileSize);
 
-			var boxes = Mpeg4Util.LoadTopLevelBoxes(inputStream);
-			Ftyp = boxes.OfType<FtypBox>().Single();
-			Moov = boxes.OfType<MoovBox>().Single();
-			Mdat = boxes.OfType<MdatBox>().Single();
+			topLevelBoxes = Mpeg4Util.LoadTopLevelBoxes(inputStream);
+			Ftyp = topLevelBoxes.OfType<FtypBox>().Single();
+			Moov = topLevelBoxes.OfType<MoovBox>().Single();
+			Mdat = topLevelBoxes.OfType<MdatBox>().Single();
+			
+			if (Ftyp.CompatibleBrands.Any(b => b == "dash"))
+				FileType = FileType.Dash;
+			else
+                FileType = Ftyp.MajorBrand switch
+                {
+                    "aax " => FileType.Aax,
+                    "aaxc" => FileType.Aaxc,
+                    _ => FileType.Mpeg4
+                };
 
-			FileType = Ftyp.MajorBrand switch
-			{
-				"aax " => FileType.Aax,
-				"aaxc" => FileType.Aaxc,
-				_ => FileType.Mpeg4
-			};
-
-			if (Moov.ILst is not null)
+            if (Moov.ILst is not null)
 				AppleTags = new AppleTags(Moov.ILst);
-
 		}
+
 		public Mp4File(Stream file) : this(file, file.Length) { }
 
 		public Mp4File(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read)
@@ -272,11 +278,13 @@ namespace AAXClean
 
 			return chapterInfo;
 		}
+		protected virtual IChunkReader CreateChunkReader(Stream inputStream, TimeSpan startTime, TimeSpan endTime)
+			=> new ChunkReader(inputStream, startTime, endTime);
 
-		static TimeSpan Min(TimeSpan t1, TimeSpan t2) => t1 > t2 ? t2 : t1;
-		public Mp4Operation ProcessAudio(TimeSpan startTime, TimeSpan endTime, Action<Task> continuation, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
+        static TimeSpan Min(TimeSpan t1, TimeSpan t2) => t1 > t2 ? t2 : t1;
+		public virtual Mp4Operation ProcessAudio(TimeSpan startTime, TimeSpan endTime, Action<Task> continuation, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
 		{
-			CunkReader reader = new(InputStream, startTime, Min(Duration, endTime));
+			IChunkReader reader = CreateChunkReader(InputStream, startTime, Min(Duration, endTime));
 
 			foreach ((TrakBox track, FrameFilterBase<FrameEntry> filter) in filters)
 				reader.AddTrack(track, filter);
@@ -288,7 +296,7 @@ namespace AAXClean
 
 		public Mp4Operation<TResult> ProcessAudio<TResult>(TimeSpan startTime, TimeSpan endTime, Func<Task, TResult> continuation, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
 		{
-			CunkReader reader = new(InputStream, startTime, Min(Duration, endTime));
+			IChunkReader reader = CreateChunkReader(InputStream, startTime, Min(Duration, endTime));
 
 			foreach ((TrakBox track, FrameFilterBase<FrameEntry> filter) in filters)
 				reader.AddTrack(track, filter);

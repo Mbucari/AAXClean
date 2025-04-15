@@ -24,8 +24,15 @@ namespace AAXClean.Chunks
 		}
 	}
 
-	internal class CunkReader
+	public interface IChunkReader
 	{
+        Task RunAsync(CancellationTokenSource cancellationSource);
+        Action<ConversionProgressEventArgs> OnProggressUpdateDelegate { get; set; }
+		void AddTrack(TrakBox trak, FrameFilterBase<FrameEntry> filter);
+    }
+
+	internal class ChunkReader : IChunkReader
+    {
 		private const uint ACC_SAMPLES_PER_FRAME = 1024;
 		private readonly List<TrakBox> Tracks = new();
 		private readonly List<FrameFilterBase<FrameEntry>> FirstFilters = new();
@@ -35,23 +42,23 @@ namespace AAXClean.Chunks
 		private SttsBox[] Stts;
 		private uint[] StartFrames;
 		private uint[] EndFrames;
-		internal Action<ConversionProgressEventArgs> OnProggressUpdateDelegate { get; set; }
-		internal TimeSpan StartTime { get; set; }
-		internal TimeSpan EndTime { get; set; }
-		internal CunkReader(Stream inputStream, TimeSpan startTime, TimeSpan endTime)
+        public Action<ConversionProgressEventArgs> OnProggressUpdateDelegate { get; set; }
+		private TimeSpan StartTime { get; }
+        private TimeSpan EndTime { get; }
+		internal ChunkReader(Stream inputStream, TimeSpan startTime, TimeSpan endTime)
 		{
 			InputStream = inputStream;
 			StartTime = startTime;
 			EndTime = endTime;
 		}
 
-		internal void AddTrack(TrakBox trak, FrameFilterBase<FrameEntry> filter)
+		public void AddTrack(TrakBox trak, FrameFilterBase<FrameEntry> filter)
 		{
 			Tracks.Add(trak);
 			FirstFilters.Add(filter);
 		}
 
-		public void Initialize()
+		private void Initialize()
 		{
 			LastFrameProcessed = new uint[Tracks.Count];
 			Stts = Tracks.Select(t => t.Mdia.Minf.Stbl.Stts).ToArray();
@@ -61,7 +68,7 @@ namespace AAXClean.Chunks
 			EndFrames = TimeScales.Select(ts => (uint)Math.Round(Math.Min(EndTime.TotalSeconds / ACC_SAMPLES_PER_FRAME * ts, uint.MaxValue))).ToArray();
 		}
 
-		internal async Task RunAsync(CancellationTokenSource cancellationSource)
+        public async Task RunAsync(CancellationTokenSource cancellationSource)
 		{
 			Initialize();
 

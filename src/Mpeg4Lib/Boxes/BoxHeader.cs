@@ -9,7 +9,7 @@ namespace Mpeg4Lib.Boxes
 	{
 		public long FilePosition { get; internal set; }
 		public long TotalBoxSize { get; }
-		public string Type { get; set; }
+		public string Type { get; private set; }
 		public uint HeaderSize { get; private set; }
 		public int Version { get; private set; }
 
@@ -27,6 +27,13 @@ namespace Mpeg4Lib.Boxes
 				HeaderSize += 8;
 			}
 		}
+
+		public void ChangeAtomName(string newAtomName)
+		{
+            if (string.IsNullOrEmpty(newAtomName) || Encoding.UTF8.GetByteCount(newAtomName) != 4)
+                throw new ArgumentException($"{nameof(newAtomName)} must be exactly 4 UTF-8 bytes long");
+            Type = newAtomName;
+        }
 
 		public BoxHeader(long boxSize, string boxType)
 		{
