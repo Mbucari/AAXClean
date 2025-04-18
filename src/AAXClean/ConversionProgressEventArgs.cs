@@ -9,7 +9,7 @@ namespace AAXClean
 		public TimeSpan EndTime { get; }
 		public double ProcessSpeed { get; }
 		public double FractionCompleted { get; }
-		internal ConversionProgressEventArgs(TimeSpan startTime,TimeSpan endTime, TimeSpan processPosition, double processSpeed)
+		internal ConversionProgressEventArgs(TimeSpan startTime, TimeSpan endTime, TimeSpan processPosition, double processSpeed)
 		{
 			StartTime = startTime;
 			EndTime = endTime;

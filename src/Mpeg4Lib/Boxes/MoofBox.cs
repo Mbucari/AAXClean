@@ -9,9 +9,9 @@ public class MoofBox : Box
 		LoadChildren(file);
 	}
 
-    public MfhdBox Mfhd => GetChild<MfhdBox>();
-    public TrafBox Traf => GetChild<TrafBox>();
-    protected override void Render(Stream file)
+	public MfhdBox Mfhd => GetChild<MfhdBox>();
+	public TrafBox Traf => GetChild<TrafBox>();
+	protected override void Render(Stream file)
 	{
 		return;
 	}

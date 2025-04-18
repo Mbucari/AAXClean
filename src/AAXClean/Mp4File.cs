@@ -60,28 +60,28 @@ namespace AAXClean
 		public MdatBox Mdat { get; }
 
 		private readonly TrackedReadStream inputStream;
-		protected readonly List<IBox> topLevelBoxes;
+		public List<IBox> TopLevelBoxes { get; }
 
 		public Mp4File(Stream file, long fileSize)
 		{
 			inputStream = new TrackedReadStream(file, fileSize);
 
-			topLevelBoxes = Mpeg4Util.LoadTopLevelBoxes(inputStream);
-			Ftyp = topLevelBoxes.OfType<FtypBox>().Single();
-			Moov = topLevelBoxes.OfType<MoovBox>().Single();
-			Mdat = topLevelBoxes.OfType<MdatBox>().Single();
-			
+			TopLevelBoxes = Mpeg4Util.LoadTopLevelBoxes(inputStream);
+			Ftyp = TopLevelBoxes.OfType<FtypBox>().Single();
+			Moov = TopLevelBoxes.OfType<MoovBox>().Single();
+			Mdat = TopLevelBoxes.OfType<MdatBox>().Single();
+
 			if (Ftyp.CompatibleBrands.Any(b => b == "dash"))
 				FileType = FileType.Dash;
 			else
-                FileType = Ftyp.MajorBrand switch
-                {
-                    "aax " => FileType.Aax,
-                    "aaxc" => FileType.Aaxc,
-                    _ => FileType.Mpeg4
-                };
+				FileType = Ftyp.MajorBrand switch
+				{
+					"aax " => FileType.Aax,
+					"aaxc" => FileType.Aaxc,
+					_ => FileType.Mpeg4
+				};
 
-            if (Moov.ILst is not null)
+			if (Moov.ILst is not null)
 				AppleTags = new AppleTags(Moov.ILst);
 		}
 
@@ -98,7 +98,7 @@ namespace AAXClean
 		/// </summary>
 		public async Task SaveAsync()
 		{
-			if (!InputStream.CanRead ||!InputStream.CanWrite || !InputStream.CanSeek)
+			if (!InputStream.CanRead || !InputStream.CanWrite || !InputStream.CanSeek)
 				throw new InvalidOperationException($"{nameof(InputStream)} must be readable, writable and seekable to save");
 
 			InputStream.Position = Moov.Header.FilePosition;
@@ -145,7 +145,7 @@ namespace AAXClean
 		public static Mp4Operation RelocateMoovAsync(string mp4FilePath)
 		{
 			Mp4Operation moovMover = null;
-			moovMover = new Mp4Operation(t => Mpeg4Util.RelocateMoovToBeginningAsync(mp4FilePath, t.Token, progressAction), null,t => { } );
+			moovMover = new Mp4Operation(t => Mpeg4Util.RelocateMoovToBeginningAsync(mp4FilePath, t.Token, progressAction), null, t => { });
 			return moovMover;
 
 			void progressAction(TimeSpan totalDuration, TimeSpan processPosition, double processSpeed)
@@ -193,7 +193,7 @@ namespace AAXClean
 				}
 
 				return ProcessAudio(start, end, continuation, (Moov.AudioTrack, filter1));
-			}			
+			}
 		}
 
 		public Mp4Operation ConvertToMultiMp4aAsync(ChapterInfo userChapters, Action<NewSplitCallback> newFileCallback)
@@ -223,7 +223,7 @@ namespace AAXClean
 			{
 				ChapterInfo chapters = new();
 
-				while(chapterQueue.TryGetNextChapter(out var ch))
+				while (chapterQueue.TryGetNextChapter(out var ch))
 					chapters.AddChapter(ch.Title, TimeSpan.FromSeconds(ch.SamplesInFrame / (double)SampleRate));
 
 				chapterFilter.Dispose();
@@ -278,10 +278,11 @@ namespace AAXClean
 
 			return chapterInfo;
 		}
+
 		protected virtual IChunkReader CreateChunkReader(Stream inputStream, TimeSpan startTime, TimeSpan endTime)
 			=> new ChunkReader(inputStream, startTime, endTime);
 
-        static TimeSpan Min(TimeSpan t1, TimeSpan t2) => t1 > t2 ? t2 : t1;
+		static TimeSpan Min(TimeSpan t1, TimeSpan t2) => t1 > t2 ? t2 : t1;
 		public virtual Mp4Operation ProcessAudio(TimeSpan startTime, TimeSpan endTime, Action<Task> continuation, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
 		{
 			IChunkReader reader = CreateChunkReader(InputStream, startTime, Min(Duration, endTime));

@@ -32,7 +32,7 @@ namespace AAXClean.FrameFilters.Audio
 
 		protected override void WriteFrameToFile(FrameEntry audioFrame, bool newChunk)
 		{
-			Mp4writer.AddFrame(audioFrame.FrameData.Span, newChunk);
+			Mp4writer.AddFrame(audioFrame.FrameData.Span, newChunk, audioFrame.SamplesInFrame);
 		}
 
 		protected override void CreateNewWriter(NewSplitCallback callback)

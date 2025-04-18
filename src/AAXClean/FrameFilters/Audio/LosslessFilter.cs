@@ -1,6 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters.Audio
@@ -41,7 +39,7 @@ namespace AAXClean.FrameFilters.Audio
 				newChunk = true;
 			}
 
-			Mp4aWriter.AddFrame(input.FrameData.Span, newChunk);
+			Mp4aWriter.AddFrame(input.FrameData.Span, newChunk, input.SamplesInFrame);
 			lastChunkIndex = input.Chunk.ChunkIndex;
 			return Task.CompletedTask;
 		}

@@ -52,7 +52,7 @@ namespace Mpeg4Lib.Chunks
 			}
 			public TrackChunk Current { get; private set; }
 
-			object IEnumerator.Current => Current;			
+			object IEnumerator.Current => Current;
 
 			public bool MoveNext()
 			{

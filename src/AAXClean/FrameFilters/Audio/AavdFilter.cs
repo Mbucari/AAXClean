@@ -4,7 +4,7 @@ using System;
 namespace AAXClean.FrameFilters.Audio
 {
 	internal class AavdFilter : AacValidateFilter
-    {
+	{
 		private readonly AesCryptoTransform aesCryptoTransform;
 
 		public AavdFilter(byte[] key, byte[] iv)
@@ -16,13 +16,13 @@ namespace AAXClean.FrameFilters.Audio
 
 			aesCryptoTransform = new AesCryptoTransform(key, iv);
 		}
-        public override FrameEntry PerformFiltering(FrameEntry input)
-        {
-            var frameData = input.FrameData.Span;
-            if (frameData.Length >= 0x10)
-                aesCryptoTransform.DecryptCbc(frameData.Slice(0, frameData.Length & 0x7ffffff0), frameData);
-            return base.PerformFiltering(input);
-        }
+		public override FrameEntry PerformFiltering(FrameEntry input)
+		{
+			var frameData = input.FrameData.Span;
+			if (frameData.Length >= 0x10)
+				aesCryptoTransform.DecryptCbc(frameData.Slice(0, frameData.Length & 0x7ffffff0), frameData);
+			return base.PerformFiltering(input);
+		}
 
 		protected override void Dispose(bool disposing)
 		{

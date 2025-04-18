@@ -5,7 +5,7 @@ namespace Mpeg4Lib.Boxes
 {
 	public class TkhdBox : FullBox
 	{
-		public override long RenderSize => base.RenderSize + 3 * (Header.Version == 0 ? 4 : 8) + 2 * 4 + 8 + 4 * 2 + Matrix.Length + 2 * 4;
+		public override long RenderSize => base.RenderSize + 3 * (Version == 0 ? 4 : 8) + 2 * 4 + 8 + 4 * 2 + Matrix.Length + 2 * 4;
 		public ulong CreationTime { get; }
 		public ulong ModificationTime { get; }
 		public uint TrackID { get; }
@@ -22,7 +22,7 @@ namespace Mpeg4Lib.Boxes
 
 		public TkhdBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
 		{
-			if (Header.Version == 0)
+			if (Version == 0)
 			{
 				CreationTime = file.ReadUInt32BE();
 				ModificationTime = file.ReadUInt32BE();
@@ -50,7 +50,7 @@ namespace Mpeg4Lib.Boxes
 		protected override void Render(Stream file)
 		{
 			base.Render(file);
-			if (Header.Version == 0)
+			if (Version == 0)
 			{
 				file.WriteUInt32BE((uint)CreationTime);
 				file.WriteUInt32BE((uint)ModificationTime);

@@ -1,13 +1,11 @@
 ﻿using Mpeg4Lib.Chunks;
 using System;
-
-namespace AAXClean.FrameFilters
+#nullable enable
+namespace AAXClean.FrameFilters;
+public class FrameEntry
 {
-	public class FrameEntry
-	{
-		public ChunkEntry Chunk { get; init; }
-		public uint FrameIndex { get; init; }
-		public uint SamplesInFrame { get; init; }
-		public Memory<byte> FrameData { get; init; }
-	}
+	public ChunkEntry? Chunk { get; init; }
+	public required uint SamplesInFrame { get; init; }
+	public required Memory<byte> FrameData { get; init; }
+	public object? ExtraData { get; set; }
 }

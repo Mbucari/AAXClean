@@ -88,7 +88,7 @@ namespace AAXClean
 				else
 					file.Position += header.TotalBoxSize - header.HeaderSize;
 
-			}while(file.Position < file.Length);
+			} while (file.Position < file.Length);
 
 			if (header?.Type is not "udta") return null;
 

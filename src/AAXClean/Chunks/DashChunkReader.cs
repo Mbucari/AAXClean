@@ -2,188 +2,151 @@
 using AAXClean.FrameFilters;
 using Mpeg4Lib.Boxes;
 using Mpeg4Lib.Chunks;
+using Mpeg4Lib.Util;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 #nullable enable
 namespace AAXClean;
-public class DashChunkReader : IChunkReader
+
+internal class DashChunkReader : ChunkReader
 {
-    private const uint AAC_SAMPLES_PER_FRAME = 1024;
-    public Action<ConversionProgressEventArgs>? OnProggressUpdateDelegate { get; set; }
+	private DashFile Dash { get; }
 
-    private List<TrakBox> Tracks { get; } = new();
-    private List<FrameFilterBase<FrameEntry>> FirstFilters { get; } = new();
+	public DashChunkReader(DashFile dash, Stream inputStream, TimeSpan startTime, TimeSpan endTime)
+		: base(inputStream, startTime, endTime)
+	{
+		Dash = dash;
+	}
 
-    private Stream InputStream { get; }
-    private TimeSpan StartTime { get; }
-    private TimeSpan EndTime { get; }
-    private DashFile Dash { get; }
+	protected override FrameEntry CreateFrameEntry(ChunkEntry chunk, int frameInChunk, uint frameDelta, Memory<byte> frameData)
+	{
+		var entry = base.CreateFrameEntry(chunk, frameInChunk, frameDelta, frameData);
 
+		if (chunk.ExtraData is not byte[][] IVs || IVs.Length <= frameInChunk)
+			throw new InvalidDataException($"The dash chunk entry does not contain IVs");
 
-    private uint[]? LastFrameProcessed;
-    private uint[]? TimeScales;
-    private uint[]? StartFrames;
-    private uint[]? EndFrames;
+		entry.ExtraData = IVs[frameInChunk];
+		return entry;
+	}
 
-    Dictionary<uint, int> TrackIdToIndex = new();
+	public override void AddTrack(TrakBox trak, FrameFilterBase<FrameEntry> filter)
+	{
+		if (Tracks.Count > 0)
+			throw new InvalidOperationException($"The {nameof(DashChunkReader)} currently only supports a single track.");
+		base.AddTrack(trak, filter);
+	}
 
-    public DashChunkReader(DashFile dash, Stream inputStream, TimeSpan startTime, TimeSpan endTime)
-    {
-        InputStream = inputStream;
-        StartTime = startTime;
-        EndTime = endTime;
-        Dash = dash;
-    }
+	private (MoofBox, MdatBox, long) SkipToFirstMoof(long minimumSample)
+	{
+		long startPosition = Dash.FirstMoof.Header.FilePosition;
+		long dataOffset = 0;
+		long runningSamples = 0;
 
-    public void AddTrack(TrakBox trak, FrameFilterBase<FrameEntry> filter)
-    {
-        if (TrackIdToIndex.ContainsKey(trak.Tkhd.TrackID))
-            throw new InvalidOperationException($"A track with ID = {trak.Tkhd.TrackID} has already been added to the chunk reader.");
+		if (Dash.Sidx.Segments.Any(s => s.ReferenceType || !s.StartsWithSAP || s.SapType != 1 || s.SapDeltaTime != 0))
+			throw new InvalidOperationException($"AAXClean doesn't know how to inrepret segment index boxes other than " +
+				$"{nameof(SidxBox.Segment.SapType)} = 1, " +
+				$"{nameof(SidxBox.Segment.SapDeltaTime)} = 0, " +
+				$"{nameof(SidxBox.Segment.StartsWithSAP)} = 1, " +
+				$"{nameof(SidxBox.Segment.ReferenceType)} = 0");
 
-        TrackIdToIndex.Add(trak.Tkhd.TrackID, TrackIdToIndex.Count);
-        Tracks.Add(trak);
-        FirstFilters.Add(filter);
-    }
+		foreach (var segment in Dash.Sidx.Segments)
+		{
+			if (minimumSample < runningSamples + segment.SubsegmentDuration)
+				break;
 
-    private void Initialize()
-    {
-        LastFrameProcessed = new uint[Tracks.Count];
-        TimeScales = Tracks.Select(t => t.Mdia.Mdhd.Timescale).ToArray();
+			dataOffset += segment.ReferenceSize;
+			runningSamples += segment.SubsegmentDuration;
+		}
 
-        StartFrames = TimeScales.Select(ts => (uint)Math.Round(StartTime.TotalSeconds / AAC_SAMPLES_PER_FRAME * ts)).ToArray();
-        EndFrames = TimeScales.Select(ts => (uint)Math.Round(Math.Min(EndTime.TotalSeconds / AAC_SAMPLES_PER_FRAME * ts, uint.MaxValue))).ToArray();
-    }
+		if (dataOffset == 0)
+		{
+			return (Dash.FirstMoof, Dash.FirstMdat, runningSamples);
+		}
+		else
+		{
+			InputStream.SeekToOffset(startPosition + dataOffset);
+			var firstMoof = (MoofBox)BoxFactory.CreateBox(InputStream, parent: null);
+			var firstMdat = (MdatBox)BoxFactory.CreateBox(InputStream, parent: null);
 
-    public async Task RunAsync(CancellationTokenSource cancellationSource)
-    {
-        Initialize();
-        if (LastFrameProcessed is null || TimeScales is null || StartFrames is null || EndFrames is null)
-            throw new InvalidOperationException($"Must call {nameof(Initialize)}() before calling {nameof(RunAsync)}()");
+			return (firstMoof, firstMdat, runningSamples);
+		}
+	}
 
-        //All filters share the came cancellation source.
-        foreach (var filter in FirstFilters)
-            filter.SetCancellationToken(cancellationSource.Token);
+	protected override IEnumerable<TrackChunk> EnumerateChunks()
+	{
+		long minimumSample = (long)(StartTime.TotalSeconds * GetTrackTimescale(0));
+		long maximumSample = (long)(EndTime.TotalSeconds * GetTrackTimescale(0));
 
-        beginProcess = DateTime.Now;
-        nextUpdate = beginProcess;
-        try
-        {
+		var (moofBox, mdatBox, startSample) = SkipToFirstMoof(minimumSample);
 
-            foreach (DashTrackChunk tc in EnumerateChunks(LastFrameProcessed))
-            {
-                Memory<byte> chunkData = new byte[tc.Entry.ChunkSize];
-                _ = await InputStream.ReadAsync(chunkData, cancellationSource.Token);
-                await DispatchChunk(AAC_SAMPLES_PER_FRAME, tc, chunkData, StartFrames, LastFrameProcessed, TimeScales);
-            }
-        }
-        catch (OperationCanceledException) { }
-        catch
-        {
-            cancellationSource.Cancel();
-            throw;
-        }
-        finally
-        {
-            OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs(StartTime, EndTime, EndTime, (EndTime - StartTime) / (DateTime.Now - beginProcess)));
+		var totalDataSize = Dash.Sidx.Segments.Sum(s => s.ReferenceSize);
+		var endOfFile = Dash.FirstMoof.Header.FilePosition + totalDataSize;
 
-            //Always call CompleteAsync() on all filters so that every
-            //FilterLoop gets awaited and any exceptions are thrown.
-            await Task.WhenAll(FirstFilters.Select(f => f.CompleteAsync()));
-        }
+		while (InputStream.Position < endOfFile)
+		{
+			if (startSample > maximumSample)
+				yield break; //No more samples in range
 
-    }
+			var trackChunk = ValidateMdatSize(moofBox, mdatBox, startSample);
+			startSample += trackChunk.Entry.FrameDurations.Sum(d => d);
+			if (startSample > minimumSample)
+			{
+				yield return trackChunk;
+			}
+			else
+			{
+				//Skip over mdat to next moof
+				var endOfMdat = InputStream.Position + mdatBox.Header.TotalBoxSize - mdatBox.Header.HeaderSize;
+				InputStream.SeekToOffset(endOfMdat);
+			}
 
-    private DateTime beginProcess;
-    private DateTime nextUpdate;
-    private static TimeSpan ProcessPosition(int trackNum, uint[] lastFrameProcessed, uint[] timeScales)
-        => TimeSpan.FromSeconds(lastFrameProcessed[trackNum] * AAC_SAMPLES_PER_FRAME / timeScales[trackNum]);
+			if (InputStream.Position < endOfFile)
+			{
+				moofBox = (MoofBox)BoxFactory.CreateBox(InputStream, parent: null);
+				mdatBox = (MdatBox)BoxFactory.CreateBox(InputStream, parent: null);
+			}
+		}
+	}
 
-    async Task DispatchChunk(uint frameDelta, DashTrackChunk chunk, Memory<byte> chunkdata, uint[] startFrames, uint[] lastFrameProcessed, uint[] timeScales)
-    {
-        for (int start = 0, f = 0; f < chunk.Entry.FrameSizes.Length; start += chunk.Entry.FrameSizes[f], f++)
-        {
-            uint frameIndex = chunk.Entry.FirstFrameIndex + (uint)f;
+	private TrackChunk ValidateMdatSize(MoofBox moofBox, MdatBox mdatBox, long startSample)
+	{
+		var trun = moofBox.Traf.Trun;
+		var chunkDataSize = trun.Samples.Sum(s => s.SampleSize ?? 0);
+		if (chunkDataSize != mdatBox.Header.TotalBoxSize - mdatBox.Header.HeaderSize)
+			throw new InvalidDataException("Mdat box size doesn't match sample sizes in track fragment run box");
 
-            if (!frameIndex.Between(startFrames[chunk.TrackNum], EndFrames![chunk.TrackNum]))
-                continue;
+		var frameSizes = trun.Samples.Select(s => s.SampleSize ?? 0).ToArray();
 
-            //Throttle update so it doesn't bog down UI
-            if (DateTime.Now > nextUpdate)
-            {
-                TimeSpan position = ProcessPosition(chunk.TrackNum, lastFrameProcessed, timeScales);
-                double speed = (position - StartTime) / (DateTime.Now - beginProcess);
-                OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs(StartTime, EndTime, position, speed));
+		var frameDurations
+			= trun.sample_duration_present ? trun.Samples.Select(s => s.SampleDuration).OfType<uint>().ToArray()
+			: moofBox.Traf.Tfhd.DefaultSampleDuration is uint sampleDuration ? Enumerable.Repeat(sampleDuration, trun.Samples.Length).ToArray()
+			: throw new InvalidOperationException("Trun sample infos don't contain sample durations and no default sample duration is set.");
 
-                nextUpdate = DateTime.Now.AddMilliseconds(100);
-            }
+		if (frameDurations.Length != frameSizes.Length)
+			throw new InvalidDataException($"The number of frame sizes ({frameSizes.Length}) does not match the number of durations ({frameDurations.Length}) in fragment {moofBox.Mfhd.SequenceNumber}");
 
-            await FirstFilters[chunk.TrackNum].AddInputAsync(new DashFrameEntry
-            {
-                Chunk = chunk.Entry,
-                FrameIndex = frameIndex,
-                SamplesInFrame = frameDelta,
-                FrameData = chunkdata.Slice(start, chunk.Entry.FrameSizes[f]),
-                IV = chunk.IVs[f]
-            });
-        }
-    }
+		var ivs = moofBox.Traf.GetChild<SencBox>().IVs;
 
-    private IEnumerable<DashTrackChunk> EnumerateChunks(uint[] lastChunksProicessed)
-    {
-        if (TrackIdToIndex.TryGetValue(Dash.FirstMoof.Traf.Tfhd.TrackID, out var index))
-        {
-            var trackChunk = ValidateMdatSize(Dash.FirstMoof, Dash.FirstMdat);
-            lastChunksProicessed[index] += (uint)trackChunk.Entry.FrameSizes.Length;
-            yield return trackChunk;
-        }
+		if (frameSizes.Length != ivs.Length)
+			throw new InvalidDataException($"The number of IVs ({ivs.Length}) does not match the number of samples ({frameSizes.Length}) in fragment {moofBox.Mfhd.SequenceNumber}");
 
-        var headerBlock = new byte[8];
-
-        //TODO: Figure out if there's a way to determine the file size or number of moof/mdat pairs
-        while (InputStream.Position < InputStream.Length)
-        {
-            var nextMoof = BoxFactory.CreateBox(InputStream, null) as MoofBox;
-            var nextMdat = BoxFactory.CreateBox(InputStream, null) as MdatBox;
-
-            if (nextMoof is not null && nextMdat is not null && TrackIdToIndex.TryGetValue(nextMoof.Traf.Tfhd.TrackID, out index))
-            {
-                var trackChunk = ValidateMdatSize(nextMoof, nextMdat);
-                lastChunksProicessed[index] += (uint)trackChunk.Entry.FrameSizes.Length;
-                yield return trackChunk;
-            }
-        }
-    }
-
-    private DashTrackChunk ValidateMdatSize(MoofBox moofBox, MdatBox mdatBox)
-    {
-        var chunkDataSize = moofBox.Traf.Trun.Samples.Sum(s => s.SampleSize ?? 0);
-        if (chunkDataSize != mdatBox.Header.TotalBoxSize - mdatBox.Header.HeaderSize)
-            throw new InvalidDataException("Mdat box size doesn't match sample sizes in track fragment run box");
-
-        var ivs = moofBox.Traf.GetChild<SencBox>().IVs;
-        var frameSizes = moofBox.Traf.Trun.Samples.Select(s => s.SampleSize ?? 0).ToArray();
-
-        if (frameSizes.Length != ivs.Length)
-            throw new InvalidDataException($"The number if IVs ({ivs.Length}) does not match the number of samples ({frameSizes.Length}) in fragment {moofBox.Mfhd.SequenceNumber}");
-
-        return new DashTrackChunk()
-        {
-            TrackNum = TrackIdToIndex[moofBox.Traf.Tfhd.TrackID],
-            IVs = ivs,
-            Entry = new ChunkEntry
-            {
-                ChunkIndex = (uint)moofBox.Mfhd.SequenceNumber,
-                ChunkOffset = InputStream.Position,
-                ChunkSize = chunkDataSize,
-                FirstFrameIndex = 0,
-                FrameSizes = frameSizes
-            },
-        };
-    }
+		return new TrackChunk()
+		{
+			TrackNum = 0,
+			Entry = new ChunkEntry
+			{
+				ChunkIndex = (uint)moofBox.Mfhd.SequenceNumber,
+				ChunkOffset = InputStream.Position,
+				ChunkSize = chunkDataSize,
+				FirstSample = startSample,
+				FrameSizes = frameSizes,
+				FrameDurations = frameDurations,
+				ExtraData = ivs
+			},
+		};
+	}
 }

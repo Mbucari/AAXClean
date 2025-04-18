@@ -9,9 +9,13 @@ public class TrafBox : Box
 		LoadChildren(file);
 	}
 
-    public TfhdBox Tfhd => GetChild<TfhdBox>();
-    public TrunBox Trun => GetChild<TrunBox>();
-    protected override void Render(Stream file)
+	public TfhdBox Tfhd => GetChild<TfhdBox>();
+	public TfdtBox Tfdt => GetChild<TfdtBox>();
+	public TrunBox Trun => GetChild<TrunBox>();
+	public SaizBox Saiz => GetChild<SaizBox>();
+	public SaioBox Saio => GetChild<SaioBox>();
+	public SencBox Senc => GetChild<SencBox>();
+	protected override void Render(Stream file)
 	{
 		return;
 	}

@@ -83,7 +83,7 @@ namespace Mpeg4Lib.Boxes
 		{
 			if (disposing && !Disposed)
 				Samples.Clear();
-				base.Dispose(disposing);
+			base.Dispose(disposing);
 		}
 
 		public class SampleEntry

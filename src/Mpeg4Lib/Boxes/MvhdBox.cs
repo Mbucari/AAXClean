@@ -5,7 +5,7 @@ namespace Mpeg4Lib.Boxes
 {
 	public class MvhdBox : FullBox
 	{
-		public override long RenderSize => base.RenderSize + 3 * (Header.Version == 0 ? 4 : 8) + 4 + 4 + 2 + 2 + 8 + Matrix.Length + Pre_defined.Length + 4;
+		public override long RenderSize => base.RenderSize + 3 * (Version == 0 ? 4 : 8) + 4 + 4 + 2 + 2 + 8 + Matrix.Length + Pre_defined.Length + 4;
 		public ulong CreationTime { get; }
 		public ulong ModificationTime { get; }
 		public uint Timescale { get; set; }
@@ -20,7 +20,7 @@ namespace Mpeg4Lib.Boxes
 
 		public MvhdBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
 		{
-			if (Header.Version == 0)
+			if (Version == 0)
 			{
 				CreationTime = file.ReadUInt32BE();
 				ModificationTime = file.ReadUInt32BE();
@@ -45,7 +45,7 @@ namespace Mpeg4Lib.Boxes
 		protected override void Render(Stream file)
 		{
 			base.Render(file);
-			if (Header.Version == 0)
+			if (Version == 0)
 			{
 				file.WriteUInt32BE((uint)CreationTime);
 				file.WriteUInt32BE((uint)ModificationTime);

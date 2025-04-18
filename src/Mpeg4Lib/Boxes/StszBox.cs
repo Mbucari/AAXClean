@@ -17,7 +17,7 @@ namespace Mpeg4Lib.Boxes
 		public int SampleCount => sampleSizes_32?.Count ?? sampleSizes_16.Count;
 		public int MaxSize => sampleSizes_32?.Max() ?? sampleSizes_16.Max();
 		public long TotalSize => sampleSizes_32?.Sum(s => (long)s) ?? sampleSizes_16.Sum(s => (long)s);
-		public int GetSizeAtIndex(int index) => sampleSizes_32 is null? sampleSizes_16[index] : sampleSizes_32[index];
+		public int GetSizeAtIndex(int index) => sampleSizes_32 is null ? sampleSizes_16[index] : sampleSizes_32[index];
 		public long SumFirstNSizes(int firstN) => sampleSizes_32?.Take(firstN).Sum(s => (long)s) ?? sampleSizes_16.Take(firstN).Sum(s => (long)s);
 
 		private readonly List<int> sampleSizes_32;

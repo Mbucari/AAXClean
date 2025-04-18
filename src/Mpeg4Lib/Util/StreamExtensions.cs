@@ -1,7 +1,7 @@
 ﻿using Mpeg4Lib.Boxes;
 using System;
-using System.Data;
 using System.IO;
+using System.Threading;
 
 namespace Mpeg4Lib.Util
 {
@@ -23,11 +23,10 @@ namespace Mpeg4Lib.Util
 		}
 
 		/// <summary>
-		/// Read the next track chuink from the input stream
+		/// Seeks to a position in the the input stream
 		/// </summary>
-		/// <param name="chunkOffset">The chuink's file offset</param>
-		/// <param name="chunkBuffer">Buffer to copy the chink data into</param>
-		public static void ReadNextChunk(this Stream inputStream, long chunkOffset, Span<byte> chunkBuffer)
+		/// <param name="chunkOffset">The chunk's file offset</param>
+		public static void SeekToOffset(this Stream inputStream, long chunkOffset)
 		{
 			if (inputStream.Position < chunkOffset)
 			{
@@ -35,7 +34,16 @@ namespace Mpeg4Lib.Util
 				if (inputStream.CanSeek)
 					inputStream.Position = chunkOffset;
 				else
-					inputStream.ReadBlock((int)(chunkOffset - inputStream.Position));
+				{
+					const int bufferSize = 8 * 1024;
+					int toRead = int.Min(bufferSize, (int)(chunkOffset - inputStream.Position));
+					var buffer = new byte[toRead];
+					while (toRead > 0)
+					{
+						inputStream.ReadExactly(buffer, 0, toRead);
+						toRead = int.Min(bufferSize, (int)(chunkOffset - inputStream.Position));
+					}
+				}
 			}
 			else if (inputStream.Position > chunkOffset)
 			{
@@ -44,7 +52,17 @@ namespace Mpeg4Lib.Util
 				else
 					throw new NotSupportedException($"Input stream position 0x{inputStream.Position:X8} is past the chunk offset 0x{chunkOffset:X8} and is not seekable.");
 			}
-			if (inputStream.Read(chunkBuffer) != chunkBuffer.Length)
+		}
+
+		/// <summary>
+		/// Read the next track chunk from the input stream
+		/// </summary>
+		/// <param name="chunkOffset">The chunk's file offset</param>
+		/// <param name="chunkBuffer">Buffer to copy the chink data into</param>
+		public static void ReadNextChunk(this Stream inputStream, long chunkOffset, Memory<byte> chunkBuffer, CancellationToken token)
+		{
+			inputStream.SeekToOffset(chunkOffset);
+			if (inputStream.Read(chunkBuffer.Span) != chunkBuffer.Length)
 				throw new EndOfStreamException($"Stream ended at position {inputStream.Position} before all {chunkBuffer.Length} bytes were read.");
 		}
 
@@ -53,7 +71,7 @@ namespace Mpeg4Lib.Util
 			if (type?.Length != 4)
 				throw new ArgumentException("Type must be 4 chas long.");
 
-			stream.Write(stackalloc byte[] { (byte)type[0], (byte)type[1], (byte)type[2], (byte)type[3] });
+			stream.Write([(byte)type[0], (byte)type[1], (byte)type[2], (byte)type[3]]);
 		}
 
 		public static void WriteInt16BE(this Stream stream, short value)
@@ -64,11 +82,11 @@ namespace Mpeg4Lib.Util
 			=> stream.WriteUInt64BE((ulong)value);
 
 		public static void WriteUInt16BE(this Stream stream, ushort value)
-			=> stream.Write(stackalloc byte[] { (byte)(value >> 8), (byte)value });
+			=> stream.Write([(byte)(value >> 8), (byte)value]);
 		public static void WriteUInt32BE(this Stream stream, uint value)
-			=> stream.Write(stackalloc byte[] { (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value });
+			=> stream.Write([(byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value]);
 		public static void WriteUInt64BE(this Stream stream, ulong value)
-			=> stream.Write(stackalloc byte[] { (byte)(value >> 56), (byte)(value >> 48), (byte)(value >> 40), (byte)(value >> 32), (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value });
+			=> stream.Write([(byte)(value >> 56), (byte)(value >> 48), (byte)(value >> 40), (byte)(value >> 32), (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value]);
 
 		public static ushort ReadUInt16BE(this Stream stream) => (ushort)stream.ReadInt16BE();
 		public static uint ReadUInt32BE(this Stream stream) => (uint)stream.ReadInt32BE();
@@ -100,7 +118,7 @@ namespace Mpeg4Lib.Util
 			Span<byte> dword = stackalloc byte[4];
 			stream.Read(dword, dword.Length);
 
-			return new string(stackalloc char[] { (char)dword[0], (char)dword[1], (char)dword[2], (char)dword[3] });
+			return new string([(char)dword[0], (char)dword[1], (char)dword[2], (char)dword[3]]);
 		}
 
 		public static byte[] ReadBlock(this Stream stream, int length)

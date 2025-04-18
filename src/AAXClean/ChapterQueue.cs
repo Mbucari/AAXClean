@@ -78,7 +78,7 @@ namespace AAXClean
 		/// </summary>
 		public void Add(FrameEntry entry)
 		{
-			Span<byte> frameData = entry.FrameData.Span;
+			ReadOnlySpan<byte> frameData = entry.FrameData.Span;
 			int size = frameData[1] | frameData[0];
 			string title = Encoding.UTF8.GetString(frameData.Slice(2, size));
 

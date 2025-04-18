@@ -2,7 +2,7 @@
 {
 	public class TrackChunk
 	{
-		public ChunkEntry Entry { get; init; }
-		public int TrackNum { get; init; }
+		public required ChunkEntry Entry { get; init; }
+		public required int TrackNum { get; init; }
 	}
 }

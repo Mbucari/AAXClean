@@ -30,10 +30,10 @@ namespace Mpeg4Lib.Boxes
 
 		public void ChangeAtomName(string newAtomName)
 		{
-            if (string.IsNullOrEmpty(newAtomName) || Encoding.UTF8.GetByteCount(newAtomName) != 4)
-                throw new ArgumentException($"{nameof(newAtomName)} must be exactly 4 UTF-8 bytes long");
-            Type = newAtomName;
-        }
+			if (string.IsNullOrEmpty(newAtomName) || Encoding.UTF8.GetByteCount(newAtomName) != 4)
+				throw new ArgumentException($"{nameof(newAtomName)} must be exactly 4 UTF-8 bytes long");
+			Type = newAtomName;
+		}
 
 		public BoxHeader(long boxSize, string boxType)
 		{

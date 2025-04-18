@@ -33,7 +33,7 @@ namespace Mpeg4Lib.Boxes
 
 			for (int i = 0; i < sampleCount; i++)
 			{
-				switch(FieldSize)
+				switch (FieldSize)
 				{
 					case 16:
 						SampleSizes.Add(file.ReadUInt16BE());
@@ -107,8 +107,8 @@ namespace Mpeg4Lib.Boxes
 						break;
 					case 4:
 						var twoValues = SampleSizes[i] << 4;
-						if (i+1 < SampleSizes.Count)
-							twoValues |= SampleSizes[i+1];
+						if (i + 1 < SampleSizes.Count)
+							twoValues |= SampleSizes[i + 1];
 						i++;
 						file.WriteByte((byte)twoValues);
 						break;

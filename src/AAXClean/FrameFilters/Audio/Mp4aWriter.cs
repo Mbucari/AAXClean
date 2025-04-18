@@ -1,11 +1,10 @@
 ﻿using Mpeg4Lib.Boxes;
-using Mpeg4Lib.Descriptors;
 using Mpeg4Lib.Util;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace AAXClean.FrameFilters.Audio
 {
@@ -31,6 +30,8 @@ namespace AAXClean.FrameFilters.Audio
 		private readonly List<ushort> AudioSampleSizes = new();
 		private readonly List<int> TextSampleSizes = new();
 		private readonly object lockObj = new();
+		private uint CurrentFrameDuration;
+		private uint FrameDurationCount;
 
 		private const int AAC_TIME_DOMAIN_SAMPLES = 1024;
 
@@ -57,11 +58,11 @@ namespace AAXClean.FrameFilters.Audio
 			ArgumentNullException.ThrowIfNull(ascBytes, nameof(ascBytes));
 
 			var asc = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig;
-            if (asc is null)
+			if (asc is null)
 				throw new Exception("No AudioSpecificConfig found in the audio sample entry.");
 			asc.AscBlob = ascBytes;
 
-            if (asc.ChannelConfiguration > 2)
+			if (asc.ChannelConfiguration > 2)
 				throw new NotSupportedException($"Only supports maximum of 2-channel audio. (Channels={asc.ChannelConfiguration})");
 
 			Moov.AudioTrack.Mdia.Mdhd.Timescale = (uint)asc.SamplingFrequency;
@@ -80,7 +81,7 @@ namespace AAXClean.FrameFilters.Audio
 
 		public void Close()
 		{
-			lock(lockObj)
+			lock (lockObj)
 			{
 				if (Closing) return;
 				Closing = true;
@@ -110,8 +111,10 @@ namespace AAXClean.FrameFilters.Audio
 			WriteChapterMetadata(chapterTitles);
 
 			Stsc.Samples.Add(new StscBox.StscChunkEntry(CurrentChunk, SamplesPerChunk, 1));
-			Stts.Samples.Add(new SttsBox.SampleEntry((uint)AudioSampleSizes.Count, AAC_TIME_DOMAIN_SAMPLES));
-
+			Stts.Samples.Add(new SttsBox.SampleEntry(FrameDurationCount, CurrentFrameDuration));
+			FrameDurationCount = 0;
+			var samples = Stts.Samples.Sum(s => s.FrameCount);
+			Debug.Assert(AudioSampleSizes.Count == Stts.Samples.Sum(s => s.FrameCount));
 			IStszBox stsz = StszBox.CreateBlank(Moov.AudioTrack.Mdia.Minf.Stbl, AudioSampleSizes);
 
 			if (mdatSize > uint.MaxValue)
@@ -127,7 +130,9 @@ namespace AAXClean.FrameFilters.Audio
 					StcoBox.CreateBlank(Moov.TextTrack.Mdia.Minf.Stbl, TextChunks);
 			}
 
-			Moov.AudioTrack.Mdia.Mdhd.Duration = (ulong)stsz.SampleCount * AAC_TIME_DOMAIN_SAMPLES;
+			var duration = Stts.Samples.Sum(s => (long)s.FrameCount * s.FrameDelta);
+
+			Moov.AudioTrack.Mdia.Mdhd.Duration = (ulong)duration;
 			Moov.Mvhd.Duration = Moov.AudioTrack.Mdia.Mdhd.Duration * Moov.Mvhd.Timescale / Moov.AudioTrack.Mdia.Mdhd.Timescale;
 			Moov.AudioTrack.Tkhd.Duration = Moov.Mvhd.Duration;
 
@@ -141,7 +146,6 @@ namespace AAXClean.FrameFilters.Audio
 			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
 
 			var btrt = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.GetChild<BtrtBox>();
-
 
 			if (Moov.TextTrack is not null)
 			{
@@ -230,7 +234,7 @@ namespace AAXClean.FrameFilters.Audio
 			Moov.Mvhd.NextTrackID--;
 		}
 
-		public void AddFrame(Span<byte> frame, bool newChunk)
+		public void AddFrame(Span<byte> frame, bool newChunk, uint frameDelta)
 		{
 			lock (lockObj)
 			{
@@ -251,11 +255,24 @@ namespace AAXClean.FrameFilters.Audio
 				}
 
 				AudioSampleSizes.Add((ushort)frame.Length);
+
+				if (CurrentFrameDuration == 0)
+				{
+					CurrentFrameDuration = frameDelta;
+				}
+				else if (CurrentFrameDuration != frameDelta)
+				{
+					Stts.Samples.Add(new SttsBox.SampleEntry(FrameDurationCount, CurrentFrameDuration));
+					FrameDurationCount = 0;
+					CurrentFrameDuration = frameDelta;
+				}
+
+				FrameDurationCount++;
 				SamplesPerChunk++;
 			}
 
 			OutputFile.Write(frame);
-		}		
+		}
 
 		private static MoovBox MakeBlankMoov(MoovBox moov)
 		{
