@@ -47,10 +47,6 @@ public class WidevineKey
 
 public class Cdm
 {
-	public static void dostucc(byte[] data)
-	{
-		Provisioning.ProvisioningRequest.Parser.ParseFrom(data);
-	}
 	public static Guid WidevineContentProtection { get; } = new("edef8ba9-79d6-4ace-a3c8-27dcd51d21ed");
 	const int MAX_NUM_OF_SESSIONS = 16;
 	public Device Device { get; }

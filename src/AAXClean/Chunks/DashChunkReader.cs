@@ -1,5 +1,4 @@
-﻿using AAXClean.Chunks;
-using AAXClean.FrameFilters;
+﻿using AAXClean.FrameFilters;
 using Mpeg4Lib.Boxes;
 using Mpeg4Lib.Chunks;
 using Mpeg4Lib.Util;
@@ -10,7 +9,7 @@ using System.IO;
 using System.Linq;
 
 #nullable enable
-namespace AAXClean;
+namespace AAXClean.Chunks;
 
 internal class DashChunkReader : ChunkReader
 {
