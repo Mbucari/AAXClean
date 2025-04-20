@@ -11,7 +11,7 @@ public class SencBox : FullBox
 	public bool UseSubSampleEncryption => (Flags & 2) == 2;
 	public byte[][] IVs { get; }
 
-	public SencBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
+	public SencBox(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{
 		var sampleCount = file.ReadInt32BE();
 

@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
+#nullable enable
 namespace AAXClean.FrameFilters.Audio
 {
 	public class Mp4aWriter
@@ -23,6 +24,7 @@ namespace AAXClean.FrameFilters.Audio
 		private readonly long mdatStart;
 		private readonly SttsBox Stts;
 		private readonly StscBox Stsc;
+		private readonly AudioSampleEntry AudioSampleEntry;
 		private readonly List<ChunkOffsetEntry> AudioChunks = new();
 		private readonly List<ChunkOffsetEntry> TextChunks = new();
 		//Since we're only working with audio files, no frame will ever be larger than ushort.MaxValue.
@@ -43,6 +45,9 @@ namespace AAXClean.FrameFilters.Audio
 			Stts = Moov.AudioTrack.Mdia.Minf.Stbl.Stts;
 			Stsc = Moov.AudioTrack.Mdia.Minf.Stbl.Stsc;
 
+			AudioSampleEntry = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry
+				?? throw new InvalidDataException($"Audio track's stsd box does not contain an {nameof(AudioSampleEntry)}");
+
 			ftyp.Save(OutputFile);
 			mdatStart = OutputFile.Position;
 
@@ -57,16 +62,14 @@ namespace AAXClean.FrameFilters.Audio
 		{
 			ArgumentNullException.ThrowIfNull(ascBytes, nameof(ascBytes));
 
-			var asc = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig;
-			if (asc is null)
-				throw new Exception("No AudioSpecificConfig found in the audio sample entry.");
-			asc.AscBlob = ascBytes;
+			var asc = AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig;
 
+			asc.AscBlob = ascBytes;
 			if (asc.ChannelConfiguration > 2)
 				throw new NotSupportedException($"Only supports maximum of 2-channel audio. (Channels={asc.ChannelConfiguration})");
 
 			Moov.AudioTrack.Mdia.Mdhd.Timescale = (uint)asc.SamplingFrequency;
-			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleRate = (ushort)asc.SamplingFrequency;
+			AudioSampleEntry.SampleRate = (ushort)asc.SamplingFrequency;
 
 			if (Moov.TextTrack is not null)
 			{
@@ -113,7 +116,6 @@ namespace AAXClean.FrameFilters.Audio
 			Stsc.Samples.Add(new StscBox.StscChunkEntry(CurrentChunk, SamplesPerChunk, 1));
 			Stts.Samples.Add(new SttsBox.SampleEntry(FrameDurationCount, CurrentFrameDuration));
 			FrameDurationCount = 0;
-			var samples = Stts.Samples.Sum(s => s.FrameCount);
 			Debug.Assert(AudioSampleSizes.Count == Stts.Samples.Sum(s => s.FrameCount));
 			IStszBox stsz = StszBox.CreateBlank(Moov.AudioTrack.Mdia.Minf.Stbl, AudioSampleSizes);
 
@@ -140,12 +142,12 @@ namespace AAXClean.FrameFilters.Audio
 				= CalculateBitrate(
 					Moov.AudioTrack.Mdia.Mdhd.Timescale,
 					Moov.AudioTrack.Mdia.Mdhd.Duration,
-					Moov.AudioTrack.Mdia.Minf.Stbl.Stsz);
+					stsz);
 
-			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate = maxBitRate;
-			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
+			AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate = maxBitRate;
+			AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate = avgBitrate;
 
-			var btrt = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.GetChild<BtrtBox>();
+			var btrt = AudioSampleEntry.GetChild<BtrtBox>();
 
 			if (Moov.TextTrack is not null)
 			{
@@ -207,7 +209,7 @@ namespace AAXClean.FrameFilters.Audio
 		{
 			if (Moov.TextTrack is null) return;
 
-			AppleListBox chapterNames =
+			AppleListBox? chapterNames =
 				Moov.TextTrack
 				?.GetChild<UdtaBox>()
 				?.GetChild<MetaBox>()
@@ -226,6 +228,9 @@ namespace AAXClean.FrameFilters.Audio
 
 		public void RemoveTextTrack()
 		{
+			if (Moov.TextTrack is null)
+				return;
+
 			Moov.Children.Remove(Moov.TextTrack);
 
 			var trefBox = Moov.AudioTrack.Children.OfType<UnknownBox>().First(u => u.Header.Type == "tref");
@@ -276,15 +281,13 @@ namespace AAXClean.FrameFilters.Audio
 
 		private static MoovBox MakeBlankMoov(MoovBox moov)
 		{
-			SttsBox t1 = null;
-			StscBox t2 = null;
-			IStszBox t3 = null;
-			IChunkOffsets t4 = null;
+			SttsBox? t1 = null;
+			StscBox? t2 = null;
+			IStszBox? t3 = null;
+			IChunkOffsets? t4 = null;
 
-			bool hasTextTrack = false;
-			if (moov.TextTrack != null)
+			if (moov.TextTrack is not null)
 			{
-				hasTextTrack = true;
 				t1 = moov.TextTrack.Mdia.Minf.Stbl.Stts;
 				t2 = moov.TextTrack.Mdia.Minf.Stbl.Stsc;
 				t3 = moov.TextTrack.Mdia.Minf.Stbl.Stsz;
@@ -292,18 +295,20 @@ namespace AAXClean.FrameFilters.Audio
 
 				moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t1);
 				moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t2);
-				moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t3);
+				if (t3 is not null)
+					moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t3);
 				moov.TextTrack.Mdia.Minf.Stbl.Children.Remove(t4);
 			}
 
 			SttsBox a1 = moov.AudioTrack.Mdia.Minf.Stbl.Stts;
 			StscBox a2 = moov.AudioTrack.Mdia.Minf.Stbl.Stsc;
-			IStszBox a3 = moov.AudioTrack.Mdia.Minf.Stbl.Stsz;
+			IStszBox? a3 = moov.AudioTrack.Mdia.Minf.Stbl.Stsz;
 			IChunkOffsets a4 = moov.AudioTrack.Mdia.Minf.Stbl.COBox;
 
 			moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a1);
 			moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a2);
-			moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a3);
+			if (a3 is not null)
+				moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a3);
 			moov.AudioTrack.Mdia.Minf.Stbl.Children.Remove(a4);
 
 			MemoryStream ms = new();
@@ -312,20 +317,25 @@ namespace AAXClean.FrameFilters.Audio
 
 			moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a1);
 			moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a2);
-			moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a3);
+			if (a3 is not null)
+				moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a3);
 			moov.AudioTrack.Mdia.Minf.Stbl.Children.Add(a4);
 
-			if (hasTextTrack)
+			if (moov.TextTrack is not null)
 			{
-				moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t1);
-				moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t2);
-				moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t3);
-				moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t4);
+				if (t1 is not null)
+					moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t1);
+				if (t2 is not null)
+					moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t2);
+				if (t3 is not null)
+					moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t3);
+				if (t4 is not null)
+					moov.TextTrack.Mdia.Minf.Stbl.Children.Add(t4);
 			}
 
 			ms.Position = 0;
 
-			MoovBox newMoov = BoxFactory.CreateBox(ms, null) as MoovBox;
+			MoovBox newMoov = BoxFactory.CreateBox<MoovBox>(ms, null);
 
 			// Create chunk offset and sample size boxes when closing the file
 			// so we know whether to create stco/co64 and stsz/stz2
@@ -333,7 +343,7 @@ namespace AAXClean.FrameFilters.Audio
 			SttsBox.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
 			StscBox.CreateBlank(newMoov.AudioTrack.Mdia.Minf.Stbl);
 
-			if (hasTextTrack)
+			if (newMoov.TextTrack is not null)
 			{
 				SttsBox.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);
 				StscBox.CreateBlank(newMoov.TextTrack.Mdia.Minf.Stbl);

@@ -1,34 +1,40 @@
-﻿using Mpeg4Lib.Util;
-using System;
+﻿using System;
+using System.Security.Cryptography;
 
-namespace AAXClean.FrameFilters.Audio
+namespace AAXClean.FrameFilters.Audio;
+
+internal class AavdFilter : AacValidateFilter
 {
-	internal class AavdFilter : AacValidateFilter
+	private const int AES_BLOCK_SIZE = 16;
+	private readonly Aes Aes;
+	private readonly byte[] IV;
+
+	public AavdFilter(byte[] key, byte[] iv)
 	{
-		private readonly AesCryptoTransform aesCryptoTransform;
+		if (key is null || key.Length != AES_BLOCK_SIZE)
+			throw new ArgumentException($"{nameof(key)} must be {AES_BLOCK_SIZE} bytes long.");
+		if (iv is null || iv.Length != AES_BLOCK_SIZE)
+			throw new ArgumentException($"{nameof(iv)} must be {AES_BLOCK_SIZE} bytes long.");
 
-		public AavdFilter(byte[] key, byte[] iv)
-		{
-			if (key is null || key.Length != 16)
-				throw new ArgumentException($"{nameof(key)} must be 16 bytes long.");
-			if (iv is null || iv.Length != 16)
-				throw new ArgumentException($"{nameof(iv)} must be 16 bytes long.");
+		Aes = Aes.Create();
+		Aes.Key = key;
+		IV = iv;
+	}
 
-			aesCryptoTransform = new AesCryptoTransform(key, iv);
-		}
-		public override FrameEntry PerformFiltering(FrameEntry input)
+	public override FrameEntry PerformFiltering(FrameEntry input)
+	{
+		if (input.FrameData.Length >= 0x10)
 		{
-			var frameData = input.FrameData.Span;
-			if (frameData.Length >= 0x10)
-				aesCryptoTransform.DecryptCbc(frameData.Slice(0, frameData.Length & 0x7ffffff0), frameData);
-			return base.PerformFiltering(input);
+			var encBlocks = input.FrameData.Slice(0, input.FrameData.Length & 0x7ffffff0).Span;
+			Aes.DecryptCbc(encBlocks, IV, encBlocks, PaddingMode.None);
 		}
+		return base.PerformFiltering(input);
+	}
 
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && !Disposed)
-				aesCryptoTransform.Dispose();
-			base.Dispose(disposing);
-		}
+	protected override void Dispose(bool disposing)
+	{
+		if (disposing && !Disposed)
+			Aes.Dispose();
+		base.Dispose(disposing);
 	}
 }

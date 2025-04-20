@@ -21,12 +21,10 @@ public interface IChunkReader
 
 internal class ChunkReader : IChunkReader
 {
+	protected record TrackEntry(uint TrackId, uint Timescale, FrameFilterBase<FrameEntry> FirstFilter, TrakBox TrakBox);
+
 	public Action<ConversionProgressEventArgs>? OnProggressUpdateDelegate { get; set; }
-
-	protected List<TrakBox> Tracks { get; } = new();
-	private List<uint> TimeScales { get; } = new();
-	private List<FrameFilterBase<FrameEntry>> FirstFilters { get; } = new();
-
+	protected Dictionary<uint, TrackEntry> TrackEntries { get; } = new();
 	protected Stream InputStream { get; }
 	protected TimeSpan StartTime { get; }
 	protected TimeSpan EndTime { get; }
@@ -40,38 +38,37 @@ internal class ChunkReader : IChunkReader
 		EndTime = endTime;
 	}
 
-	protected virtual IEnumerable<TrackChunk> EnumerateChunks()
+	protected virtual IEnumerable<ChunkEntry> EnumerateChunks()
 	{
-		return new MpegChunkEnumerable(Tracks.ToArray())
-		 .Where(ChunkHasFrameInRange);
+		return TrackEntries
+			.Values
+			.Select(e => e.TrakBox)
+			.InterleaveBy(t => t.ChunkEntries(), t => t.ChunkOffset)
+			.Where(ChunkHasFrameInRange);
 
-		bool ChunkHasFrameInRange(TrackChunk value)
+		bool ChunkHasFrameInRange(ChunkEntry value)
 		{
-			uint timeScale = GetTrackTimescale(value.TrackNum);
+			uint timeScale = GetTrackEntryFromId(value.TrackId).Timescale;
 			var minimumSample = StartTime.TotalSeconds * timeScale;
 			var maximumSample = EndTime.TotalSeconds * timeScale;
-			return value.Entry.FirstSample <= maximumSample && (value.Entry.FirstSample + value.Entry.FrameDurations.Sum(d => d)) >= minimumSample;
+			return value.FirstSample <= maximumSample && (value.FirstSample + value.FrameDurations.Sum(d => d)) >= minimumSample;
 		}
 	}
 
-	protected uint GetTrackTimescale(int trackNum)
-	{
-		if (trackNum < 0 || trackNum >= TimeScales.Count)
-			throw new ArgumentOutOfRangeException(nameof(trackNum), "Track number is out of range or the added tracks");
-		return TimeScales[trackNum];
-	}
+	protected TrackEntry GetTrackEntryFromId(uint trackId)
+		=> TrackEntries.TryGetValue(trackId, out var trackEntry) ? trackEntry
+		: throw new ArgumentOutOfRangeException(nameof(trackId), $"Track ID {trackId} is not present in this {nameof(ChunkReader)} instance.");
 
 	public virtual void AddTrack(TrakBox trak, FrameFilterBase<FrameEntry> filter)
 	{
-		Tracks.Add(trak);
-		TimeScales.Add(trak.Mdia.Mdhd.Timescale);
-		FirstFilters.Add(filter);
+		var trackEntry = new TrackEntry(trak.Tkhd.TrackID, trak.Mdia.Mdhd.Timescale, filter, trak);
+		TrackEntries.Add(trak.Tkhd.TrackID, trackEntry);
 	}
 
 	public async Task RunAsync(CancellationTokenSource cancellationSource)
 	{
 		//All filters share the came cancellation source.
-		foreach (var filter in FirstFilters)
+		foreach (var filter in TrackEntries.Values.Select(e => e.FirstFilter))
 			filter.SetCancellationToken(cancellationSource.Token);
 
 		OnInitialProgress();
@@ -80,8 +77,8 @@ internal class ChunkReader : IChunkReader
 		{
 			foreach (var c in EnumerateChunks())
 			{
-				Memory<byte> chunkData = new byte[c.Entry.ChunkSize];
-				InputStream.ReadNextChunk(c.Entry.ChunkOffset, chunkData, cancellationSource.Token);
+				Memory<byte> chunkData = new byte[c.ChunkSize];
+				InputStream.ReadNextChunk(c.ChunkOffset, chunkData, cancellationSource.Token);
 				await DispatchChunk(c, chunkData);
 			}
 		}
@@ -97,7 +94,7 @@ internal class ChunkReader : IChunkReader
 
 			//Always call CompleteAsync() on all filters so that every
 			//FilterLoop gets awaited and any exceptions are thrown.
-			await Task.WhenAll(FirstFilters.Select(f => f.CompleteAsync()));
+			await Task.WhenAll(TrackEntries.Values.Select(e => e.FirstFilter.CompleteAsync()));
 		}
 	}
 
@@ -109,19 +106,19 @@ internal class ChunkReader : IChunkReader
 			FrameData = frameData
 		};
 
-	private async Task DispatchChunk(TrackChunk chunk, Memory<byte> chunkdata)
+	private async Task DispatchChunk(ChunkEntry chunk, Memory<byte> chunkdata)
 	{
-		long sampleIndex = chunk.Entry.FirstSample;
+		long sampleIndex = chunk.FirstSample;
 
-		var timeScale = GetTrackTimescale(chunk.TrackNum);
+		var trackEntry = GetTrackEntryFromId(chunk.TrackId);
 
-		long startSample = (long)(StartTime.TotalSeconds * timeScale);
-		long endSample = (long)(EndTime.TotalSeconds * timeScale);
+		long startSample = (long)(StartTime.TotalSeconds * trackEntry.Timescale);
+		long endSample = (long)(EndTime.TotalSeconds * trackEntry.Timescale);
 		uint frameDelta;
 
-		for (int start = 0, f = 0; f < chunk.Entry.FrameSizes.Length; start += chunk.Entry.FrameSizes[f], f++, sampleIndex += frameDelta)
+		for (int start = 0, f = 0; f < chunk.FrameSizes.Length; start += chunk.FrameSizes[f], f++, sampleIndex += frameDelta)
 		{
-			frameDelta = chunk.Entry.FrameDurations[f];
+			frameDelta = chunk.FrameDurations[f];
 
 			if (startSample >= sampleIndex + frameDelta)
 				continue;
@@ -129,11 +126,11 @@ internal class ChunkReader : IChunkReader
 			if (endSample < sampleIndex)
 				break;
 
-			OnProgressReport(sampleIndex, timeScale);
+			OnProgressReport(sampleIndex, trackEntry.Timescale);
 
-			var frameData = chunkdata.Slice(start, chunk.Entry.FrameSizes[f]);
-			var frameEntry = CreateFrameEntry(chunk.Entry, f, frameDelta, frameData);
-			await FirstFilters[chunk.TrackNum].AddInputAsync(frameEntry);
+			var frameData = chunkdata.Slice(start, chunk.FrameSizes[f]);
+			var frameEntry = CreateFrameEntry(chunk, f, frameDelta, frameData);
+			await trackEntry.FirstFilter.AddInputAsync(frameEntry);
 		}
 	}
 

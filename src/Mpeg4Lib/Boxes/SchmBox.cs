@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-#nullable enable
 namespace Mpeg4Lib.Boxes;
-
 
 public class SchmBox : FullBox
 {
@@ -15,7 +13,7 @@ public class SchmBox : FullBox
 	public SchemeType Type { get; }
 	public uint SchemeVersion { get; }
 	public string? SchemeUri { get; }
-	public SchmBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
+	public SchmBox(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{
 		long endPos = Header.FilePosition + Header.TotalBoxSize;
 

@@ -14,7 +14,7 @@ public class TencBox : FullBox
 	public Guid DefaultKID { get; }
 	public byte DefaultConstantIvSize { get; }
 	public byte[] DefaultConstantIv { get; }
-	public TencBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
+	public TencBox(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{
 		file.ReadByte();
 		if (Version == 0)

@@ -2,35 +2,34 @@
 using System.IO;
 using System.Text;
 
-namespace Mpeg4Lib.Boxes
+namespace Mpeg4Lib.Boxes;
+
+public class AppleTagBox : Box
 {
-	public class AppleTagBox : Box
+	public static AppleTagBox Create(AppleListBox parent, string name, byte[] data, AppleDataType dataType)
 	{
-		public static AppleTagBox Create(AppleListBox parent, string name, byte[] data, AppleDataType dataType)
-		{
-			if (Encoding.ASCII.GetByteCount(name) != 4)
-				throw new ArgumentOutOfRangeException($"{nameof(name)} must be exactly 4 bytes long");
+		if (Encoding.ASCII.GetByteCount(name) != 4)
+			throw new ArgumentOutOfRangeException($"{nameof(name)} must be exactly 4 bytes long");
 
-			int size = data.Length + 2 + 8 /* empty Box size*/ ;
-			BoxHeader header = new BoxHeader((uint)size, name);
+		int size = data.Length + 2 + 8 /* empty Box size*/ ;
+		BoxHeader header = new BoxHeader((uint)size, name);
 
-			AppleTagBox tagBox = new AppleTagBox(header, parent);
-			AppleDataBox.Create(tagBox, data, dataType);
+		AppleTagBox tagBox = new AppleTagBox(header, parent);
+		AppleDataBox.Create(tagBox, data, dataType);
 
-			parent.Children.Add(tagBox);
-			return tagBox;
-		}
+		parent.Children.Add(tagBox);
+		return tagBox;
+	}
 
-		protected AppleTagBox(BoxHeader header, IBox parent) : base(header, parent) { }
+	protected AppleTagBox(BoxHeader header, IBox? parent) : base(header, parent) { }
 
-		public AppleTagBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
-		{
-			LoadChildren(file);
-		}
-		public AppleDataBox Data => GetChild<AppleDataBox>();
-		protected override void Render(Stream file)
-		{
-			return;
-		}
+	public AppleTagBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
+	{
+		LoadChildren(file);
+	}
+	public AppleDataBox Data => GetChildOrThrow<AppleDataBox>();
+	protected override void Render(Stream file)
+	{
+		return;
 	}
 }

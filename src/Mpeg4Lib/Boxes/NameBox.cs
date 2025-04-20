@@ -8,7 +8,7 @@ namespace Mpeg4Lib.Boxes
 	{
 		public override long RenderSize => base.RenderSize + Encoding.UTF8.GetByteCount(Name);
 		public string Name { get; set; }
-		public NameBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
+		public NameBox(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 		{
 			var stringSize = RemainingBoxLength(file);
 			var stringData = file.ReadBlock((int)stringSize);
@@ -25,7 +25,8 @@ namespace Mpeg4Lib.Boxes
 			parent.Children.Add(nameBox);
 		}
 
-		private NameBox(BoxHeader header, IBox parent, string name) : base(new byte[4], header, parent)
+		private NameBox(BoxHeader header, IBox parent, string name)
+			: base(new byte[4], header, parent)
 		{
 			Name = name;
 		}

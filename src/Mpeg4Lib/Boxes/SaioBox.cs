@@ -1,7 +1,6 @@
 ﻿using Mpeg4Lib.Util;
 using System.IO;
 
-#nullable enable
 namespace Mpeg4Lib.Boxes;
 
 public interface ISaioBox : IBox
@@ -18,10 +17,10 @@ public class SaioBox : FullBox, ISaioBox
 	public uint AuxInfoTypeParameter { get; }
 	public int EntryCount { get; }
 
-	private uint[]? offsets_32;
-	private long[]? offsets_64;
+	private readonly uint[]? offsets_32;
+	private readonly long[]? offsets_64;
 
-	public SaioBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
+	public SaioBox(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{
 		if ((Flags & 1) == 1)
 		{

@@ -17,7 +17,7 @@ public class DashFile : Mp4File
 	public MdatBox FirstMdat => Mdat;
 	public SidxBox Sidx => TopLevelBoxes.OfType<SidxBox>().Single();
 
-	public override TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.GetChild<MvexBox>().GetChild<MehdBox>().FragmentDuration / TimeScale);
+	public override TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.GetChildOrThrow<MvexBox>().GetChildOrThrow<MehdBox>().FragmentDuration / TimeScale);
 
 	private new MdatBox Mdat => base.Mdat;
 
@@ -32,19 +32,29 @@ public class DashFile : Mp4File
 			throw new ArgumentException($"This instance of {nameof(Mp4File)} is not a Dash file.");
 
 		FirstMoof = TopLevelBoxes.OfType<MoofBox>().Single();
-		var sinf = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.GetChild<SinfBox>();
+
+		var audioSampleEntry = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry
+			?? throw new InvalidDataException($"The audio track doesn't contain an {nameof(AudioSampleEntry)}");
+
+		var sinf = audioSampleEntry.GetChildOrThrow<SinfBox>();
 
 		if (sinf.SchemeType?.Type != SchmBox.SchemeType.Cenc)
 			throw new NotSupportedException($"Only {nameof(SchmBox.SchemeType.Cenc)} dash files are currently supported.");
 
-		if (sinf.SchemeInformation?.TrackEncryption is not TencBox tenc)
-			throw new NotSupportedException($"{nameof(AAXClean)} doesn't know how to decrypt a dash without a tenc atom");
+		var tenc = sinf.SchemeInformation?.TrackEncryption
+			?? throw new NotSupportedException($"{nameof(AAXClean)} doesn't know how to decrypt a dash without a tenc atom");
 
 		var stsd = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd;
-		stsd.AudioSampleEntry.Children.Remove(sinf);
-		stsd.AudioSampleEntry.Header.ChangeAtomName(sinf.OriginalFormat.DataFormat);
+		audioSampleEntry.Children.Remove(sinf);
+		audioSampleEntry.Header.ChangeAtomName(sinf.OriginalFormat.DataFormat);
 		foreach (var pssh in Moov.GetChildren<PsshBox>().ToArray())
 			Moov.Children.Remove(pssh);
+
+		Ftyp = FtypBox.Create("mp41", 0);
+		Ftyp.CompatibleBrands.Add("iso8");
+		Ftyp.CompatibleBrands.Add("isom");
+		Ftyp.CompatibleBrands.Add("M4A ");
+		Ftyp.CompatibleBrands.Add("M4B ");
 
 		Tenc = tenc;
 	}

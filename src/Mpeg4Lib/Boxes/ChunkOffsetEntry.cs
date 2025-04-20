@@ -1,8 +1,7 @@
-﻿namespace Mpeg4Lib.Boxes
+﻿namespace Mpeg4Lib.Boxes;
+
+public sealed class ChunkOffsetEntry
 {
-	public sealed class ChunkOffsetEntry
-	{
-		public uint EntryIndex { get; init; }
-		public long ChunkOffset { get; set; }
-	}
+	public uint EntryIndex { get; init; }
+	public long ChunkOffset { get; set; }
 }

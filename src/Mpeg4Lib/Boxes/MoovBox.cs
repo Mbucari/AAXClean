@@ -6,15 +6,15 @@ namespace Mpeg4Lib.Boxes
 {
 	public class MoovBox : Box
 	{
-		public MoovBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
+		public MoovBox(Stream file, BoxHeader header) : base(header, null)
 		{
 			LoadChildren(file);
 		}
 
-		public MvhdBox Mvhd => GetChild<MvhdBox>();
-		public TrakBox AudioTrack => Tracks.Where(t => t.GetChild<MdiaBox>()?.GetChild<HdlrBox>()?.HandlerType == "soun").FirstOrDefault();
-		public TrakBox TextTrack => Tracks.Where(t => t.GetChild<MdiaBox>()?.GetChild<HdlrBox>()?.HandlerType == "text").FirstOrDefault();
-		public AppleListBox ILst => GetChild<UdtaBox>()?.GetChild<MetaBox>()?.GetChild<AppleListBox>();
+		public MvhdBox Mvhd => GetChildOrThrow<MvhdBox>();
+		public TrakBox AudioTrack => Tracks.Where(t => t.GetChild<MdiaBox>()?.GetChild<HdlrBox>()?.HandlerType == "soun").First();
+		public TrakBox? TextTrack => Tracks.Where(t => t.GetChild<MdiaBox>()?.GetChild<HdlrBox>()?.HandlerType == "text").FirstOrDefault();
+		public AppleListBox? ILst => GetChild<UdtaBox>()?.GetChild<MetaBox>()?.GetChild<AppleListBox>();
 		public IEnumerable<TrakBox> Tracks => GetChildren<TrakBox>();
 
 		/// <summary>

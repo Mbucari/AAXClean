@@ -15,7 +15,7 @@ public class SidxBox : FullBox
 
 	public Segment[] Segments { get; }
 
-	public SidxBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
+	public SidxBox(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{
 		ReferenceId = file.ReadUInt32BE();
 		Timescale = file.ReadInt32BE();

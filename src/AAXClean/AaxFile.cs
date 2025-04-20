@@ -42,16 +42,12 @@ namespace AAXClean
 						children.RemoveAt(i);
 				}
 
-				Ftyp = FtypBox.Create(32, null);
-				Ftyp.CompatibleBrands.Clear();
+				Ftyp = FtypBox.Create("isom", 0x200);
 				Ftyp.CompatibleBrands.Add("iso2");
 				Ftyp.CompatibleBrands.Add("mp41");
 				Ftyp.CompatibleBrands.Add("M4A ");
 				Ftyp.CompatibleBrands.Add("M4B ");
 			}
-
-			Ftyp.MajorBrand = "isom";
-			Ftyp.MajorVersion = 0x200;
 		}
 		public AaxFile(Stream file) : this(file, file.Length) { }
 		public AaxFile(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read) : this(File.Open(fileName, FileMode.Open, access, share)) { }

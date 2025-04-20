@@ -3,7 +3,7 @@ using System.IO;
 
 namespace Mpeg4Lib.Descriptors
 {
-	//ES_Descriptor ISO/IEC 14496-1
+	//ES_Descriptor ISO/IEC 14496-1 Section 7.2.6.5 (pp 35)
 	//https://stackoverflow.com/a/61158659/3335599
 	public class ES_Descriptor : BaseDescriptor
 	{
@@ -13,14 +13,15 @@ namespace Mpeg4Lib.Descriptors
 
 		private int StreamDependenceFlag => EsFlags >> 7;
 		private int URL_Flag => (EsFlags >> 6) & 1;
-		private int OCRstreamFlag => (EsFlags >> 6) & 1;
+		private int OCRstreamFlag => (EsFlags >> 5) & 1;
+		public int StreamPriority => EsFlags & 31;
 
 		private readonly ushort DependsOn_ES_ID;
 		private readonly byte URLlength;
-		private readonly byte[] URLstring;
+		private readonly byte[]? URLstring;
 		private readonly ushort OCR_ES_Id;
 
-		public DecoderConfigDescriptor DecoderConfig => GetChild<DecoderConfigDescriptor>();
+		public DecoderConfigDescriptor DecoderConfig => GetChildOrThrow<DecoderConfigDescriptor>();
 
 		public ES_Descriptor(Stream file) : base(0x3, file)
 		{

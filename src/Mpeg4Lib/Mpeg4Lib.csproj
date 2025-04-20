@@ -15,11 +15,21 @@
 	  <RepositoryUrl>https://github.com/Mbucari/AAXClean</RepositoryUrl>
 	  <RepositoryType>Git</RepositoryType>
 	  <NeutralLanguage>en</NeutralLanguage>
+	  <Nullable>enable</Nullable>
   </PropertyGroup>
 
 	<PropertyGroup>
 		<PublishReadyToRun>true</PublishReadyToRun>
 		<DebugType>embedded</DebugType>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0|AnyCPU'">
+	  <DefineConstants>$(DefineConstants);FEATURE_CRYPTO</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0|AnyCPU'">
+	  <DefineConstants>$(DefineConstants);FEATURE_CRYPTO</DefineConstants>
 	</PropertyGroup>
 
 	<ItemGroup>

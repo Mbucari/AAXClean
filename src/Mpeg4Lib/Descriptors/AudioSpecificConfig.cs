@@ -15,7 +15,6 @@ public interface IASC
 	bool DependsOnCoreCoder { get; set; }
 }
 
-
 //ISO/IEC 14496-1 (MPEG-4 Systems) Section 1.6 (pp 52)
 //Only supports audio object IDs 1,2,3,4,6,7,17,19,20,21,22,23, and 42 (USAC)
 //and only parses data through the dependsOnCoreCoder flag in GASpecificConfig (Subpart 4)

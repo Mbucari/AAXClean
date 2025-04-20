@@ -1,19 +1,18 @@
 ﻿using System.IO;
 
-namespace Mpeg4Lib.Boxes
+namespace Mpeg4Lib.Boxes;
+
+public class MdiaBox : Box
 {
-	public class MdiaBox : Box
+	public MdiaBox(Stream file, BoxHeader header, IBox? parent) : base(header, parent)
 	{
-		public MdiaBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
-		{
-			LoadChildren(file);
-		}
-		public MdhdBox Mdhd => GetChild<MdhdBox>();
-		public HdlrBox Hdlr => GetChild<HdlrBox>();
-		public MinfBox Minf => GetChild<MinfBox>();
-		protected override void Render(Stream file)
-		{
-			return;
-		}
+		LoadChildren(file);
+	}
+	public MdhdBox Mdhd => GetChildOrThrow<MdhdBox>();
+	public HdlrBox Hdlr => GetChildOrThrow<HdlrBox>();
+	public MinfBox Minf => GetChildOrThrow<MinfBox>();
+	protected override void Render(Stream file)
+	{
+		return;
 	}
 }

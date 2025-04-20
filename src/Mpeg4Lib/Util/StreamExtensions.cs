@@ -69,7 +69,7 @@ namespace Mpeg4Lib.Util
 		public static void WriteType(this Stream stream, string type)
 		{
 			if (type?.Length != 4)
-				throw new ArgumentException("Type must be 4 chas long.");
+				throw new ArgumentException("Type must be 4 chars long.");
 
 			stream.Write([(byte)type[0], (byte)type[1], (byte)type[2], (byte)type[3]]);
 		}

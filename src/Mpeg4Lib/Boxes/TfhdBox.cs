@@ -30,7 +30,7 @@ public class TfhdBox : FullBox
 	private bool default_sample_size_present => (Flags & 16) == 16;
 	private bool default_sample_flags_present => (Flags & 32) == 32;
 
-	public TfhdBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
+	public TfhdBox(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{
 		TrackID = file.ReadUInt32BE();
 

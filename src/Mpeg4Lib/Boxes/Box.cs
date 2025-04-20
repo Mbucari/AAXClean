@@ -8,20 +8,20 @@ namespace Mpeg4Lib.Boxes
 {
 	public abstract class Box : IBox
 	{
-		public IBox Parent { get; }
+		public IBox? Parent { get; }
 		public BoxHeader Header { get; }
 		public List<IBox> Children { get; } = new List<IBox>();
 		public virtual long RenderSize => 8 + Children.Sum(b => b.RenderSize);
 
 		protected long RemainingBoxLength(Stream file) => Header.FilePosition + Header.TotalBoxSize - file.Position;
 
-		public Box(BoxHeader header, IBox parent)
+		public Box(BoxHeader header, IBox? parent)
 		{
 			Header = header;
 			Parent = parent;
 		}
 		protected abstract void Render(Stream file);
-		public T GetChild<T>() where T : IBox
+		public T? GetChild<T>() where T : IBox
 		{
 			IEnumerable<T> children = GetChildren<T>();
 
@@ -32,6 +32,9 @@ namespace Mpeg4Lib.Boxes
 				_ => throw new InvalidOperationException($"{GetType().Name} has {children.Count()} children of type {typeof(T)}. Call {nameof(GetChildren)} instead."),
 			};
 		}
+
+		public T GetChildOrThrow<T>() where T : IBox
+			=> GetChild<T>() ?? throw new InvalidDataException($"{Header.Type} does not contain a child of type {typeof(T)}");
 
 		public IEnumerable<T> GetChildren<T>() where T : IBox
 		{

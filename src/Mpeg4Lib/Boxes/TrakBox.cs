@@ -1,19 +1,18 @@
 ﻿using System.IO;
 
-namespace Mpeg4Lib.Boxes
-{
-	public class TrakBox : Box
-	{
-		public TrakBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
-		{
-			LoadChildren(file);
-		}
+namespace Mpeg4Lib.Boxes;
 
-		public TkhdBox Tkhd => GetChild<TkhdBox>();
-		public MdiaBox Mdia => GetChild<MdiaBox>();
-		protected override void Render(Stream file)
-		{
-			return;
-		}
+public class TrakBox : Box
+{
+	public TrakBox(Stream file, BoxHeader header, IBox? parent) : base(header, parent)
+	{
+		LoadChildren(file);
+	}
+
+	public TkhdBox Tkhd => GetChildOrThrow<TkhdBox>();
+	public MdiaBox Mdia => GetChildOrThrow<MdiaBox>();
+	protected override void Render(Stream file)
+	{
+		return;
 	}
 }

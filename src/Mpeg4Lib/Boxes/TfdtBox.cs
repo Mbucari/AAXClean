@@ -7,7 +7,7 @@ public class TfdtBox : FullBox
 {
 	public override long RenderSize => base.RenderSize + (Version == 1 ? 8 : 4);
 	public long BaseMediaDecodeTime { get; }
-	public TfdtBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
+	public TfdtBox(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{
 		if (Version == 1)
 			BaseMediaDecodeTime = file.ReadInt64BE();

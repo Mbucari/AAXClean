@@ -22,9 +22,9 @@ public class TrunBox : FullBox
 		(sample_flags_present ? 4 : 0) +
 		(sample_composition_time_offsets_present ? 4 : 0);
 
-	public TrunBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
+	public TrunBox(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{
-		int sampleCount = file.ReadInt32BE();
+		uint sampleCount = file.ReadUInt32BE();
 		if (data_offset_present)
 			DataOffset = file.ReadInt32BE();
 		if (first_sample_flags_present)

@@ -5,17 +5,24 @@ namespace Mpeg4Lib.Boxes
 {
 	public static class BoxFactory
 	{
-		public static IBox CreateBox(Stream file, IBox parent)
+		public static T CreateBox<T>(Stream file, IBox? parent) where T : Box
+		{
+			var box = CreateBox(file, parent);
+			return box as T ?? throw new InvalidDataException($"The {box.Header.Type} box is not of type {typeof(T)}");
+		}
+
+		public static IBox CreateBox(Stream file, IBox? parent)
 			=> CreateBox(new BoxHeader(file), file, parent);
 
-		public static IBox CreateBox(BoxHeader header, Stream file, IBox parent)
+		public static IBox CreateBox(BoxHeader header, Stream file, IBox? parent)
 		{
 			IBox box = header.Type switch
 			{
 				"free" or "skip" => new FreeBox(file, header, parent),
-				"ftyp" => new FtypBox(file, header, parent),
-				"mdat" => new MdatBox(header, parent),
-				"moov" => new MoovBox(file, header, parent),
+				"ftyp" => new FtypBox(file, header),
+				"mdat" => new MdatBox(header),
+				"moov" => new MoovBox(file, header),
+				"moof" => new MoofBox(file, header),
 				"mvhd" => new MvhdBox(file, header, parent),
 				"trak" => new TrakBox(file, header, parent),
 				"tkhd" => new TkhdBox(file, header, parent),
@@ -42,7 +49,6 @@ namespace Mpeg4Lib.Boxes
 				"name" => new NameBox(file, header, parent),
 				"pssh" => new PsshBox(file, header, parent),
 				"sidx" => new SidxBox(file, header, parent),
-				"moof" => new MoofBox(file, header, parent),
 				"mfhd" => new MfhdBox(file, header, parent),
 				"tfhd" => new TfhdBox(file, header, parent),
 				"traf" => new TrafBox(file, header, parent),

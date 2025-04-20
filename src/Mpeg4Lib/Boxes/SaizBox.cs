@@ -11,7 +11,7 @@ public class SaizBox : FullBox
 	public uint AuxInfoTypeParameter { get; }
 	public byte DefaultInfoSampleSize { get; }
 	public byte[] SampleInfoSizes { get; }
-	public SaizBox(Stream file, BoxHeader header, IBox parent) : base(file, header, parent)
+	public SaizBox(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{
 		if ((Flags & 1) == 1)
 		{

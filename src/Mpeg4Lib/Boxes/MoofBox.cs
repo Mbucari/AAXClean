@@ -4,13 +4,13 @@ namespace Mpeg4Lib.Boxes;
 
 public class MoofBox : Box
 {
-	public MoofBox(Stream file, BoxHeader header, IBox parent) : base(header, parent)
+	public MoofBox(Stream file, BoxHeader header) : base(header, null)
 	{
 		LoadChildren(file);
 	}
 
-	public MfhdBox Mfhd => GetChild<MfhdBox>();
-	public TrafBox Traf => GetChild<TrafBox>();
+	public MfhdBox Mfhd => GetChildOrThrow<MfhdBox>();
+	public TrafBox Traf => GetChildOrThrow<TrafBox>();
 	protected override void Render(Stream file)
 	{
 		return;
