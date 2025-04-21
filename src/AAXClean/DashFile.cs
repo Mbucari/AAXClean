@@ -8,7 +8,6 @@ using System.Buffers;
 using System.IO;
 using System.Linq;
 
-#nullable enable
 namespace AAXClean;
 
 public class DashFile : Mp4File
@@ -76,7 +75,11 @@ public class DashFile : Mp4File
 		=> new DashChunkReader(this, inputStream, startTime, endTime);
 
 	public override FrameTransformBase<FrameEntry, FrameEntry> GetAudioFrameFilter()
-		=> new DashFilter(Key);
+	{
+		if (Key is null)
+			throw new InvalidOperationException($"This instance of {nameof(DashFile)} does not have a decryption key set.");
+		return new DashFilter(Key);
+	}
 
 	public void SetDecryptionKey(byte[] keyId, byte[] decryptionKey)
 	{

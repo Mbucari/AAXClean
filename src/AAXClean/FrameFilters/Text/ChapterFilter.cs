@@ -5,7 +5,7 @@ namespace AAXClean.FrameFilters.Text
 {
 	public class ChapterFilter : FrameFinalBase<FrameEntry>
 	{
-		public event EventHandler<FrameEntry> ChapterRead;
+		public event EventHandler<FrameEntry>? ChapterRead;
 		protected override int InputBufferSize => 1;
 		protected override Task FlushAsync() => Task.CompletedTask;
 		protected override Task PerformFilteringAsync(FrameEntry input) => Task.CompletedTask;

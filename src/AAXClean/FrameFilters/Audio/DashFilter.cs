@@ -19,7 +19,6 @@ internal class DashFilter : AacValidateFilter
 		if (input.ExtraData is byte[] iv)
 		{
 			var frameData = input.FrameData.Span;
-			//AesCtr.SetIV(iv);
 			AesCtr.Decrypt(iv, frameData, frameData);
 		}
 		return base.PerformFiltering(input);

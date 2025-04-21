@@ -30,7 +30,8 @@ namespace AAXClean.FrameFilters.Audio
 
 		protected override Task PerformFilteringAsync(FrameEntry input)
 		{
-			bool newChunk = input.Chunk.ChunkIndex > lastChunkIndex;
+			var chunkIndex = input.Chunk?.ChunkIndex ?? lastChunkIndex;
+			bool newChunk = chunkIndex > lastChunkIndex;
 
 			//Write chapters as soon as they're available.
 			while (ChapterQueue.TryGetNextChapter(out var chapterEntry))
@@ -40,7 +41,7 @@ namespace AAXClean.FrameFilters.Audio
 			}
 
 			Mp4aWriter.AddFrame(input.FrameData.Span, newChunk, input.SamplesInFrame);
-			lastChunkIndex = input.Chunk.ChunkIndex;
+			lastChunkIndex = chunkIndex;
 			return Task.CompletedTask;
 		}
 

@@ -6,7 +6,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-#nullable enable
 namespace AAXClean.Widevine;
 
 public interface ISession : IDisposable
@@ -132,7 +131,7 @@ internal class Session : ISession
 	{
 		var mac_key_server = DeriveKey(sessionKey, authContext, 1).Append(DeriveKey(sessionKey, authContext, 2));
 
-		var hmacData = (signedMessage.OemcryptoCoreMessage?.ToByteArray() ?? []).Append(signedMessage.Msg?.ToByteArray());
+		var hmacData = (signedMessage.OemcryptoCoreMessage?.ToByteArray() ?? []).Append(signedMessage.Msg?.ToByteArray() ?? []);
 
 		var computed_signature = HMACSHA256.HashData(mac_key_server, hmacData);
 

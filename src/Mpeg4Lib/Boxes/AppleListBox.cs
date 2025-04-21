@@ -41,27 +41,45 @@ public class AppleListBox : Box
 		AppleTagBox.Create(this, name, data, type);
 	}
 
-	public void EditOrAddTag(string name, string data)
+	public bool RemoveTag(string name)
 	{
-		EditOrAddTag(name, Encoding.UTF8.GetBytes(data), AppleDataType.Utf_8);
+		if (Tags.Where(t => t.Header.Type == name).FirstOrDefault() is AppleTagBox tag)
+		{
+			tag.Dispose();
+			return Children.Remove(tag);
+		}
+		return false;
 	}
 
-	public void EditOrAddTag(string name, byte[] data)
+	public void EditOrAddTag(string name, string? data)
+	{
+		if (data is null)
+			RemoveTag(name);
+		else
+			EditOrAddTag(name, Encoding.UTF8.GetBytes(data), AppleDataType.Utf_8);
+	}
+
+	public void EditOrAddTag(string name, byte[]? data)
 	{
 		EditOrAddTag(name, data, AppleDataType.ContainsData);
 	}
 
-	public void EditOrAddTag(string name, byte[] data, AppleDataType type)
+	public void EditOrAddTag(string name, byte[]? data, AppleDataType type)
 	{
-		AppleTagBox? tag = Tags.Where(t => t.Header.Type == name).FirstOrDefault();
+		if (data is null)
+			RemoveTag(name);
+		else
+		{
+			AppleTagBox? tag = Tags.Where(t => t.Header.Type == name).FirstOrDefault();
 
-		if (tag is null)
-		{
-			AddTag(name, data, type);
-		}
-		else if (tag?.Data.DataType == type)
-		{
-			tag.Data.Data = data;
+			if (tag is null)
+			{
+				AddTag(name, data, type);
+			}
+			else if (tag?.Data.DataType == type)
+			{
+				tag.Data.Data = data;
+			}
 		}
 	}
 

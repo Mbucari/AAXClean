@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
-#nullable enable
 namespace AAXClean.FrameFilters.Audio
 {
 	public class Mp4aWriter
@@ -39,6 +38,12 @@ namespace AAXClean.FrameFilters.Audio
 
 		public Mp4aWriter(Stream outputFile, FtypBox ftyp, MoovBox moov)
 		{
+			ArgumentNullException.ThrowIfNull(outputFile, nameof(outputFile));
+			ArgumentNullException.ThrowIfNull(ftyp, nameof(ftyp));
+			ArgumentNullException.ThrowIfNull(moov, nameof(moov));
+			if (!outputFile.CanWrite)
+				throw new ArgumentException("The stream is not writable", nameof(outputFile));
+
 			OutputFile = outputFile;
 			Moov = MakeBlankMoov(moov);
 

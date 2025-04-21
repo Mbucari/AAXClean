@@ -41,19 +41,19 @@ namespace AAXClean
 
 	public class Mp4File
 	{
-		public ChapterInfo Chapters { get; set; }
-		public AppleTags AppleTags { get; }
+		public ChapterInfo? Chapters { get; set; }
+		public AppleTags? AppleTags { get; }
 		public Stream InputStream => inputStream;
 		public FileType FileType { get; }
 		public virtual TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.AudioTrack.Mdia.Mdhd.Duration / TimeScale);
-		public int MaxBitrate => (int)Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate;
-		public int AverageBitrate => (int)Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate;
+		public int MaxBitrate => (int)AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate;
+		public int AverageBitrate => (int)AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate;
 		public int TimeScale => (int)Moov.AudioTrack.Mdia.Mdhd.Timescale;
-		public int AudioObjectType => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.AudioObjectType;
-		public int AudioChannels => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.ChannelConfiguration;
-		public int AudioSampleSize => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.SampleSize;
-		public byte[] AscBlob => Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.AscBlob;
-		public SampleRate SampleRate => (SampleRate)Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.SamplingFrequency;
+		public int AudioObjectType => AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.AudioObjectType;
+		public int AudioChannels => AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.ChannelConfiguration;
+		public int AudioSampleSize => AudioSampleEntry.SampleSize;
+		public byte[] AscBlob => AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.AscBlob;
+		public SampleRate SampleRate => (SampleRate)AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.SamplingFrequency;
 
 		public FtypBox Ftyp { get; set; }
 		public MoovBox Moov { get; }
@@ -61,6 +61,7 @@ namespace AAXClean
 
 		private readonly TrackedReadStream inputStream;
 		public List<IBox> TopLevelBoxes { get; }
+		public AudioSampleEntry AudioSampleEntry { get; }
 
 		public Mp4File(Stream file, long fileSize)
 		{
@@ -83,6 +84,9 @@ namespace AAXClean
 
 			if (Moov.ILst is not null)
 				AppleTags = new AppleTags(Moov.ILst);
+
+			AudioSampleEntry = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry
+				?? throw new InvalidOperationException("The audio track's AudioSampleEntry is null");
 		}
 
 		public Mp4File(Stream file) : this(file, file.Length) { }
@@ -105,7 +109,7 @@ namespace AAXClean
 
 			//Remove Free boxes and work with net size change
 			foreach (var box in Moov.GetFreeBoxes())
-				box.Parent.Children.Remove(box);
+				box.Parent?.Children.Remove(box);
 
 			var sizeChange = Moov.RenderSize - Moov.Header.TotalBoxSize;
 
@@ -144,17 +148,17 @@ namespace AAXClean
 
 		public static Mp4Operation RelocateMoovAsync(string mp4FilePath)
 		{
-			Mp4Operation moovMover = null;
+			Mp4Operation? moovMover = null;
 			moovMover = new Mp4Operation(t => Mpeg4Util.RelocateMoovToBeginningAsync(mp4FilePath, t.Token, progressAction), null, t => { });
 			return moovMover;
 
 			void progressAction(TimeSpan totalDuration, TimeSpan processPosition, double processSpeed)
 			{
-				moovMover.OnProggressUpdate(new ConversionProgressEventArgs(TimeSpan.Zero, totalDuration, processPosition, processSpeed));
+				moovMover?.OnProgressUpdate(new ConversionProgressEventArgs(TimeSpan.Zero, totalDuration, processPosition, processSpeed));
 			}
 		}
 
-		public Mp4Operation ConvertToMp4aAsync(Stream outputStream, ChapterInfo userChapters = null)
+		public Mp4Operation ConvertToMp4aAsync(Stream outputStream, ChapterInfo? userChapters = null)
 		{
 			var start = userChapters?.StartOffset ?? TimeSpan.Zero;
 			var end = userChapters?.EndOffset ?? TimeSpan.MaxValue;
@@ -212,14 +216,17 @@ namespace AAXClean
 			return ProcessAudio(userChapters.StartOffset, userChapters.EndOffset, continuation, (Moov.AudioTrack, f1));
 		}
 
-		public Mp4Operation<ChapterInfo> GetChapterInfoAsync()
+		public Mp4Operation<ChapterInfo?> GetChapterInfoAsync()
 		{
+			if (Moov.TextTrack is not TrakBox textTrack)
+				return Mp4Operation<ChapterInfo?>.FromCompleted(this, null);
+
 			ChapterFilter chapterFilter = new();
 
 			ChapterQueue chapterQueue = new(SampleRate, SampleRate);
 			chapterFilter.ChapterRead += (s, e) => chapterQueue.Add(e);
 
-			ChapterInfo continuation(Task t)
+			ChapterInfo? continuation(Task t)
 			{
 				ChapterInfo chapters = new();
 
@@ -235,12 +242,12 @@ namespace AAXClean
 			return ProcessAudio(TimeSpan.Zero, TimeSpan.MaxValue, continuation, (Moov.TextTrack, chapterFilter));
 		}
 
-		public ChapterInfo GetChaptersFromMetadata()
+		public ChapterInfo? GetChaptersFromMetadata()
 		{
-			TrakBox textTrak = Moov.TextTrack;
+			TrakBox? textTrak = Moov.TextTrack;
 
 			//Get chapter names from metadata box in chapter track
-			List<string> chapterNames =
+			List<string>? chapterNames =
 				textTrak
 				?.GetChild<UdtaBox>()
 				?.GetChild<MetaBox>()
@@ -253,7 +260,7 @@ namespace AAXClean
 
 			if (chapterNames is null) return null;
 
-			IReadOnlyList<SttsBox.SampleEntry> sampleTimes = textTrak.Mdia.Minf.Stbl.Stts.Samples;
+			IReadOnlyList<SttsBox.SampleEntry> sampleTimes = textTrak!.Mdia.Minf.Stbl.Stts.Samples;
 
 			if (sampleTimes.Count != chapterNames.Count) return null;
 
@@ -291,7 +298,7 @@ namespace AAXClean
 				reader.AddTrack(track, filter);
 
 			var operation = new Mp4Operation(reader.RunAsync, this, continuation);
-			reader.OnProggressUpdateDelegate = operation.OnProggressUpdate;
+			reader.OnProgressUpdateDelegate = operation.OnProgressUpdate;
 			return operation;
 		}
 
@@ -303,7 +310,7 @@ namespace AAXClean
 				reader.AddTrack(track, filter);
 
 			var operation = new Mp4Operation<TResult>(reader.RunAsync, this, continuation);
-			reader.OnProggressUpdateDelegate = operation.OnProggressUpdate;
+			reader.OnProgressUpdateDelegate = operation.OnProgressUpdate;
 			return operation;
 		}
 

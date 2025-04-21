@@ -1,6 +1,7 @@
 ﻿using AAXClean.FrameFilters;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 
@@ -10,7 +11,12 @@ namespace AAXClean
 	{
 		public Memory<byte> FrameData { get; init; }
 		public uint SamplesInFrame { get; init; }
-		public string Title { get; init; }
+		public string Title { get; }
+		public ChapterEntry(string title)
+		{
+			ArgumentNullException.ThrowIfNull(title, nameof(title));
+			Title = title;
+		}
 	}
 
 	/// <summary>
@@ -30,7 +36,7 @@ namespace AAXClean
 			SampleScaleFactor = (double)outputRate / (double)inputRate;
 		}
 
-		public bool TryGetNextChapter(out ChapterEntry chapterEntry)
+		public bool TryGetNextChapter([NotNullWhen(true)] out ChapterEntry? chapterEntry)
 		{
 			lock (lockObj)
 			{
@@ -64,11 +70,10 @@ namespace AAXClean
 
 			lock (lockObj)
 			{
-				chapterEntries.Enqueue(new ChapterEntry
+				chapterEntries.Enqueue(new ChapterEntry(chapter.Title)
 				{
 					FrameData = frameData,
-					SamplesInFrame = sampleDelta,
-					Title = chapter.Title
+					SamplesInFrame = sampleDelta
 				});
 			}
 		}
@@ -87,11 +92,10 @@ namespace AAXClean
 
 			lock (lockObj)
 			{
-				chapterEntries.Enqueue(new ChapterEntry
+				chapterEntries.Enqueue(new ChapterEntry(title)
 				{
 					FrameData = entry.FrameData,
-					SamplesInFrame = (uint)(Math.Max(0, sif + subtractNext) * SampleScaleFactor),
-					Title = title
+					SamplesInFrame = (uint)(Math.Max(0, sif + subtractNext) * SampleScaleFactor)
 				});
 			}
 

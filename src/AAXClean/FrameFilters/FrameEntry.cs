@@ -1,7 +1,8 @@
 ﻿using Mpeg4Lib.Chunks;
 using System;
-#nullable enable
+
 namespace AAXClean.FrameFilters;
+
 public class FrameEntry
 {
 	public ChunkEntry? Chunk { get; init; }

@@ -11,31 +11,25 @@ namespace AAXClean
 {
 	public sealed class AaxFile : Mp4File
 	{
-		public byte[] Key { get; private set; }
-		public byte[] IV { get; private set; }
-
-		private readonly long OriginalFtypSize;
-		private readonly long OriginalMoovSize;
+		public byte[]? Key { get; private set; }
+		public byte[]? IV { get; private set; }
 
 		public AaxFile(Stream file, long fileSize, bool additionalFixups = true) : base(file, fileSize)
 		{
 			if (FileType != FileType.Aax && FileType != FileType.Aaxc)
 				throw new ArgumentException($"This instance of {nameof(Mp4File)} is not an Aax or Aaxc file.");
 
-			OriginalFtypSize = Ftyp.Header.TotalBoxSize;
-			OriginalMoovSize = Moov.Header.TotalBoxSize;
-
 			//This is the flag that, if set, prevents cover art from loading on android.
-			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.DependsOnCoreCoder = false;
+			AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.DependsOnCoreCoder = false;
 			//Must change the audio type from aavd to mp4a
-			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Header.ChangeAtomName("mp4a");
+			AudioSampleEntry.Header.ChangeAtomName("mp4a");
 
 			//These actions will alter the mpeg-4 size and should not
 			//be performed unless re-writing the entire mpeg-4 file.
 			if (additionalFixups)
 			{
 				//Remove extra Free boxes
-				List<IBox> children = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children;
+				List<IBox> children = AudioSampleEntry.Children;
 				for (int i = children.Count - 1; i >= 0; i--)
 				{
 					if (children[i] is FreeBox)
@@ -53,7 +47,11 @@ namespace AAXClean
 		public AaxFile(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read) : this(File.Open(fileName, FileMode.Open, access, share)) { }
 
 		public override FrameTransformBase<FrameEntry, FrameEntry> GetAudioFrameFilter()
-			=> new AavdFilter(Key, IV);
+		{
+			if (Key is null || IV is null)
+				throw new InvalidOperationException($"This instance of {nameof(AaxFile)} does not have a decryption key set.");
+			return new AavdFilter(Key, IV);
+		}
 
 		#region Aax(c) Keys
 
@@ -74,10 +72,8 @@ namespace AAXClean
 			if (FileType != FileType.Aax)
 				throw new ArgumentException($"This instance of {nameof(AaxFile)} is not an {FileType.Aax} file.");
 
-			AdrmBox adrm = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.GetChild<AdrmBox>();
-
-			if (adrm is null)
-				throw new Exception($"This instance of {nameof(AaxFile)} does not contain an adrm box.");
+			AdrmBox adrm = AudioSampleEntry.GetChild<AdrmBox>()
+				?? throw new InvalidOperationException($"This instance of {nameof(AaxFile)} does not contain an adrm box.");
 
 			//Adrm key derrivation from 
 			//https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/mov.c in mov_read_adrm
@@ -115,11 +111,10 @@ namespace AAXClean
 				(file_key, 0, 16),
 				(audible_fixed_key, 0, 16));
 
-			Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children.Remove(adrm);
+			AudioSampleEntry.Children.Remove(adrm);
 
-			IBox aabd = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children.FirstOrDefault(b => b.Header.Type == "aabd");
-			if (aabd is not null)
-				Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry.Children.Remove(aabd);
+			if (AudioSampleEntry.Children.FirstOrDefault(b => b.Header.Type == "aabd") is IBox aabd)
+				AudioSampleEntry.Children.Remove(aabd);
 
 			SetDecryptionKey(file_key, ByteUtil.CloneBytes(file_iv, 0, 16));
 		}

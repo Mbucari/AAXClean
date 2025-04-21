@@ -7,7 +7,7 @@ namespace AAXClean
 {
 	public class Mp4Operation
 	{
-		public event EventHandler<ConversionProgressEventArgs> ConversionProgressUpdate;
+		public event EventHandler<ConversionProgressEventArgs>? ConversionProgressUpdate;
 		public bool IsCompleted => Continuation?.IsCompleted is true;
 		public bool IsFaulted => _readerTask?.IsFaulted is true;
 		public bool IsCanceled => _readerTask?.IsCanceled is true;
@@ -16,24 +16,24 @@ namespace AAXClean
 		public double ProcessSpeed => _lastArgs?.ProcessSpeed ?? 0;
 		public TaskStatus TaskStatus => _readerTask?.Status ?? TaskStatus.Created;
 		public Task OperationTask => Continuation;
-		public Mp4File Mp4File { get; }
+		public Mp4File? Mp4File { get; }
 
-		protected virtual Task Continuation => _continuation;
+		protected virtual Task Continuation => _continuation ?? Task.CompletedTask;
 
 		private readonly CancellationTokenSource _cancellationSource = new();
 		private readonly Func<CancellationTokenSource, Task> _startAction;
-		private readonly Action<Task> _continuationAction;
-		private ConversionProgressEventArgs _lastArgs;
-		private Task _continuation;
-		private Task _readerTask;
+		private readonly Action<Task>? _continuationAction;
+		private ConversionProgressEventArgs? _lastArgs;
+		private Task? _continuation;
+		private Task? _readerTask;
 
-		internal Mp4Operation(Func<CancellationTokenSource, Task> startAction, Mp4File mp4File, Action<Task> continuationTask)
+		internal Mp4Operation(Func<CancellationTokenSource, Task> startAction, Mp4File? mp4File, Action<Task> continuationTask)
 			: this(startAction, mp4File)
 		{
 			_continuationAction = continuationTask;
 		}
 
-		protected Mp4Operation(Func<CancellationTokenSource, Task> startAction, Mp4File mp4File)
+		protected Mp4Operation(Func<CancellationTokenSource, Task> startAction, Mp4File? mp4File)
 		{
 			_startAction = startAction;
 			Mp4File = mp4File;
@@ -61,7 +61,7 @@ namespace AAXClean
 			_continuation = readerTask.ContinueWith(t =>
 			{
 				//Call the continuation delegate to cleanup disposables
-				_continuationAction(t);
+				_continuationAction?.Invoke(t);
 				if (t.IsFaulted)
 					throw t.Exception;
 			},
@@ -74,12 +74,13 @@ namespace AAXClean
 			return Continuation.GetAwaiter();
 		}
 
-		internal void OnProggressUpdate(ConversionProgressEventArgs args)
+		internal void OnProgressUpdate(ConversionProgressEventArgs args)
 		{
 			_lastArgs = args;
 			ConversionProgressUpdate?.Invoke(this, args);
 		}
 
-		public static Mp4Operation CompletedOperation => new Mp4Operation(cs => Task.CompletedTask, null, t => { });
+		public static Mp4Operation FromCompleted(Mp4File mp4File)
+			=> new Mp4Operation(c => Task.CompletedTask, mp4File, _ => { });
 	}
 }

@@ -9,21 +9,20 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-#nullable enable
 namespace AAXClean.Chunks;
 
 public interface IChunkReader
 {
 	Task RunAsync(CancellationTokenSource cancellationSource);
-	Action<ConversionProgressEventArgs>? OnProggressUpdateDelegate { get; set; }
-	void AddTrack(TrakBox trak, FrameFilterBase<FrameEntry> filter);
+	Action<ConversionProgressEventArgs>? OnProgressUpdateDelegate { get; set; }
+	void AddTrack(TrakBox track, FrameFilterBase<FrameEntry> filter);
 }
 
 internal class ChunkReader : IChunkReader
 {
 	protected record TrackEntry(uint TrackId, uint Timescale, FrameFilterBase<FrameEntry> FirstFilter, TrakBox TrakBox);
 
-	public Action<ConversionProgressEventArgs>? OnProggressUpdateDelegate { get; set; }
+	public Action<ConversionProgressEventArgs>? OnProgressUpdateDelegate { get; set; }
 	protected Dictionary<uint, TrackEntry> TrackEntries { get; } = new();
 	protected Stream InputStream { get; }
 	protected TimeSpan StartTime { get; }
@@ -59,10 +58,10 @@ internal class ChunkReader : IChunkReader
 		=> TrackEntries.TryGetValue(trackId, out var trackEntry) ? trackEntry
 		: throw new ArgumentOutOfRangeException(nameof(trackId), $"Track ID {trackId} is not present in this {nameof(ChunkReader)} instance.");
 
-	public virtual void AddTrack(TrakBox trak, FrameFilterBase<FrameEntry> filter)
+	public virtual void AddTrack(TrakBox track, FrameFilterBase<FrameEntry> filter)
 	{
-		var trackEntry = new TrackEntry(trak.Tkhd.TrackID, trak.Mdia.Mdhd.Timescale, filter, trak);
-		TrackEntries.Add(trak.Tkhd.TrackID, trackEntry);
+		var trackEntry = new TrackEntry(track.Tkhd.TrackID, track.Mdia.Mdhd.Timescale, filter, track);
+		TrackEntries.Add(track.Tkhd.TrackID, trackEntry);
 	}
 
 	public async Task RunAsync(CancellationTokenSource cancellationSource)
@@ -106,7 +105,7 @@ internal class ChunkReader : IChunkReader
 			FrameData = frameData
 		};
 
-	private async Task DispatchChunk(ChunkEntry chunk, Memory<byte> chunkdata)
+	private async Task DispatchChunk(ChunkEntry chunk, Memory<byte> chunkData)
 	{
 		long sampleIndex = chunk.FirstSample;
 
@@ -128,7 +127,7 @@ internal class ChunkReader : IChunkReader
 
 			OnProgressReport(sampleIndex, trackEntry.Timescale);
 
-			var frameData = chunkdata.Slice(start, chunk.FrameSizes[f]);
+			var frameData = chunkData.Slice(start, chunk.FrameSizes[f]);
 			var frameEntry = CreateFrameEntry(chunk, f, frameDelta, frameData);
 			await trackEntry.FirstFilter.AddInputAsync(frameEntry);
 		}
@@ -141,12 +140,12 @@ internal class ChunkReader : IChunkReader
 	{
 		beginProcess = DateTime.UtcNow;
 		nextUpdate = beginProcess;
-		OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs(StartTime, EndTime, StartTime, 0));
+		OnProgressUpdateDelegate?.Invoke(new ConversionProgressEventArgs(StartTime, EndTime, StartTime, 0));
 	}
 
 	private void OnFinalProgress()
 	{
-		OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs(StartTime, EndTime, EndTime, (EndTime - StartTime) / (DateTime.UtcNow - beginProcess)));
+		OnProgressUpdateDelegate?.Invoke(new ConversionProgressEventArgs(StartTime, EndTime, EndTime, (EndTime - StartTime) / (DateTime.UtcNow - beginProcess)));
 	}
 
 	private void OnProgressReport(long sampleNumber, uint timeScale)
@@ -156,7 +155,7 @@ internal class ChunkReader : IChunkReader
 		{
 			var trackPosition = TimeSpan.FromSeconds((double)sampleNumber / timeScale);
 			double speed = (trackPosition - StartTime) / (DateTime.UtcNow - beginProcess);
-			OnProggressUpdateDelegate?.Invoke(new ConversionProgressEventArgs(StartTime, EndTime, trackPosition, speed));
+			OnProgressUpdateDelegate?.Invoke(new ConversionProgressEventArgs(StartTime, EndTime, trackPosition, speed));
 			nextUpdate = DateTime.UtcNow.AddMilliseconds(100);
 		}
 	}

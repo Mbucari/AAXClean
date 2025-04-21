@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 
-#nullable enable
 namespace AAXClean.Widevine;
 
 public enum KeyType

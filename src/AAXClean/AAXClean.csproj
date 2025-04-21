@@ -20,6 +20,7 @@
 	<DebugType>embedded</DebugType>
 	<RepositoryType>Git</RepositoryType>
 	<NeutralLanguage>en</NeutralLanguage>
+	<Nullable>enable</Nullable>
   </PropertyGroup>
 
   <PropertyGroup>

@@ -13,7 +13,7 @@ namespace AAXClean.FrameFilters.Audio
 			return input;
 		}
 
-		private bool ValidateFrame(ReadOnlySpan<byte> frame) => (AV_RB16(frame) & 0xfff0) != 0xfff0;
+		private static bool ValidateFrame(ReadOnlySpan<byte> frame) => (AV_RB16(frame) & 0xfff0) != 0xfff0;
 
 		//Defined at
 		//http://man.hubwiz.com/docset/FFmpeg.docset/Contents/Resources/Documents/api/intreadwrite_8h_source.html

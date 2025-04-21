@@ -10,6 +10,8 @@ public unsafe struct AesCtr : IDisposable
 
 	private readonly ICryptoTransform Encryptor;
 	private readonly Aes Aes;
+	private readonly byte[] encrypted_counter = new byte[AES_BLOCK_SIZE];
+
 	public AesCtr(byte[] key)
 	{
 		ArgumentNullException.ThrowIfNull(key, nameof(key));
@@ -17,51 +19,51 @@ public unsafe struct AesCtr : IDisposable
 			throw new ArgumentException($"{nameof(key)} must be exactly {AES_BLOCK_SIZE} bytes long.");
 
 		Aes = Aes.Create();
-		Aes.Key = key;
 		Aes.Padding = PaddingMode.None;
 		Aes.Mode = CipherMode.ECB;
-		Encryptor = Aes.CreateEncryptor(key, new byte[16]);
+		Encryptor = Aes.CreateEncryptor(key, null);
 	}
-
 
 	public unsafe void Decrypt(byte[] iv, ReadOnlySpan<byte> source, Span<byte> destination)
 	{
+		ArgumentNullException.ThrowIfNull(iv, nameof(iv));
+		ArgumentOutOfRangeException.ThrowIfNotEqual(iv.Length, AES_BLOCK_SIZE, nameof(iv));
+
 		if (destination.Length < source.Length)
 			throw new ArithmeticException($"Destination array is not long enough. (Parameter '{nameof(destination)}')");
 
-		int data_pos = 0;
+		const int AES_NUM_DWORDS = AES_BLOCK_SIZE / sizeof(uint);
+
 		fixed (byte* pD = destination)
 		{
 			fixed (byte* pS = source)
 			{
-				uint* pD32 = (uint*)pD;
-				uint* pS32 = (uint*)pS;
-
-				while (data_pos < source.Length)
+				fixed (byte* pEc = encrypted_counter)
 				{
-					//Crt always encrypts with an empty IV, and the only way to reset the IV after encrypting a block
-					//is by using TransformFinalBlock. 
-					var encrypted_counter = Encryptor.TransformFinalBlock(iv, 0, AES_BLOCK_SIZE);
-					IncrementBE(iv);
+					uint* pD32 = (uint*)pD;
+					uint* pS32 = (uint*)pS;
+					uint* pEc32 = (uint*)pEc;
 
-					int length = int.Min(source.Length - data_pos, AES_BLOCK_SIZE);
+					int data_pos = 0, count = source.Length;
 
-					fixed (byte* pEc = encrypted_counter)
+					while (count >= AES_BLOCK_SIZE)
 					{
-						uint* pEc32 = (uint*)pEc;
+						Encryptor.TransformBlock(iv, 0, AES_BLOCK_SIZE, encrypted_counter, 0);
+						IncrementBE(iv);
 
-						int i = 0, dwordLength = length / sizeof(uint);
-						for (; i < dwordLength; i++)
-						{
+						for (int i = 0; i < AES_NUM_DWORDS; i++)
 							*pD32++ = pEc32[i] ^ *pS32++;
-						}
-						i <<= 2;
-						data_pos += i;
-						for (; i < length; i++)
-						{
-							*(pD + data_pos) = (byte)(pEc[i] ^ *(pS + data_pos));
-							data_pos++;
-						}
+
+						data_pos += AES_BLOCK_SIZE;
+						count -= AES_BLOCK_SIZE;
+					}
+
+					if (count > 0)
+					{
+						Encryptor.TransformBlock(iv, 0, AES_BLOCK_SIZE, encrypted_counter, 0);
+
+						for (int i = 0; i < count; i++, data_pos++)
+							pD[data_pos] = (byte)(pEc[i] ^ pS[data_pos]);
 					}
 				}
 			}
@@ -82,6 +84,7 @@ public unsafe struct AesCtr : IDisposable
 		Dispose(true);
 		GC.SuppressFinalize(this);
 	}
+
 	private bool isDisposed;
 	private void Dispose(bool disposing)
 	{

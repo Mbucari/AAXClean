@@ -32,22 +32,6 @@ namespace Mpeg4Lib.Util
 			}
 			return boxes;
 		}
-		public static List<IBox> LoadAllBoxes(Stream file)
-		{
-			List<IBox> boxes = new();
-
-			while (file.Position < file.Length)
-			{
-				var box = BoxFactory.CreateBox(file, null);
-				boxes.Add(box);
-
-				if (box is MdatBox)
-				{
-					file.Seek(box.Header.TotalBoxSize - box.Header.HeaderSize, SeekOrigin.Current);
-				}
-			}
-			return boxes;
-		}
 
 		public static async Task RelocateMoovToBeginningAsync(string mp4FilePath, CancellationToken cancellationToken, Action<TimeSpan, TimeSpan, double> progress)
 		{

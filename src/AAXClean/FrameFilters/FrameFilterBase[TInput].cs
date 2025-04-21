@@ -10,7 +10,7 @@ namespace AAXClean.FrameFilters
 		protected abstract int InputBufferSize { get; }
 
 		private CancellationToken CancellationToken;
-		private Task filterLoop;
+		private Task? filterLoop;
 		private TInput[] buffer;
 		private int bufferPosition = 0;
 		private readonly Channel<(int numEntries, TInput[] entries)> filterChannel;

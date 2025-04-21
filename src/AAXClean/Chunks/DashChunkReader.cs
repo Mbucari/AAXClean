@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-#nullable enable
 namespace AAXClean.Chunks;
 
 internal class DashChunkReader : ChunkReader
@@ -32,11 +31,11 @@ internal class DashChunkReader : ChunkReader
 		return entry;
 	}
 
-	public override void AddTrack(TrakBox trak, FrameFilterBase<FrameEntry> filter)
+	public override void AddTrack(TrakBox track, FrameFilterBase<FrameEntry> filter)
 	{
 		if (TrackEntries.Count > 0)
 			throw new InvalidOperationException($"The {nameof(DashChunkReader)} currently only supports a single track.");
-		base.AddTrack(trak, filter);
+		base.AddTrack(track, filter);
 	}
 
 	protected override IEnumerable<ChunkEntry> EnumerateChunks()
