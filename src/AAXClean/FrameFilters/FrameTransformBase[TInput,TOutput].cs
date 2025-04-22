@@ -26,10 +26,12 @@ namespace AAXClean.FrameFilters
 		protected sealed override async Task HandleInputDataAsync(TInput input)
 		{
 			TOutput filteredData = PerformFiltering(input);
-#if DEBUG
-			//Allow unlinked for testing purposes
 			if (Linked is null)
+#if DEBUG
+				//Allow unlinked for testing purposes
 				return;
+#else
+				throw new System.InvalidOperationException($"A FrameTransformBase<TInput, TOutput> must be linked to a FrameFilterBase<TOutput>");
 #endif
 			await Linked.AddInputAsync(filteredData);
 		}

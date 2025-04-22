@@ -72,11 +72,17 @@ public class DashChunkEntryies : IEnumerable<ChunkEntry>
 		if (moofBox.Traf.Trun is not TrunBox trun)
 			throw new InvalidDataException($"The {nameof(TrafBox)} doesn't contain a {nameof(TrunBox)}");
 
-		var chunkDataSize = trun.Samples.Sum(s => s.SampleSize ?? 0);
-		if (chunkDataSize != mdatBox.Header.TotalBoxSize - mdatBox.Header.HeaderSize)
-			throw new InvalidDataException("Mdat box size doesn't match sample sizes in track fragment run box");
+		var frameSizes
+			= trun.sample_size_present ? trun.Samples.Select(s => s.SampleSize).OfType<int>().ToArray()
+			: moofBox.Traf.Tfhd.DefaultSampleSize is uint sampleSize ? Enumerable.Repeat((int)sampleSize, trun.Samples.Length).ToArray()
+			: throw new InvalidOperationException("Trun sample infos don't contain sample sizes and no default sample size is set.");
 
-		var frameSizes = trun.Samples.Select(s => s.SampleSize ?? 0).ToArray();
+		var mdatSize = mdatBox.Header.TotalBoxSize - mdatBox.Header.HeaderSize;
+		if (frameSizes.Sum() != mdatSize)
+			throw new InvalidDataException("Mdat box size doesn't match sample sizes in track fragment");
+
+		if (mdatSize > int.MaxValue)
+			throw new InvalidDataException("Mdat is larger than Int32.MaxValue");
 
 		var frameDurations
 			= trun.sample_duration_present ? trun.Samples.Select(s => s.SampleDuration).OfType<uint>().ToArray()
@@ -97,7 +103,7 @@ public class DashChunkEntryies : IEnumerable<ChunkEntry>
 			TrackId = TrackId,
 			ChunkIndex = (uint)moofBox.Mfhd.SequenceNumber,
 			ChunkOffset = InputStream.Position,
-			ChunkSize = chunkDataSize,
+			ChunkSize = (int)mdatSize,
 			FirstSample = startSample,
 			FrameSizes = frameSizes,
 			FrameDurations = frameDurations,

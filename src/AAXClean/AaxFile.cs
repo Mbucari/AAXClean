@@ -19,8 +19,10 @@ namespace AAXClean
 			if (FileType != FileType.Aax && FileType != FileType.Aaxc)
 				throw new ArgumentException($"This instance of {nameof(Mp4File)} is not an Aax or Aaxc file.");
 
-			//This is the flag that, if set, prevents cover art from loading on android.
-			AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.DependsOnCoreCoder = false;
+			if (AudioSampleEntry.Esds is EsdsBox esds)
+				//This is the flag that, if set, prevents cover art from loading on android.
+				esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.DependsOnCoreCoder = false;
+
 			//Must change the audio type from aavd to mp4a
 			AudioSampleEntry.Header.ChangeAtomName("mp4a");
 

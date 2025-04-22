@@ -1,4 +1,5 @@
 ﻿using Mpeg4Lib.Util;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -36,6 +37,32 @@ public class HdlrBox : FullBox
 		}
 		HandlerName = Encoding.UTF8.GetString(blist.ToArray());
 	}
+
+	private HdlrBox(string type, string? name, IBox parent)
+		: base([0,0,0,0], new BoxHeader(8, "hdlr"), parent)
+	{
+		ArgumentException.ThrowIfNullOrEmpty(type, nameof(type));
+		if (Encoding.UTF8.GetByteCount(type) != 4)
+			throw new ArgumentException($"Type '{type}' must be exactly 4 UTF-8 characters long.", nameof(type));
+
+		HandlerType = type;
+		Reserved = new byte[12];
+		HandlerName = name ?? "";
+		HasNullTerminator = true;
+	}
+
+	public static HdlrBox Create(string type, string? name, byte[] reservedData, IBox parent)
+	{
+		ArgumentNullException.ThrowIfNull(reservedData, nameof(reservedData));
+		ArgumentNullException.ThrowIfNull(parent, nameof(parent));
+		ArgumentOutOfRangeException.ThrowIfGreaterThan(reservedData.Length, 12, nameof(reservedData));
+
+		var hdlr = new HdlrBox(type, name, parent);
+		Array.Copy(reservedData, 0, hdlr.Reserved, 0, reservedData.Length);
+		parent.Children.Add(hdlr);
+		return hdlr;
+	}
+
 	protected override void Render(Stream file)
 	{
 		base.Render(file);

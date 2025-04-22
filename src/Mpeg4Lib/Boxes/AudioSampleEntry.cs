@@ -9,7 +9,7 @@ public class AudioSampleEntry : SampleEntry
 
 	private readonly byte[] reserved;
 	private readonly byte[] reserved_2;
-	public ushort ChannelCount { get; }
+	public ushort ChannelCount { get; set; }
 	public ushort SampleSize { get; }
 	public short PreDefined { get; }
 	public ushort SampleRate { get; set; }
@@ -19,6 +19,7 @@ public class AudioSampleEntry : SampleEntry
 	/// Only AAC files have ESDS. EC-3 and AC-4 files do not.
 	/// </summary>
 	public EsdsBox? Esds => GetChild<EsdsBox>();
+	public Dec3Box? Dec3 => GetChild<Dec3Box>();
 
 	public AudioSampleEntry(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{

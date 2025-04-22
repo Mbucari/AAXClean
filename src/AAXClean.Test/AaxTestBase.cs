@@ -56,7 +56,6 @@ namespace AAXClean.Test
 			try
 			{
 				Assert.AreEqual(AudioChannels, Aax.AudioChannels);
-				Assert.AreEqual(AudioSampleSize, Aax.AudioSampleSize);
 				Assert.AreEqual(TimeScale, Aax.TimeScale);
 				Assert.AreEqual(AverageBitrate, Aax.AverageBitrate);
 				Assert.AreEqual(MaxBitrate, Aax.MaxBitrate);

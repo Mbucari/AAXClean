@@ -27,6 +27,15 @@ public class AppleListBox : Box
 		}
 	}
 
+	private AppleListBox(IBox parent) : base(new BoxHeader(8, "ilst"), parent) { }
+
+	public static AppleListBox CreateEmpty(IBox parent)
+	{
+		var ilist = new AppleListBox(parent);
+		parent.Children.Add(ilist);
+		return ilist;
+	}
+
 	public IEnumerable<AppleTagBox> Tags => GetChildren<AppleTagBox>();
 
 	protected override void Render(Stream file) { }

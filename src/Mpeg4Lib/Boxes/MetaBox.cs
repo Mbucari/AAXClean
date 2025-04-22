@@ -8,5 +8,15 @@ namespace Mpeg4Lib.Boxes
 		{
 			LoadChildren(file);
 		}
+
+		private MetaBox(IBox parent)
+			: base([0,0,0,0], new BoxHeader(8,"meta"), parent) { }
+
+		public static MetaBox CreateEmpty(IBox parent)
+		{
+			var meta = new MetaBox(parent);
+			parent.Children.Add(meta);
+			return meta;
+		}
 	}
 }

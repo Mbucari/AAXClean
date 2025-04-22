@@ -9,6 +9,15 @@ public class UdtaBox : Box
 		LoadChildren(file);
 	}
 
+	private UdtaBox(IBox parent) : base(new BoxHeader(8, "udta"), parent) { }
+
+	public static UdtaBox CreateEmpty(IBox parent)
+	{
+		var udata = new UdtaBox(parent);
+		parent.Children.Add(udata);
+		return udata;
+	}
+
 	protected override void Render(Stream file)
 	{
 		return;

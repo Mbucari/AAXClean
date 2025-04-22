@@ -42,18 +42,22 @@ namespace AAXClean
 	public class Mp4File
 	{
 		public ChapterInfo? Chapters { get; set; }
-		public AppleTags? AppleTags { get; }
+		public AppleTags AppleTags { get; }
 		public Stream InputStream => inputStream;
 		public FileType FileType { get; }
 		public virtual TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.AudioTrack.Mdia.Mdhd.Duration / TimeScale);
-		public int MaxBitrate => (int)AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.MaxBitrate;
-		public int AverageBitrate => (int)AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AverageBitrate;
+		public int MaxBitrate => (int)(AudioSampleEntry.Esds?.ES_Descriptor.DecoderConfig.MaxBitrate ?? 0);
+		public int AverageBitrate =>
+			(int)(AudioSampleEntry.Esds?.ES_Descriptor.DecoderConfig.AverageBitrate ??
+			AudioSampleEntry.Dec3?.AverageBitrate ??
+			 throw new InvalidOperationException("Cannot determine the average bitrate"));
+
 		public int TimeScale => (int)Moov.AudioTrack.Mdia.Mdhd.Timescale;
-		public int AudioObjectType => AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.AudioObjectType;
-		public int AudioChannels => AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.ChannelConfiguration;
-		public int AudioSampleSize => AudioSampleEntry.SampleSize;
-		public byte[] AscBlob => AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.AscBlob;
-		public SampleRate SampleRate => (SampleRate)AudioSampleEntry.Esds.ES_Descriptor.DecoderConfig.AudioSpecificConfig.SamplingFrequency;
+		public int AudioChannels =>
+			AudioSampleEntry.Esds?.ES_Descriptor.DecoderConfig.AudioSpecificConfig.ChannelConfiguration ??
+			AudioSampleEntry.Dec3?.NumberOfChannels ??
+			 throw new InvalidOperationException("Cannot determine the number of audio channels");
+		public SampleRate SampleRate => (SampleRate)TimeScale;
 
 		public FtypBox Ftyp { get; set; }
 		public MoovBox Moov { get; }
@@ -82,9 +86,7 @@ namespace AAXClean
 					_ => FileType.Mpeg4
 				};
 
-			if (Moov.ILst is not null)
-				AppleTags = new AppleTags(Moov.ILst);
-
+			AppleTags = new AppleTags(Moov.ILst ?? Moov.CreateEmptyMetadata());
 			AudioSampleEntry = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry
 				?? throw new InvalidOperationException("The audio track's AudioSampleEntry is null");
 		}
@@ -162,16 +164,18 @@ namespace AAXClean
 		{
 			var start = userChapters?.StartOffset ?? TimeSpan.Zero;
 			var end = userChapters?.EndOffset ?? TimeSpan.MaxValue;
+			ChapterQueue chapterQueue = new(SampleRate, SampleRate);
+
+			if (userChapters is not null)
+			{
+				if (Moov.TextTrack is null)
+					Moov.CreateEmptyTextTrack();
+				chapterQueue.AddRange(userChapters);
+			}
 
 			FrameTransformBase<FrameEntry, FrameEntry> filter1 = GetAudioFrameFilter();
-
-			ChapterQueue chapterQueue = new(SampleRate, SampleRate);
 			LosslessFilter filter2 = new(outputStream, this, chapterQueue);
-
 			filter1.LinkTo(filter2);
-
-			if (Moov.TextTrack is not null && userChapters is not null)
-				chapterQueue.AddRange(userChapters);
 
 			if (Moov.TextTrack is not null && userChapters is null)
 			{

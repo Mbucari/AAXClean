@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Mpeg4Lib.Boxes;
 
@@ -35,19 +36,20 @@ public class SttsBox : FullBox
 		}
 	}
 
-	public uint FrameToFrameDelta(uint frameIndex)
+	public uint SampleTimeCount => (uint)Samples.Sum(s => s.FrameCount);
+
+	public IEnumerable<uint> EnumerateFrameDeltas(uint startAt = 0)
 	{
-		uint workingIndex = frameIndex;
 		foreach (SampleEntry entry in Samples)
 		{
-			if (workingIndex < entry.FrameCount)
+			while (startAt < entry.FrameCount)
 			{
-				return entry.FrameDelta;
+				yield return entry.FrameDelta;
+				startAt++;
 			}
 
-			workingIndex -= entry.FrameCount;
+			startAt -= entry.FrameCount;
 		}
-		throw new IndexOutOfRangeException($"{nameof(frameIndex)} {frameIndex} is larger than the number of frames in {nameof(SttsBox)}");
 	}
 
 	/// <summary>
@@ -64,7 +66,7 @@ public class SttsBox : FullBox
 				return TimeSpan.FromSeconds((beginDelta + workingIndex * entry.FrameDelta) / timeScale);
 			}
 
-			beginDelta += entry.FrameCount * entry.FrameDelta;
+			beginDelta += entry.FrameCount * (ulong)entry.FrameDelta;
 			workingIndex -= entry.FrameCount;
 		}
 		throw new IndexOutOfRangeException($"{nameof(frameIndex)} {frameIndex} is larger than the number of frames in {nameof(SttsBox)}");

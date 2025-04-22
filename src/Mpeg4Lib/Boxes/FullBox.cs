@@ -6,7 +6,7 @@ namespace Mpeg4Lib.Boxes;
 public abstract class FullBox : Box
 {
 	public override long RenderSize => base.RenderSize + 4;
-	public byte Version => VersionFlags[0];
+	public byte Version { get => VersionFlags[0]; protected set => VersionFlags[0] = value; }
 	public int Flags => VersionFlags[1] << 16 | VersionFlags[2] << 8 | VersionFlags[3];
 
 	protected byte[] VersionFlags { get; }

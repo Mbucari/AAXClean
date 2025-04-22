@@ -46,9 +46,7 @@ public class ChunkEntryList : IReadOnlyCollection<ChunkEntry>
 
 			(int[] frameSizes, int totalChunkSize) = Stsz.GetFrameSizes(chunkFrames.FirstFrameIndex, chunkFrames.NumberOfFrames);
 
-			var frameDurations = new uint[frameSizes.Length];
-			for (uint i = 0; i < frameSizes.Length; i++)
-				frameDurations[i] = Stts.FrameToFrameDelta(chunkFrames.FirstFrameIndex + i);
+			var frameDurations = Stts.EnumerateFrameDeltas(chunkFrames.FirstFrameIndex).Take(frameSizes.Length).ToArray();
 
 			var entry = new ChunkEntry
 			{
