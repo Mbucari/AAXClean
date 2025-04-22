@@ -15,7 +15,10 @@ public class AudioSampleEntry : SampleEntry
 	public ushort SampleRate { get; set; }
 	private readonly ushort SampleRate_loworder;
 
-	public EsdsBox Esds => GetChildOrThrow<EsdsBox>();
+	/// <summary>
+	/// Only AAC files have ESDS. EC-3 and AC-4 files do not.
+	/// </summary>
+	public EsdsBox? Esds => GetChild<EsdsBox>();
 
 	public AudioSampleEntry(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{

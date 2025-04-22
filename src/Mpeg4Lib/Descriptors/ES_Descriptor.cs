@@ -1,5 +1,6 @@
 ﻿using Mpeg4Lib.Util;
 using System.IO;
+using System.Linq;
 
 namespace Mpeg4Lib.Descriptors
 {
@@ -7,7 +8,6 @@ namespace Mpeg4Lib.Descriptors
 	//https://stackoverflow.com/a/61158659/3335599
 	public class ES_Descriptor : BaseDescriptor
 	{
-		public override uint RenderSize => base.RenderSize + GetLength();
 		public ushort ES_ID { get; }
 		private readonly byte EsFlags;
 
@@ -23,7 +23,9 @@ namespace Mpeg4Lib.Descriptors
 
 		public DecoderConfigDescriptor DecoderConfig => GetChildOrThrow<DecoderConfigDescriptor>();
 
-		public ES_Descriptor(Stream file) : base(0x3, file)
+		public override int InternalSize => base.InternalSize + GetLength();
+
+		public ES_Descriptor(Stream file, DescriptorHeader header) : base(file, header)
 		{
 			ES_ID = file.ReadUInt16BE();
 			EsFlags = (byte)file.ReadByte();
@@ -46,7 +48,23 @@ namespace Mpeg4Lib.Descriptors
 			LoadChildren(file);
 		}
 
-		private uint GetLength()
+		private ES_Descriptor() :base(0x3)
+		{
+			ES_ID = 0;
+			EsFlags = 0;
+		}
+
+		public static ES_Descriptor CreateAudio()
+		{
+			var descriptor = new ES_Descriptor();
+			var decoder = DecoderConfigDescriptor.CreateAudio();
+			var slConfig = SLConfigDescriptor.CreateMp4();
+			descriptor.Children.Add(decoder);
+			descriptor.Children.Add(slConfig);
+			return descriptor;
+		}
+
+		private int GetLength()
 		{
 			int length = 3;
 			if (StreamDependenceFlag == 1)
@@ -58,7 +76,7 @@ namespace Mpeg4Lib.Descriptors
 			if (OCRstreamFlag == 1)
 				length += 2;
 
-			return (uint)length;
+			return length;
 		}
 
 		public override void Render(Stream file)

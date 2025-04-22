@@ -15,7 +15,7 @@ public interface IASC
 	bool DependsOnCoreCoder { get; set; }
 }
 
-//ISO/IEC 14496-1 (MPEG-4 Systems) Section 1.6 (pp 52)
+//ISO/IEC 14496-3 (MPEG-4 Systems) Section 1.6 (pp 52)
 //Only supports audio object IDs 1,2,3,4,6,7,17,19,20,21,22,23, and 42 (USAC)
 //and only parses data through the dependsOnCoreCoder flag in GASpecificConfig (Subpart 4)
 public class AudioSpecificConfig : BaseDescriptor, IASC
@@ -28,19 +28,38 @@ public class AudioSpecificConfig : BaseDescriptor, IASC
 	private static readonly byte[] SupportedObjectTypes = [1, 2, 3, 4, 6, 7, 17, 19, 20, 21, 22, 23, 42];
 	private const byte AOT_ESCAPE = 31;
 
-	public override uint RenderSize => base.RenderSize + (uint)AscBlob.Length;
+	private int ascBlobLength = 0;
+	public override int InternalSize => base.InternalSize + ascBlobLength;
+
 	public byte[] AscBlob
 	{
 		get => GetAscBlob();
-		set => bitReader = LoadAscBlob(this, value);
+		set
+		{
+			bitReader = LoadAscBlob(this, value);
+			ascBlobLength = value.Length;
+		}
 	}
 
 	private BitReader bitReader;
-	public AudioSpecificConfig(Stream file) : base(0x5, file)
+	public AudioSpecificConfig(Stream file, DescriptorHeader header) : base(file, header)
 	{
-		var ascBlob = file.ReadBlock(Size);
+		var ascBlob = file.ReadBlock(Header.TotalBoxSize - Header.HeaderSize);
 		bitReader = LoadAscBlob(this, ascBlob);
+		ascBlobLength = ascBlob.Length;
 	}
+
+	private AudioSpecificConfig() : base(5)
+	{
+		//AAC-LC, 44.1kHz, 2 channels. Use a an arbitrary valid configuration
+		//to cheat the validators. These must be updated to valid values by
+		//the user before rendering. 
+		bitReader = LoadAscBlob(this, [0x13, 0x90]);
+		ascBlobLength = 2;
+	}
+
+	public static AudioSpecificConfig CreateEmpty()
+		=> new();
 
 	public static IASC Parse(byte[] ascBlob)
 	{

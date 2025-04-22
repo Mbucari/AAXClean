@@ -7,24 +7,20 @@ namespace Mpeg4Lib.Descriptors;
 
 public abstract class BaseDescriptor
 {
+	public DescriptorHeader Header { get; }
 	public List<BaseDescriptor> Children { get; } = new List<BaseDescriptor>();
 
-	public virtual uint RenderSize => 1 + (uint)originalSizeOfSize + (uint)Children.Sum(b => b.RenderSize);
+	public uint RenderSize => 1 + (uint)Header.GetEncodedSizeLength(InternalSize) + (uint)InternalSize;
+	public virtual int InternalSize => (int)Children.Sum(c => c.RenderSize);
 
-	protected long FilePosition { get; }
-	public byte TagID { get; }
-	public int Size { get; }
-	//Store the original size of the expandable class size.
-	//Use it as a minimum when re-encoding to preserve box sizes.
-	private readonly int originalSizeOfSize;
-	public BaseDescriptor(byte tagID, Stream file)
+	public BaseDescriptor(Stream file, DescriptorHeader header)
 	{
-		FilePosition = file.Position - 1;
-		TagID = tagID;
+		Header = header;
+	}
 
-		long start = file.Position;
-		Size = ExpandableClass.DecodeSize(file);
-		originalSizeOfSize = (int)(file.Position - start);
+	protected BaseDescriptor(byte tagId)
+	{
+		Header = new DescriptorHeader(tagId);
 	}
 
 	public abstract void Render(Stream file);
@@ -51,13 +47,11 @@ public abstract class BaseDescriptor
 
 	protected void LoadChildren(Stream file)
 	{
-		long endPos = FilePosition + 1 /* TagID */ + originalSizeOfSize + Size;
-
-		while (file.Position < endPos)
+		while (file.Position < Header.FilePosition + Header.TotalBoxSize)
 		{
 			BaseDescriptor child = DescriptorFactory.CreateDescriptor(file);
 
-			if (child.Size == 0)
+			if (child.InternalSize == 0)
 				break;
 			Children.Add(child);
 		}
@@ -65,9 +59,8 @@ public abstract class BaseDescriptor
 
 	public void Save(Stream file)
 	{
-		file.WriteByte(TagID);
-		var sizeSize = ExpandableClass.GetSizeByteCount(Size, originalSizeOfSize);
-		ExpandableClass.EncodeSize(file, (int)RenderSize - sizeSize - 1, originalSizeOfSize);
+		file.WriteByte(Header.TagID);
+		ExpandableClass.EncodeSize(file, InternalSize, Header.GetEncodedSizeLength(InternalSize));
 		Render(file);
 
 		foreach (BaseDescriptor child in Children)

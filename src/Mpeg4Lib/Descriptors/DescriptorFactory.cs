@@ -6,15 +6,16 @@ public static class DescriptorFactory
 {
 	public static BaseDescriptor CreateDescriptor(Stream file)
 	{
-		int tagID = file.ReadByte();
 
-		return tagID switch
+		var header = new DescriptorHeader(file);
+
+		return header.TagID switch
 		{
-			3 => new ES_Descriptor(file),
-			4 => new DecoderConfigDescriptor(file),
-			5 => new AudioSpecificConfig(file),
-			6 => new SLConfigDescriptor(file),
-			_ => new UnknownDescriptor((byte)tagID, file),
+			3 => new ES_Descriptor(file, header),
+			4 => new DecoderConfigDescriptor(file, header),
+			5 => new AudioSpecificConfig(file, header),
+			6 => new SLConfigDescriptor(file, header),
+			_ => new UnknownDescriptor(file, header),
 		};
 	}
 }
