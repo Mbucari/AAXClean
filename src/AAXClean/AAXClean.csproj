@@ -2,7 +2,7 @@
 
   <PropertyGroup>
 	<TargetFrameworks>net9.0;net8.0</TargetFrameworks>
-    <Version>2.0.0.5</Version>
+    <Version>2.0.0.9</Version>
     <Authors>MrGneissGuy</Authors>
     <Company>Just Me, Inc.</Company>
     <Description>Decrypts Audible aax and aaxc files to mp4.</Description>
@@ -10,15 +10,12 @@
     <Tags>Audible AAC AAXC m4b audiobook</Tags>
     <ProjectUrl>https://github.com/Mbucari/AAXClean</ProjectUrl>
     <PackageProjectUrl>https://github.com/Mbucari/AAXClean</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/Mbucari/AAXClean</RepositoryUrl>
-	<PackageProjectUrl>https://github.com/Mbucari/AAXClean</PackageProjectUrl>
-	<RepositoryUrl>https://github.com/Mbucari/AAXClean</RepositoryUrl>
+	<RepositoryUrl>https://github.com/Mbucari/AAXClean.git</RepositoryUrl>
 	<RepositoryType>Git</RepositoryType>
 	<PackageTags>Audible AAC AAXC m4b audiobook</PackageTags>
 	<PublishRepositoryUrl>true</PublishRepositoryUrl>
 	<EmbedUntrackedSources>true</EmbedUntrackedSources>
 	<DebugType>embedded</DebugType>
-	<RepositoryType>Git</RepositoryType>
 	<NeutralLanguage>en</NeutralLanguage>
 	<Nullable>enable</Nullable>
   </PropertyGroup>
