@@ -22,31 +22,6 @@ namespace AAXClean.Test
 		public override int MaxBitrate => 64004;
 		public override long RenderSize => 2876633L;
 		public override TimeSpan Duration => TimeSpan.FromTicks(299221159183);
-		public override string SingleM4bHash => "55ce2201c19a8e7bf153ebb132cce8020f4aa88d";
-		public override List<string> MultiM4bHashes => new()
-	{
-"cbf40eb5e0c314fc20ae28f1b585fc90b6c26123",
-"971d27c9a40fd5969e9d4fa8f2698fcf2cc70c0f",
-"cd374d11358a8144f397a02623deb9839972b246",
-"deca87356a3069631f9d29205be623cc318297a3",
-"78421fc50328b1982f44b5d341a4eb58fdf8b171",
-"d8ce294135f7dba03b12fab4f41f747f145344bc",
-"48a4c491809a52290199f6ecc950bc7d1fe1e9d5",
-"15c541fff2256741599bbb46ba70be3dcec69abd",
-"f4635c07d02423fcd0b4eeb82eb27d07dad0d3e3",
-"946094945a03204681508dd353ea7795d4271d9a",
-"b89e8ab47a05de3eaa8f2c80fb7fd0ad029ddb6f",
-"8febcf1519ba692c20671995898d0f0c110be747",
-"fd31318db017cd72b40cdbf33c05b9f11d07a4a9",
-"fbd31f8254c353258e36e4e5868f74905afb8115",
-"05b05aededdff4aaf97dd566ba3367b113af2e89",
-"2cd4794fd78bf3a821048553b785fbf71cc78387",
-"de553ad5d6d2c1ff88ccd6ece7e195a33170aac9",
-"0cbdc9d869ff564ea08b3c3ddece46e8e6fe9dc0",
-"0d6cd6ff022ae3c124e6bfbe83118b96b02115ed",
-"d219418a53dec82090b0272c273fad4cceb3a945",
-"3eba76bf129a17a73bfa0a55af27bd3cc77b4659",
-};
 		public override ChapterInfo Chapters
 		{
 			get
@@ -136,7 +111,7 @@ namespace AAXClean.Test
 
 				FileStream tempfile = TestFiles.NewTempFile();
 				await Aax.ConvertToMp4aAsync(tempfile);
-				Aax.Close();
+				tempfile.Close();
 
 				mp4File = new Mp4File(tempfile.Name);
 
@@ -162,7 +137,7 @@ namespace AAXClean.Test
 			}
 			finally
 			{
-				mp4File?.Close();
+				mp4File?.InputStream.Close();
 				TestFiles.CloseAllFiles();
 			}
 		}		

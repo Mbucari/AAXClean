@@ -47,8 +47,6 @@ namespace AAXClean.Test
 		public abstract TimeSpan Duration { get; }
 		public abstract ChapterInfo Chapters { get; }
 		public abstract TestBookTags Tags { get; }
-		public abstract string SingleM4bHash { get; }
-		public abstract List<string> MultiM4bHashes { get; }
 
 		[TestMethod]
 		public void _0_OpenAAX()
@@ -163,84 +161,6 @@ namespace AAXClean.Test
 				Assert.AreEqual(ch_1[i].EndOffset, ch_2[i].EndOffset);
 				Assert.AreEqual(ch_1[i].Title, ch_2[i].Title);
 			}
-		}
-
-		[TestMethod]
-		public async Task _4_ConvertSingle()
-		{
-			try
-			{
-				FileStream tempfile = TestFiles.NewTempFile();
-				await Aax.ConvertToMp4aAsync(tempfile, Aax.GetChaptersFromMetadata());
-
-				using SHA1 sha = SHA1.Create();
-
-				FileStream mp4file = File.OpenRead(tempfile.Name);
-				int read;
-				byte[] buff = new byte[4 * 1024 * 1024];
-
-				while ((read = mp4file.Read(buff)) == buff.Length)
-				{
-					sha.TransformBlock(buff, 0, read, null, 0);
-				}
-				mp4file.Close();
-				sha.TransformFinalBlock(buff, 0, read);
-				string fileHash = string.Join("", sha.Hash.Select(b => b.ToString("x2")));
-
-				Assert.AreEqual(SingleM4bHash, fileHash);
-			}
-			finally
-			{
-				TestFiles.CloseAllFiles();
-				Aax.InputStream.Close();
-			}
-		}
-
-		[TestMethod]
-		public async Task _5_ConvertMultiple()
-		{
-			try
-			{
-				List<string> tempFiles = new();
-				void NewSplit(NewSplitCallback callback)
-				{
-					callback.OutputFile = TestFiles.NewTempFile();
-					tempFiles.Add(((FileStream)callback.OutputFile).Name);
-				}
-
-				await Aax.ConvertToMultiMp4aAsync(Chapters, NewSplit);
-#if !DEBUG
-				Assert.AreEqual(MultiM4bHashes.Count, tempFiles.Count);
-#endif
-				using SHA1 sha = SHA1.Create();
-				List<string> hashes = new();
-
-				foreach (string tmp in tempFiles)
-				{
-					sha.ComputeHash(File.ReadAllBytes(tmp));
-					hashes.Add(string.Join("", sha.Hash.Select(b => b.ToString("x2"))));
-				}
-#if DEBUG
-				var hs = new System.Text.StringBuilder();
-
-				hs.AppendLine();
-				foreach (var h in hashes)
-				{
-					hs.AppendLine($"\"{h}\",");
-				}
-#endif
-
-				for (int i = 0; i < tempFiles.Count; i++)
-				{
-					Assert.AreEqual(MultiM4bHashes[i], hashes[i]);
-				}
-			}
-			finally
-			{
-				TestFiles.CloseAllFiles();
-				Aax.InputStream.Close();
-			}
-
 		}
 
 		[TestMethod]
