@@ -1,6 +1,5 @@
 ﻿using Mpeg4Lib.Util;
 using System.IO;
-using System.Linq;
 
 namespace Mpeg4Lib.Descriptors;
 

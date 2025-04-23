@@ -13,7 +13,7 @@ namespace AAXClean
 
 	public interface INewSplitCallback<T> : INewSplitCallback where T : INewSplitCallback<T>
 	{
-		public static abstract T Create(Chapter chapter);
+		abstract static T Create(Chapter chapter);
 	}
 
 	public class NewSplitCallback : INewSplitCallback<NewSplitCallback>

@@ -182,9 +182,9 @@ namespace AAXClean.FrameFilters.Audio
 
 			if (AudioSampleEntry.GetChild<BtrtBox>() is null)
 				BtrtBox.Create(0, maxBitRate, avgBitrate, AudioSampleEntry);
-			
+
 			SaveMoov();
-			Closed = true;			
+			Closed = true;
 		}
 
 		private static (uint maxOneSecondBitrate, uint avgBitrate) CalculateBitrate(double timeScale, ulong duration, IStszBox stsz, SttsBox stts)
@@ -438,6 +438,7 @@ namespace AAXClean.FrameFilters.Audio
 				AudioSampleSizes.Clear();
 				AudioChunks.Clear();
 				TextChunks.Clear();
+				disposed = true;
 			}
 		}
 		#endregion

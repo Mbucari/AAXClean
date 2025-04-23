@@ -6,7 +6,7 @@ internal class DashFilter : AacValidateFilter
 {
 	protected override int InputBufferSize => 1000;
 	public byte[] Key { get; }
-	AesCtr AesCtr { get; }
+	private AesCtr AesCtr { get; }
 
 	public DashFilter(byte[] key)
 	{

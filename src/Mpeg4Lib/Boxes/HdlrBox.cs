@@ -39,7 +39,7 @@ public class HdlrBox : FullBox
 	}
 
 	private HdlrBox(string type, string? name, IBox parent)
-		: base([0,0,0,0], new BoxHeader(8, "hdlr"), parent)
+		: base([0, 0, 0, 0], new BoxHeader(8, "hdlr"), parent)
 	{
 		ArgumentException.ThrowIfNullOrEmpty(type, nameof(type));
 		if (Encoding.UTF8.GetByteCount(type) != 4)

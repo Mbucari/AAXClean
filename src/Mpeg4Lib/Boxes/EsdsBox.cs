@@ -17,7 +17,7 @@ public class EsdsBox : FullBox
 	}
 
 	private EsdsBox(ES_Descriptor es_Descriptor, IBox parent)
-		: base([0,0,0,0], new BoxHeader(8, "esds"), parent)
+		: base([0, 0, 0, 0], new BoxHeader(8, "esds"), parent)
 	{
 		ES_Descriptor = es_Descriptor;
 	}

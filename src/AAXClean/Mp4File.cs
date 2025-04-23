@@ -293,7 +293,7 @@ namespace AAXClean
 		protected virtual IChunkReader CreateChunkReader(Stream inputStream, TimeSpan startTime, TimeSpan endTime)
 			=> new ChunkReader(inputStream, startTime, endTime);
 
-		static TimeSpan Min(TimeSpan t1, TimeSpan t2) => t1 > t2 ? t2 : t1;
+		private static TimeSpan Min(TimeSpan t1, TimeSpan t2) => t1 > t2 ? t2 : t1;
 		public virtual Mp4Operation ProcessAudio(TimeSpan startTime, TimeSpan endTime, Action<Task> continuation, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
 		{
 			IChunkReader reader = CreateChunkReader(InputStream, startTime, Min(Duration, endTime));

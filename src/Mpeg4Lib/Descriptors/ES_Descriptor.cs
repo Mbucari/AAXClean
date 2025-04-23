@@ -1,6 +1,5 @@
 ﻿using Mpeg4Lib.Util;
 using System.IO;
-using System.Linq;
 
 namespace Mpeg4Lib.Descriptors
 {
@@ -48,7 +47,7 @@ namespace Mpeg4Lib.Descriptors
 			LoadChildren(file);
 		}
 
-		private ES_Descriptor() :base(0x3)
+		private ES_Descriptor() : base(0x3)
 		{
 			ES_ID = 0;
 			EsFlags = 0;

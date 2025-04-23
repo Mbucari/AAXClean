@@ -8,7 +8,7 @@ namespace Mpeg4Lib.Boxes;
 
 public interface ITrackReferenceTypeBox : IBox
 {
-	public uint TrackId { get; set; }
+	uint TrackId { get; set; }
 }
 
 public class TrefBox : Box

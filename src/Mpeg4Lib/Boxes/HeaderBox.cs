@@ -12,7 +12,7 @@ public abstract class HeaderBox : FullBox
 	public ulong Duration { get; set; }
 	private bool RequireVersionOne => Version == 1 || Duration > uint.MaxValue;
 
-	static readonly DateTimeOffset Datum = new DateTimeOffset(1904, 1, 1, 0, 0, 0, TimeSpan.Zero);
+	private static readonly DateTimeOffset Datum = new DateTimeOffset(1904, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
 	protected abstract void ReadBeforeDuration(Stream file);
 	protected abstract void WriteBeforeDuration(Stream file);
