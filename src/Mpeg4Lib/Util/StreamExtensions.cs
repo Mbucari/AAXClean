@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Mpeg4Lib.Util
 {
@@ -26,32 +27,52 @@ namespace Mpeg4Lib.Util
 		/// Seeks to a position in the the input stream
 		/// </summary>
 		/// <param name="chunkOffset">The chunk's file offset</param>
-		public static void SeekToOffset(this Stream inputStream, long chunkOffset)
+		public static async Task SeekToOffsetAsync(this Stream inputStream, long chunkOffset, CancellationToken token)
 		{
-			if (inputStream.Position < chunkOffset)
+			if (inputStream.Position == chunkOffset)
+				return;
+			else if(inputStream.CanSeek)
+				inputStream.Position = chunkOffset;
+			else if (inputStream.Position < chunkOffset)
 			{
 				//Unknown Track or data type. Read past it to next known chunk.
-				if (inputStream.CanSeek)
-					inputStream.Position = chunkOffset;
-				else
+				const int bufferSize = 8 * 1024;
+				int toRead = int.Min(bufferSize, (int)(chunkOffset - inputStream.Position));
+				var buffer = new byte[toRead];
+				while (toRead > 0)
 				{
-					const int bufferSize = 8 * 1024;
-					int toRead = int.Min(bufferSize, (int)(chunkOffset - inputStream.Position));
-					var buffer = new byte[toRead];
-					while (toRead > 0)
-					{
-						inputStream.ReadExactly(buffer, 0, toRead);
-						toRead = int.Min(bufferSize, (int)(chunkOffset - inputStream.Position));
-					}
+					await inputStream.ReadExactlyAsync(buffer, 0, toRead, token);
+					toRead = int.Min(bufferSize, (int)(chunkOffset - inputStream.Position));
 				}
 			}
-			else if (inputStream.Position > chunkOffset)
+			else
+				throw new NotSupportedException($"Input stream position 0x{inputStream.Position:X8} is past the chunk offset 0x{chunkOffset:X8} and is not seekable.");
+		}
+
+		/// <summary>
+		/// Seeks to a position in the the input stream
+		/// </summary>
+		/// <param name="chunkOffset">The chunk's file offset</param>
+		public static void SeekToOffset(this Stream inputStream, long chunkOffset)
+		{
+			if (inputStream.Position == chunkOffset)
+				return;
+			else if (inputStream.CanSeek)
+				inputStream.Position = chunkOffset;
+			else if (inputStream.Position < chunkOffset)
 			{
-				if (inputStream.CanSeek)
-					inputStream.Position = chunkOffset;
-				else
-					throw new NotSupportedException($"Input stream position 0x{inputStream.Position:X8} is past the chunk offset 0x{chunkOffset:X8} and is not seekable.");
+				//Unknown Track or data type. Read past it to next known chunk.
+				const int bufferSize = 8 * 1024;
+				int toRead = int.Min(bufferSize, (int)(chunkOffset - inputStream.Position));
+				var buffer = new byte[toRead];
+				while (toRead > 0)
+				{
+					inputStream.ReadExactly(buffer, 0, toRead);
+					toRead = int.Min(bufferSize, (int)(chunkOffset - inputStream.Position));
+				}
 			}
+			else
+				throw new NotSupportedException($"Input stream position 0x{inputStream.Position:X8} is past the chunk offset 0x{chunkOffset:X8} and is not seekable.");
 		}
 
 		/// <summary>
@@ -59,10 +80,10 @@ namespace Mpeg4Lib.Util
 		/// </summary>
 		/// <param name="chunkOffset">The chunk's file offset</param>
 		/// <param name="chunkBuffer">Buffer to copy the chink data into</param>
-		public static void ReadNextChunk(this Stream inputStream, long chunkOffset, Memory<byte> chunkBuffer, CancellationToken token)
+		public static async Task ReadNextChunkAsync(this Stream inputStream, long chunkOffset, Memory<byte> chunkBuffer, CancellationToken token)
 		{
-			inputStream.SeekToOffset(chunkOffset);
-			if (inputStream.Read(chunkBuffer.Span) != chunkBuffer.Length)
+			await inputStream.SeekToOffsetAsync(chunkOffset, token);
+			if (await inputStream.ReadAsync(chunkBuffer, token) != chunkBuffer.Length)
 				throw new EndOfStreamException($"Stream ended at position {inputStream.Position} before all {chunkBuffer.Length} bytes were read.");
 		}
 

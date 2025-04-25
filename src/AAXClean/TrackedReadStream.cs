@@ -38,17 +38,9 @@ namespace AAXClean
 
 		public override int Read(byte[] buffer, int offset, int count)
 		{
-			int totalRead = 0, btsRead;
-
-			do
-			{
-				btsRead = BaseStream.Read(buffer, offset + totalRead, count - totalRead);
-				totalRead += btsRead;
-			} while (totalRead < count && btsRead > 0);
-
-			ReadPosition += totalRead;
-
-			return totalRead;
+			BaseStream.ReadExactly(buffer, offset, count);
+			ReadPosition += count;
+			return count;
 		}
 
 		public override long Seek(long offset, SeekOrigin origin)

@@ -70,7 +70,7 @@ namespace Mpeg4Lib.Util
 				};
 
 				int read;
-				DateTime startTime = DateTime.Now;
+				DateTime startTime = DateTime.UtcNow;
 				DateTime nextUpdate = startTime;
 
 				do
@@ -82,14 +82,14 @@ namespace Mpeg4Lib.Util
 					await fileStream.WriteAsync(buffer1, 0, read, cancellationToken);
 
 					movedMB += read;
-					if (DateTime.Now > nextUpdate)
+					if (DateTime.UtcNow > nextUpdate)
 					{
 						var position = TimeSpan.FromSeconds(secondsPerMb * movedMB);
-						double speed = position / (DateTime.Now - startTime);
+						double speed = position / (DateTime.UtcNow - startTime);
 
 						progress(totalDuration, position, speed);
 
-						nextUpdate = DateTime.Now.AddMilliseconds(200);
+						nextUpdate = DateTime.UtcNow.AddMilliseconds(200);
 					}
 
 					(buffer1, buffer2) = (buffer2, buffer1);
@@ -97,7 +97,7 @@ namespace Mpeg4Lib.Util
 				while (read == moovSize);
 
 				var finalPosition = TimeSpan.FromSeconds(secondsPerMb * movedMB);
-				progress(totalDuration, finalPosition, finalPosition / (DateTime.Now - startTime));
+				progress(totalDuration, finalPosition, finalPosition / (DateTime.UtcNow - startTime));
 			}
 			finally
 			{

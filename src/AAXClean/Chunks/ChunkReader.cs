@@ -71,14 +71,15 @@ internal class ChunkReader : IChunkReader
 			filter.SetCancellationToken(cancellationSource.Token);
 
 		OnInitialProgress();
+		var token = cancellationSource.Token;
 
 		try
 		{
 			foreach (var c in EnumerateChunks())
 			{
 				Memory<byte> chunkData = new byte[c.ChunkSize];
-				InputStream.ReadNextChunk(c.ChunkOffset, chunkData, cancellationSource.Token);
-				await DispatchChunk(c, chunkData);
+				await InputStream.ReadNextChunkAsync(c.ChunkOffset, chunkData, token);
+				await DispatchChunk(c, chunkData, token);
 			}
 		}
 		catch (OperationCanceledException) { }
@@ -105,7 +106,7 @@ internal class ChunkReader : IChunkReader
 			FrameData = frameData
 		};
 
-	private async Task DispatchChunk(ChunkEntry chunk, Memory<byte> chunkData)
+	private async Task DispatchChunk(ChunkEntry chunk, Memory<byte> chunkData, CancellationToken token)
 	{
 		long sampleIndex = chunk.FirstSample;
 
@@ -129,6 +130,7 @@ internal class ChunkReader : IChunkReader
 
 			var frameData = chunkData.Slice(start, chunk.FrameSizes[f]);
 			var frameEntry = CreateFrameEntry(chunk, f, frameDelta, frameData);
+			token.ThrowIfCancellationRequested();
 			await trackEntry.FirstFilter.AddInputAsync(frameEntry);
 		}
 	}
