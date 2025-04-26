@@ -2,6 +2,11 @@
 # AAXClean
 Decrypts Audible's aax and aaxc files, without FFMpeg, to an m4b (lossless mp4). The input stream is not required to be seekable when decrypting. All file-level and stream-level metadata is preserved with lossless decryption. There is an option for reading/writing file-level mp4 metadata tags and adding different chapter information.
 
+**Supported Formats**
+- Audible AAX(C)
+- Mpeg-4 Audio
+- Mpeg-DASH Audio
+
 ## Nuget
 Include the [AAXClean](https://www.nuget.org/packages/AAXClean/) NuGet package to your project.
 
@@ -11,14 +16,20 @@ To convert audiobooks to Mp3, use [AAXClean.Codecs](https://github.com/Mbucari/A
 
 ## Instantiation
 
-AaxFile has two constructors:
+AaxFile has three constructors:
 ```C#
 public AaxFile(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read);
 public AaxFile(Stream file);
 public AaxFile(Stream file, long fileSize, bool additionalFixups = true)
 ```
 
-The first two constructors use the third constructor. AAXClean needs to know the total file size length, so if it's instantiated with a stream that cannot seek, you must specify the file size. If the stream is a network stream, get the file size from the content-length header.
+DashFile has two constructors:
+```C#
+public AaxFile(Stream file);
+public AaxFile(Stream file, long fileSize)
+```
+
+AAXClean needs to know the total file size length, so if it's instantiated with a stream that cannot seek, you must specify the file size. If the stream is a network stream, get the file size from the content-length header.
 
 ## Usage:
 
@@ -35,6 +46,12 @@ aaxFile.SetDecryptionKey(audible_key, audible_iv);
 ```C#
 var activation_bytes = "0a1b2c3d";
 aaxFile.SetDecryptionKey(activation_bytes);
+```
+### Dash:
+```C#
+var key_id = "0a0b0c0d0e0f1a1b1c1d1e1f2a2b2c2d";
+var key = "2e2f3a3b3c3d3e3f4a4b4c4d4e4f5a5b";
+dashFile.SetDecryptionKey(key_id, key);
 ```
 ### Edit Metadata Tags:
 ```C#
