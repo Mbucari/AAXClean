@@ -4,6 +4,9 @@ using System.IO;
 
 namespace Mpeg4Lib.Boxes;
 
+/// <summary>
+/// EC3SpecificBox. ETSI TS 102 366 F.6
+/// </summary>
 public class Dec3Box : Box
 {
 	public override long RenderSize => base.RenderSize + Ec3Data.Length;

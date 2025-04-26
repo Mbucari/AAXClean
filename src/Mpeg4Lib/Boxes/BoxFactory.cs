@@ -66,6 +66,7 @@ namespace Mpeg4Lib.Boxes
 				"mehd" => new MehdBox(file, header, parent),
 				"dec3" => new Dec3Box(file, header, parent),
 				"tref" => new TrefBox(file, header, parent),
+				"dac4" => new Dac4Box(file, header, parent),
 				_ => new UnknownBox(file, header, parent),
 			};
 			Debug.Assert(box.RenderSize == header.TotalBoxSize || box is MdatBox);

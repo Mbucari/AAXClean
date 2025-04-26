@@ -27,6 +27,14 @@ internal class BitReader
 	}
 	public int Length => bytes.Length * 8;
 
+	public bool ReadBool() => Read(1) != 0;
+	public void ByteAlign()
+	{
+		var bitPad = Position % 8;
+		if (bitPad != 0)
+			Position += 8 - bitPad;
+	}
+
 	public uint Read(int numBits)
 	{
 		ArgumentOutOfRangeException.ThrowIfLessThan(numBits, 0, nameof(numBits));

@@ -20,6 +20,7 @@ public class AudioSampleEntry : SampleEntry
 	/// </summary>
 	public EsdsBox? Esds => GetChild<EsdsBox>();
 	public Dec3Box? Dec3 => GetChild<Dec3Box>();
+	public Dac4Box? Dac4 => GetChild<Dac4Box>();
 
 	public AudioSampleEntry(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{
