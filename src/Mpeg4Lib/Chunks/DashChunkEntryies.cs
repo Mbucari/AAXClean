@@ -38,7 +38,7 @@ public class DashChunkEntryies : IEnumerable<ChunkEntry>
 	{
 		SkipToFirstMoof(out var moofBox, out var mdatBox, out var startSample);
 
-		var totalDataSize = Sidx.Segments.Sum(s => s.ReferenceSize);
+		var totalDataSize = Sidx.Segments.Sum(s => (long)s.ReferenceSize);
 		var endOfFile = FirstMoof.Header.FilePosition + totalDataSize;
 
 		while (InputStream.Position < endOfFile)
