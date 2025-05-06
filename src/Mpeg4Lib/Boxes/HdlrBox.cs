@@ -8,8 +8,8 @@ namespace Mpeg4Lib.Boxes;
 
 public class HdlrBox : FullBox
 {
-	public bool HasNullTerminator { get; set; }
-	public override long RenderSize => base.RenderSize + 20 + Encoding.UTF8.GetByteCount(HandlerName) + (HasNullTerminator ? 1 : 0);
+	public int NullTerminatorCount { get; set; }
+	public override long RenderSize => base.RenderSize + 20 + Encoding.UTF8.GetByteCount(HandlerName) + NullTerminatorCount;
 	public uint PreDefined { get; }
 	public string HandlerType { get; }
 	private readonly byte[] Reserved;
@@ -22,20 +22,12 @@ public class HdlrBox : FullBox
 		HandlerType = Encoding.UTF8.GetString(file.ReadBlock(4));
 		Reserved = file.ReadBlock(12);
 
-		List<byte> blist = new();
-		while (file.Position < endPos)
-		{
-			byte lastByte = (byte)file.ReadByte();
+		var readToEnd = file.ReadBlock((int)(endPos - file.Position));
 
-			if (lastByte == 0)
-			{
-				HasNullTerminator = true;
-				break;
-			}
+		for (int i = readToEnd.Length - 1; i >= 0 && readToEnd[i] == 0; i--)
+			NullTerminatorCount++;
 
-			blist.Add(lastByte);
-		}
-		HandlerName = Encoding.UTF8.GetString(blist.ToArray());
+		HandlerName = Encoding.UTF8.GetString(readToEnd, 0, readToEnd.Length - NullTerminatorCount);
 	}
 
 	private HdlrBox(string type, string? name, IBox parent)
@@ -48,7 +40,7 @@ public class HdlrBox : FullBox
 		HandlerType = type;
 		Reserved = new byte[12];
 		HandlerName = name ?? "";
-		HasNullTerminator = true;
+		NullTerminatorCount = 1;
 	}
 
 	public static HdlrBox Create(string type, string? name, byte[] reservedData, IBox parent)
@@ -70,7 +62,6 @@ public class HdlrBox : FullBox
 		file.Write(Encoding.UTF8.GetBytes(HandlerType));
 		file.Write(Reserved);
 		file.Write(Encoding.UTF8.GetBytes(HandlerName));
-		if (HasNullTerminator)
-			file.WriteByte(0);
+		file.Write(new byte[NullTerminatorCount]);
 	}
 }
