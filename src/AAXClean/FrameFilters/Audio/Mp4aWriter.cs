@@ -269,27 +269,47 @@ namespace AAXClean.FrameFilters.Audio
 
 		public void RemoveTextTrack()
 		{
-			if (Moov.TextTrack is null)
+			if (Moov.TextTrack is null || !Moov.Children.Remove(Moov.TextTrack))
 				return;
 
-			var textTrackId = Moov.TextTrack.Tkhd.TrackID;
-
-			if (!Moov.Children.Remove(Moov.TextTrack))
-				return;
-
-			if (Moov.Mvhd.NextTrackID == textTrackId + 1)
-				Moov.Mvhd.NextTrackID--;
-
-			var trefBox = Moov.AudioTrack.GetChild<TrefBox>();
-			if (Moov.AudioTrack.GetChild<TrefBox>() is TrefBox tref)
+			uint trackNum = 1;
+			Dictionary<uint, uint> trackRemap = [];
+			foreach (var t in Moov.GetChildren<TrakBox>().OrderBy(t => t.Tkhd.TrackID))
 			{
-				for (int i = tref.References.Count - 1; i >= 0; i--)
+				trackRemap[t.Tkhd.TrackID] = trackNum;
+				t.Tkhd.TrackID = trackNum++;
+			}
+
+			Moov.Mvhd.NextTrackID = trackNum;
+
+			foreach (var track in Moov.GetChildren<TrakBox>().Select(c => c.GetChild<TrefBox>()).OfType<TrefBox>())
+			{
+				foreach (var tref in track.References.ToArray())
 				{
-					if (tref.References[i].TrackId == textTrackId)
-						tref.References.RemoveAt(i);
+					if (tref.Header.Type == "chap")
+					{
+						track.References.Remove(tref);
+						continue;
+					}
+
+					//Update track id to remapped values
+					foreach (var tid in tref.TrackIds.Order().ToArray())
+			{
+						if (!trackRemap.TryGetValue(tid, out var remap))
+							tref.TrackIds.Remove(tid);
+						else if (remap != tid)
+				{
+							tref.TrackIds.Remove(tid);
+							tref.TrackIds.Add(remap);
+						}
+					}
+
+					if (tref.TrackIds.Count == 0)
+						track.References.Remove(tref);
 				}
-				if (tref.References.Count == 0)
-					Moov.AudioTrack.Children.Remove(tref);
+
+				if (track.References.Count == 0)
+					track.Parent!.Children.Remove(track);
 			}
 		}
 

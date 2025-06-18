@@ -8,7 +8,7 @@ namespace Mpeg4Lib.Boxes;
 
 public interface ITrackReferenceTypeBox : IBox
 {
-	uint TrackId { get; set; }
+	HashSet<uint> TrackIds { get; set; }
 }
 
 public class TrefBox : Box
@@ -17,9 +17,8 @@ public class TrefBox : Box
 	public List<ITrackReferenceTypeBox> References { get; }
 	public TrefBox(Stream file, BoxHeader header, IBox? parent) : base(header, parent)
 	{
-		int referenceTypeBoxes = (int)(Header.TotalBoxSize - Header.HeaderSize) / 12;
-		References = new(referenceTypeBoxes);
-		for (int i = 0; i < referenceTypeBoxes; i++)
+		References = new();
+		while (RemainingBoxLength(file) > 0)
 			References.Add(new TrackReferenceTypeBox(file, this));
 	}
 
@@ -35,9 +34,9 @@ public class TrefBox : Box
 		return tref;
 	}
 
-	public TrefBox AddReference(string type, uint trackId)
+	public TrefBox AddReference(string type, HashSet<uint> trackIds)
 	{
-		References.Add(new TrackReferenceTypeBox(type, trackId, this));
+		References.Add(new TrackReferenceTypeBox(type, trackIds, this));
 		return this;
 	}
 
@@ -47,27 +46,31 @@ public class TrefBox : Box
 			box.Save(file);
 	}
 
-	[DebuggerDisplay("{Header.Type,nq}, TrackId = {TrackId}")]
+	[DebuggerDisplay("{Header.Type,nq}, {TrackIds}")]
 	private class TrackReferenceTypeBox : Box, ITrackReferenceTypeBox
 	{
-		public override long RenderSize => base.RenderSize + sizeof(int);
-		public uint TrackId { get; set; }
+		public override long RenderSize => base.RenderSize + sizeof(int) * TrackIds.Count;
+		public HashSet<uint> TrackIds { get; set; }
 
 		public TrackReferenceTypeBox(Stream file, IBox? parent)
 			: base(new BoxHeader(file), parent)
 		{
-			TrackId = file.ReadUInt32BE();
+			var numTraks = (int)RemainingBoxLength(file) / sizeof(int);
+			TrackIds = new(numTraks);
+			for (int i = 0; i < numTraks; i++)
+				TrackIds.Add(file.ReadUInt32BE());
 		}
 
-		public TrackReferenceTypeBox(string type, uint trackId, IBox parent)
+		public TrackReferenceTypeBox(string type, HashSet<uint> trackIds, IBox parent)
 			: base(new BoxHeader(12, type), parent)
 		{
-			TrackId = trackId;
+			TrackIds = trackIds;
 		}
 
 		protected override void Render(Stream file)
 		{
-			file.WriteUInt32BE(TrackId);
+			foreach (var id in TrackIds)
+				file.WriteUInt32BE(id);
 		}
 	}
 }
