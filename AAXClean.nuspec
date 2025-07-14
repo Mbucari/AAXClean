@@ -23,11 +23,11 @@
 	</metadata>
 	<dependencies>
 		<group targetFramework="net9.0">
-			<dependency id="Mpeg4Lib" version="2.0.1.2" />
+			<dependency id="Mpeg4Lib" version="2.0.1.3" />
 			<dependency id="Microsoft.SourceLink.GitHub" version="8.0.0" />
 		</group>
 		<group targetFramework="net8.0">
-			<dependency id="Mpeg4Lib" version="2.0.1.2" />
+			<dependency id="Mpeg4Lib" version="2.0.1.3" />
 			<dependency id="Microsoft.SourceLink.GitHub" version="8.0.0" />
 		</group>
 	</dependencies>
