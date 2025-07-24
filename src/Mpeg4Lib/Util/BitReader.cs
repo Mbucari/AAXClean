@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Mpeg4Lib.Util;
 
-internal class BitReader
+public class BitReader
 {
 	private readonly byte[] bytes;
 	public BitReader(byte[] data)

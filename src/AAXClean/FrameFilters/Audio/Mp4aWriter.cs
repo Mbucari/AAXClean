@@ -152,7 +152,7 @@ namespace AAXClean.FrameFilters.Audio
 			Debug.Assert(AudioSampleSizes.Count == Stts.Samples.Sum(s => s.FrameCount));
 			IStszBox stsz = StszBox.CreateBlank(Moov.AudioTrack.Mdia.Minf.Stbl, AudioSampleSizes);
 
-			if (mdatSize > uint.MaxValue)
+			if (mdatEnd > uint.MaxValue)
 				Co64Box.CreateBlank(Moov.AudioTrack.Mdia.Minf.Stbl, AudioChunks);
 			else
 				StcoBox.CreateBlank(Moov.AudioTrack.Mdia.Minf.Stbl, AudioChunks);
@@ -294,11 +294,11 @@ namespace AAXClean.FrameFilters.Audio
 
 					//Update track id to remapped values
 					foreach (var tid in tref.TrackIds.Order().ToArray())
-			{
+					{
 						if (!trackRemap.TryGetValue(tid, out var remap))
 							tref.TrackIds.Remove(tid);
 						else if (remap != tid)
-				{
+						{
 							tref.TrackIds.Remove(tid);
 							tref.TrackIds.Add(remap);
 						}

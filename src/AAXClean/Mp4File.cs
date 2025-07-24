@@ -39,7 +39,7 @@ namespace AAXClean
 		Hz_7350 = 7350
 	}
 
-	public class Mp4File
+	public class Mp4File : IDisposable
 	{
 		public ChapterInfo? Chapters { get; set; }
 		public AppleTags AppleTags { get; }
@@ -47,16 +47,37 @@ namespace AAXClean
 		public FileType FileType { get; }
 		public virtual TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.AudioTrack.Mdia.Mdhd.Duration / TimeScale);
 		public int MaxBitrate => (int)(AudioSampleEntry.Esds?.ES_Descriptor.DecoderConfig.MaxBitrate ?? 0);
-		public int AverageBitrate =>
-			(int)(AudioSampleEntry.Esds?.ES_Descriptor.DecoderConfig.AverageBitrate ??
-			AudioSampleEntry.Dec3?.AverageBitrate ??
-			 throw new InvalidOperationException("Cannot determine the average bitrate"));
 
-		public int TimeScale => (int)Moov.AudioTrack.Mdia.Mdhd.Timescale;
-		public int AudioChannels =>
+		private int? m_timescale = null;
+		private int? m_audioChannels = null;
+		private int? m_averageBitrate = null;
+
+		public int TimeScale => m_timescale ??=
+			AudioSampleEntry.Esds?.ES_Descriptor.DecoderConfig.AudioSpecificConfig.SamplingFrequency ??
+			AudioSampleEntry.Dec3?.SampleRate ??
+			AudioSampleEntry.Dac4?.SampleRate ??
+			(int)Moov.AudioTrack.Mdia.Mdhd.Timescale;
+
+		public int AudioChannels => m_audioChannels ??=
 			AudioSampleEntry.Esds?.ES_Descriptor.DecoderConfig.AudioSpecificConfig.ChannelConfiguration ??
 			AudioSampleEntry.Dec3?.NumberOfChannels ??
-			 throw new InvalidOperationException("Cannot determine the number of audio channels");
+			AudioSampleEntry.Dac4?.NumberOfChannels ??
+			AudioSampleEntry.ChannelCount;
+
+		public int AverageBitrate => m_averageBitrate ??=
+			(int)(AudioSampleEntry.Esds?.ES_Descriptor.DecoderConfig.AverageBitrate ??
+			AudioSampleEntry.Dec3?.AverageBitrate ??
+			AudioSampleEntry?.Dac4?.AverageBitrate ??
+			CalculateBitrate());
+
+		protected virtual uint CalculateBitrate()
+		{
+			var totalSize = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz?.TotalSize;
+			if (!totalSize.HasValue || totalSize.Value == 0)
+				return 0;
+			return (uint)Math.Round(totalSize.Value * 8 / Duration.TotalSeconds, 0);
+		}
+
 		public SampleRate SampleRate => (SampleRate)TimeScale;
 
 		public FtypBox Ftyp { get; set; }
@@ -318,10 +339,27 @@ namespace AAXClean
 			return operation;
 		}
 
-		[Obsolete("Call Close() on the input stream")]
-		public void Close()
+		protected bool Disposed { get; private set; }
+		public void Dispose()
 		{
-			InputStream?.Close();
+			Dispose(disposing: true);
+			GC.SuppressFinalize(this);
+		}
+
+		~Mp4File()
+		{
+			Dispose(disposing: false);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (disposing && !Disposed)
+			{
+				inputStream.Dispose();
+				foreach (var box in TopLevelBoxes)
+					box.Dispose();
+			}
+			Disposed = true;
 		}
 	}
 }

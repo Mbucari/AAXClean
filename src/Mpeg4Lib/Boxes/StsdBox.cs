@@ -1,4 +1,5 @@
 ﻿using Mpeg4Lib.Util;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Mpeg4Lib.Boxes;
@@ -22,6 +23,12 @@ public class StsdBox : FullBox
 				AudioSampleEntry = new AudioSampleEntry(file, h, this);
 				Children.Add(AudioSampleEntry);
 			}
+			else if (hdlr?.HandlerType == "vide")
+			{
+				var entry = new VisualSampleEntry(file, h, this);
+				VisualSampleEntries.Add(entry);
+				Children.Add(entry);
+			}
 			else
 			{
 				UnknownBox unknownSampleEntry = new UnknownBox(file, h, this);
@@ -31,6 +38,7 @@ public class StsdBox : FullBox
 	}
 
 	public AudioSampleEntry? AudioSampleEntry { get; }
+	public List<VisualSampleEntry> VisualSampleEntries { get; } = [];
 
 	protected override void Render(Stream file)
 	{

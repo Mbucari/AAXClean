@@ -24,6 +24,16 @@ public class DashFile : Mp4File
 
 	public byte[]? Key { get; private set; }
 
+	protected override uint CalculateBitrate()
+	{
+		var totalSize = Sidx.Segments.Sum(s => (long)s.ReferenceSize) * 8;
+		var totalDuration = Sidx.Segments.Sum(s => (long)s.SubsegmentDuration);
+		var bitRate = totalSize * Sidx.Timescale / totalDuration;
+		return (uint)bitRate;
+	}
+
+	public DashFile(string fileName, FileAccess access = FileAccess.Read, FileShare share = FileShare.Read)
+		: this(File.Open(fileName, FileMode.Open, access, share)) { }
 	public DashFile(Stream file) : this(file, file.Length) { }
 	public DashFile(Stream file, long fileLength) : base(file, fileLength)
 	{
@@ -51,15 +61,16 @@ public class DashFile : Mp4File
 
 		if (AudioSampleEntry.Header.Type == "ec-3")
 		{
-			Ftyp = FtypBox.Create("isom", 512);
-			Ftyp.CompatibleBrands.Add("isom");
+			Ftyp = FtypBox.Create("mp42", 0);
 			Ftyp.CompatibleBrands.Add("dby1");
+			Ftyp.CompatibleBrands.Add("isom");
 			Ftyp.CompatibleBrands.Add("iso2");
 			Ftyp.CompatibleBrands.Add("mp41");
 		}
 		else
 		{
-			Ftyp = FtypBox.Create("mp41", 0);
+			Ftyp = FtypBox.Create("mp42", 0);
+			Ftyp.CompatibleBrands.Add("dby1");
 			Ftyp.CompatibleBrands.Add("mp41");
 			Ftyp.CompatibleBrands.Add("iso8");
 			Ftyp.CompatibleBrands.Add("isom");
