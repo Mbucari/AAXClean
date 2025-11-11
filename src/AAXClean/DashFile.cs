@@ -59,21 +59,21 @@ public class DashFile : Mp4File
 		foreach (var pssh in Moov.GetChildren<PsshBox>().ToArray())
 			Moov.Children.Remove(pssh);
 
-		if (AudioSampleEntry.Header.Type == "ec-3")
+		if (AudioSampleEntry.Dec3 is not null || AudioSampleEntry.Dac4 is not null)
 		{
 			Ftyp = FtypBox.Create("mp42", 0);
 			Ftyp.CompatibleBrands.Add("dby1");
+			Ftyp.CompatibleBrands.Add("iso8");
 			Ftyp.CompatibleBrands.Add("isom");
-			Ftyp.CompatibleBrands.Add("iso2");
 			Ftyp.CompatibleBrands.Add("mp41");
+			Ftyp.CompatibleBrands.Add("M4A ");
+			Ftyp.CompatibleBrands.Add("M4B ");
 		}
 		else
 		{
-			Ftyp = FtypBox.Create("mp42", 0);
-			Ftyp.CompatibleBrands.Add("dby1");
+			Ftyp = FtypBox.Create("isom", 0x200);
+			Ftyp.CompatibleBrands.Add("iso2");
 			Ftyp.CompatibleBrands.Add("mp41");
-			Ftyp.CompatibleBrands.Add("iso8");
-			Ftyp.CompatibleBrands.Add("isom");
 			Ftyp.CompatibleBrands.Add("M4A ");
 			Ftyp.CompatibleBrands.Add("M4B ");
 		}
