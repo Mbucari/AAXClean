@@ -12,7 +12,7 @@
 		<license type="file">LICENSE.txt</license>
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>
 		<dependencies>
-			<group targetFramework="net9.0">
+			<group targetFramework="net10.0">
 			<dependency id="Microsoft.SourceLink.GitHub" version="8.0.0" />
 			</group>
 			<group targetFramework="net8.0">
@@ -21,18 +21,18 @@
 		</dependencies>
 	</metadata>
 	<dependencies>
-		<group targetFramework="net9.0">
-			<dependency id="Mpeg4Lib" version="2.0.3.1" />
+		<group targetFramework="net10.0">0
+			<dependency id="Mpeg4Lib" version="2.1.0.1" />
 			<dependency id="Microsoft.SourceLink.GitHub" version="8.0.0" />
 		</group>
 		<group targetFramework="net8.0">
-			<dependency id="Mpeg4Lib" version="2.0.3.1" />
+			<dependency id="Mpeg4Lib" version="2.1.0.1" />
 			<dependency id="Microsoft.SourceLink.GitHub" version="8.0.0" />
 		</group>
 	</dependencies>
 	<files>
-		<file src="src\AAXClean\bin\Release\net9.0\AAXClean.dll" target="lib\net9.0\AAXClean.dll" />
-		<file src="src\AAXClean\bin\Release\net9.0\Mpeg4Lib.dll" target="lib\net9.0\Mpeg4Lib.dll" />
+		<file src="src\AAXClean\bin\Release\net10.0\AAXClean.dll" target="lib\net10.0\AAXClean.dll" />
+		<file src="src\AAXClean\bin\Release\net10.0\Mpeg4Lib.dll" target="lib\net10.0\Mpeg4Lib.dll" />
 		<file src="src\AAXClean\bin\Release\net8.0\AAXClean.dll" target="lib\net8.0\AAXClean.dll" />
 		<file src="src\AAXClean\bin\Release\net8.0\Mpeg4Lib.dll" target="lib\net8.0\Mpeg4Lib.dll" />
 		<file src="README.md" target="docs\" />

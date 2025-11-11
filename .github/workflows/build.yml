@@ -25,7 +25,7 @@ on:
 
 env:
   DOTNET_CONFIGURATION: 'Release'
-  DOTNET_VERSION: '9.0.x'
+  DOTNET_VERSION: '10.x'
   NUGET_SOURCE: 'https://api.nuget.org/v3/index.json'
 
 jobs:
@@ -33,9 +33,9 @@ jobs:
     name: Build and Publish
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
         env:
@@ -64,7 +64,7 @@ jobs:
           echo "nupkg=${nupkg}" >> "${GITHUB_OUTPUT}"
           
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: '${{ steps.build_pack.outputs.nupkg }}'
           path: ./${{ steps.build_pack.outputs.nupkg }}
