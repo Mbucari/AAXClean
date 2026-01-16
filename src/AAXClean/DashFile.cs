@@ -20,7 +20,7 @@ public class DashFile : Mp4File
 
 	private new MdatBox Mdat => base.Mdat;
 
-	public TencBox Tenc { get; }
+	public TencBox? Tenc { get; }
 
 	public byte[]? Key { get; private set; }
 
@@ -45,17 +45,15 @@ public class DashFile : Mp4File
 		var audioSampleEntry = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry
 			?? throw new InvalidDataException($"The audio track doesn't contain an {nameof(AudioSampleEntry)}");
 
-		var sinf = audioSampleEntry.GetChildOrThrow<SinfBox>();
+		if (audioSampleEntry.GetChild<SinfBox>() is { } sinf)
+		{
+			if (sinf.SchemeType?.Type != SchmBox.SchemeType.Cenc)
+				throw new NotSupportedException($"Only {nameof(SchmBox.SchemeType.Cenc)} dash files are currently supported.");
+			Tenc = sinf?.SchemeInformation?.TrackEncryption;
+			audioSampleEntry.Children.Remove(sinf);
+			audioSampleEntry.Header.ChangeAtomName(sinf.OriginalFormat.DataFormat);
+		}
 
-		if (sinf.SchemeType?.Type != SchmBox.SchemeType.Cenc)
-			throw new NotSupportedException($"Only {nameof(SchmBox.SchemeType.Cenc)} dash files are currently supported.");
-
-		var tenc = sinf.SchemeInformation?.TrackEncryption
-			?? throw new NotSupportedException($"{nameof(AAXClean)} doesn't know how to decrypt a dash without a tenc atom");
-
-		var stsd = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd;
-		audioSampleEntry.Children.Remove(sinf);
-		audioSampleEntry.Header.ChangeAtomName(sinf.OriginalFormat.DataFormat);
 		foreach (var pssh in Moov.GetChildren<PsshBox>().ToArray())
 			Moov.Children.Remove(pssh);
 
@@ -77,8 +75,6 @@ public class DashFile : Mp4File
 			Ftyp.CompatibleBrands.Add("M4A ");
 			Ftyp.CompatibleBrands.Add("M4B ");
 		}
-
-		Tenc = tenc;
 	}
 
 	public void SetDecryptionKey(string keyId, string decryptionKey)
@@ -99,13 +95,15 @@ public class DashFile : Mp4File
 
 	public override FrameTransformBase<FrameEntry, FrameEntry> GetAudioFrameFilter()
 	{
-		if (Key is null)
+		if (Key is null && Tenc is not null)
 			throw new InvalidOperationException($"This instance of {nameof(DashFile)} does not have a decryption key set.");
 		return new DashFilter(Key);
 	}
 
 	public void SetDecryptionKey(byte[] keyId, byte[] decryptionKey)
 	{
+		if (Tenc is null)
+			throw new InvalidOperationException($"This instance of {nameof(DashFile)} does not contain a {nameof(TencBox)}.");
 		if (keyId is null || keyId.Length != AesCtr.AES_BLOCK_SIZE)
 			throw new ArgumentException($"{nameof(keyId)} must be {AesCtr.AES_BLOCK_SIZE} bytes long.");
 		if (decryptionKey is null || decryptionKey.Length != AesCtr.AES_BLOCK_SIZE)

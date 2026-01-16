@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 namespace Mpeg4Lib.Util;
 
 //https://github.com/FFmpeg/FFmpeg/blob/master/libavutil/aes_ctr.c
-public unsafe struct AesCtr : IDisposable
+public unsafe class AesCtr : IDisposable
 {
 	public const int AES_BLOCK_SIZE = 16;
 

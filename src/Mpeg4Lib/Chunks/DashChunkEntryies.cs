@@ -92,11 +92,13 @@ public class DashChunkEntryies : IEnumerable<ChunkEntry>
 		if (frameDurations.Length != frameSizes.Length)
 			throw new InvalidDataException($"The number of frame sizes ({frameSizes.Length}) does not match the number of durations ({frameDurations.Length}) in fragment {moofBox.Mfhd.SequenceNumber}");
 
-		if (moofBox.Traf.Senc is not SencBox senc)
-			throw new InvalidDataException($"The {nameof(TrafBox)} doesn't contain a {nameof(SencBox)}");
+		object? extraData = null;
 
-		if (frameSizes.Length != senc.IVs.Length)
-			throw new InvalidDataException($"The number of IVs ({senc.IVs.Length}) does not match the number of samples ({frameSizes.Length}) in fragment {moofBox.Mfhd.SequenceNumber}");
+		if (moofBox.Traf.Senc is { } senc)
+		{
+			extraData = frameSizes.Length != senc.IVs.Length ? senc.IVs
+				: throw new InvalidDataException($"The number of IVs ({senc.IVs.Length}) does not match the number of samples ({frameSizes.Length}) in fragment {moofBox.Mfhd.SequenceNumber}");
+		}
 
 		return new ChunkEntry
 		{
@@ -107,7 +109,7 @@ public class DashChunkEntryies : IEnumerable<ChunkEntry>
 			FirstSample = startSample,
 			FrameSizes = frameSizes,
 			FrameDurations = frameDurations,
-			ExtraData = senc.IVs
+			ExtraData = extraData
 		};
 	}
 
