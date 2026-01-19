@@ -1,70 +1,43 @@
 ﻿using Mpeg4Lib.Util;
-using System.Collections.Generic;
+using System;
 using System.IO;
-using System.Linq;
 
 namespace Mpeg4Lib.Boxes;
 
-public class StcoBox : FullBox, IChunkOffsets
+internal class StcoBox : FullBox, IChunkOffsets
 {
 	public override long RenderSize => base.RenderSize + 4 + ChunkOffsets.Count * 4;
-	public uint EntryCount { get; set; }
-	public List<ChunkOffsetEntry> ChunkOffsets { get; private init; } = new List<ChunkOffsetEntry>();
+	public uint EntryCount => (uint)ChunkOffsets.Count;
+	public ChunkOffsetList ChunkOffsets { get; }
 
-	public static StcoBox CreateBlank(IBox parent, List<ChunkOffsetEntry> chunkOffsets)
+	internal static StcoBox CreateBlank(IBox parent, ChunkOffsetList chunkOffsets)
 	{
 		int size = 4 + 12 /* empty Box size*/;
 		BoxHeader header = new BoxHeader((uint)size, "stco");
-
-		StcoBox stcoBox = new StcoBox(new byte[] { 0, 0, 0, 0 }, header, parent)
-		{
-			ChunkOffsets = chunkOffsets,
-			EntryCount = (uint)chunkOffsets.Count
-		};
-
+		chunkOffsets.Sort();
+		StcoBox stcoBox = new StcoBox(chunkOffsets, [0, 0, 0, 0], header, parent);
 		parent.Children.Add(stcoBox);
 		return stcoBox;
 	}
-	private StcoBox(byte[] versionFlags, BoxHeader header, IBox parent) : base(versionFlags, header, parent) { }
+	private StcoBox(ChunkOffsetList chunkOffsets, byte[] versionFlags, BoxHeader header, IBox parent)
+		: base(versionFlags, header, parent)
+	{
+		ChunkOffsets = chunkOffsets;
+	}
 
 	public StcoBox(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{
-		EntryCount = file.ReadUInt32BE();
+		uint entryCount = file.ReadUInt32BE(); if (entryCount > int.MaxValue)
+			throw new NotSupportedException($"Mpeg4Lib does not support MPEG-4 files with more than {int.MaxValue} chunk offsets");
 
-		long lastChunkOffset = 0;
-		for (uint i = 0; i < EntryCount; i++)
-		{
-			long chunkOffset = file.ReadUInt32BE();
-
-			//Seems some files incorrectly use stco box with offsets > uint.MAXVALUE (e.g. 50 Self Help Books).
-			//This causes the offsets to uint to overflow. Unfottnately, somtimes chapters are out of order and
-			//chunkOffset is supposed to be less than lastChunkOffset (e.g. Altered Carbon). To attempt to
-			//detect this, only assume it's an overflow if lastChunkOffset - chunkOffset > uint.MaxValue / 2
-			if (chunkOffset < lastChunkOffset && lastChunkOffset - chunkOffset > uint.MaxValue / 2)
-			{
-				chunkOffset += 1L << 32;
-			}
-			ChunkOffsets.Add(new ChunkOffsetEntry
-			{
-				EntryIndex = i,
-				ChunkOffset = chunkOffset
-			});
-			lastChunkOffset = chunkOffset;
-		}
-		//Load ChunkOffsets sorted by the offset
-		ChunkOffsets.Sort((c1, c2) => c1.ChunkOffset.CompareTo(c2.ChunkOffset));
+		ChunkOffsets = ChunkOffsetList.Read32(file, entryCount);
 	}
 
 	protected override void Render(Stream file)
 	{
 		base.Render(file);
-		file.WriteUInt32BE((uint)ChunkOffsets.Count);
-		//Write ChunkOffsets sorted by the chunk index, leaving ChunkOffsets unsorted
-		IOrderedEnumerable<ChunkOffsetEntry> orderedChunkOffsets = ChunkOffsets.OrderBy(co => co.EntryIndex);
-		foreach (ChunkOffsetEntry chunkOffset in orderedChunkOffsets)
-		{
-			file.WriteUInt32BE((uint)chunkOffset.ChunkOffset);
-		}
+		file.WriteUInt32BE(EntryCount);
+		ChunkOffsets.Write32(file);
 	}
 
 	protected override void Dispose(bool disposing)

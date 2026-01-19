@@ -2,7 +2,6 @@
 
 public interface IStszBox : IBox
 {
-	uint SampleSize { get; }
 	int SampleCount { get; }
 	/// <summary>The largest sample size in the box</summary>
 	int MaxSize { get; }
@@ -17,5 +16,17 @@ public interface IStszBox : IBox
 	/// <param name="firstFrameIndex">The first frame to retrieve the size of</param>
 	/// <param name="numFrames">The number of frames to retrieve sizes of</param>
 	/// <returns>A tuple containing the size of each frame in an int[] and the total size of all the frames. </returns>
-	(int[] frameSizes, int framesSizeTotal) GetFrameSizes(uint firstFrameIndex, uint numFrames);
+	(int[] frameSizes, int framesSizeTotal) GetFrameSizes(uint firstFrameIndex, uint numFrames)
+	{
+		int[] frameSizes = new int[numFrames];
+		int framesSizeTotal = 0;
+
+		for (uint i = 0; i < numFrames; i++)
+		{
+			frameSizes[i] = GetSizeAtIndex((int)(i + firstFrameIndex));
+			framesSizeTotal += frameSizes[i];
+		}
+
+		return (frameSizes, framesSizeTotal);
+	}
 }

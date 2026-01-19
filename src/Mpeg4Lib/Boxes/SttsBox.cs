@@ -1,8 +1,11 @@
 ﻿using Mpeg4Lib.Util;
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace Mpeg4Lib.Boxes;
 
@@ -29,10 +32,16 @@ public class SttsBox : FullBox
 		: base(file, header, parent)
 	{
 		var entryCount = file.ReadUInt32BE();
+		Debug.Assert(entryCount <= int.MaxValue);
+		Samples = new List<SampleEntry>((int)entryCount);
+		CollectionsMarshal.SetCount(Samples, (int)entryCount);
+		Span<SampleEntry> samples = CollectionsMarshal.AsSpan(Samples);
 
-		for (int i = 0; i < entryCount; i++)
+		file.ReadExactly(MemoryMarshal.AsBytes(samples));
+		if (BitConverter.IsLittleEndian)
 		{
-			Samples.Add(new SampleEntry(file));
+			Span<uint> uints = MemoryMarshal.Cast<SampleEntry, uint>(samples);
+			BinaryPrimitives.ReverseEndianness(uints, uints);
 		}
 	}
 
@@ -90,13 +99,9 @@ public class SttsBox : FullBox
 		base.Dispose(disposing);
 	}
 
-	public class SampleEntry
+	[StructLayout(LayoutKind.Sequential)]
+	public readonly record struct SampleEntry
 	{
-		public SampleEntry(Stream file)
-		{
-			FrameCount = file.ReadUInt32BE();
-			FrameDelta = file.ReadUInt32BE();
-		}
 		public SampleEntry(uint sampleCount, uint sampleDelta)
 		{
 			FrameCount = sampleCount;

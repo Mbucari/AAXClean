@@ -24,8 +24,8 @@ namespace AAXClean.FrameFilters.Audio
 		private readonly SttsBox Stts;
 		private readonly StscBox Stsc;
 		private readonly AudioSampleEntry AudioSampleEntry;
-		private readonly List<ChunkOffsetEntry> AudioChunks = new();
-		private readonly List<ChunkOffsetEntry> TextChunks = new();
+		private readonly ChunkOffsetList AudioChunks = new();
+		private readonly ChunkOffsetList TextChunks = new();
 		//Since we're only working with audio files, no frame will ever be larger than ushort.MaxValue.
 		//Use shorts to save memory.
 		private readonly List<ushort> AudioSampleSizes = new();
@@ -152,17 +152,11 @@ namespace AAXClean.FrameFilters.Audio
 			Debug.Assert(AudioSampleSizes.Count == Stts.Samples.Sum(s => s.FrameCount));
 			IStszBox stsz = StszBox.CreateBlank(Moov.AudioTrack.Mdia.Minf.Stbl, AudioSampleSizes);
 
-			if (mdatEnd > uint.MaxValue)
-				Co64Box.CreateBlank(Moov.AudioTrack.Mdia.Minf.Stbl, AudioChunks);
-			else
-				StcoBox.CreateBlank(Moov.AudioTrack.Mdia.Minf.Stbl, AudioChunks);
+			IChunkOffsets.Create(Moov.AudioTrack.Mdia.Minf.Stbl, AudioChunks);
 
 			if (Moov.TextTrack is not null)
 			{
-				if (mdatSize > uint.MaxValue)
-					Co64Box.CreateBlank(Moov.TextTrack.Mdia.Minf.Stbl, TextChunks);
-				else
-					StcoBox.CreateBlank(Moov.TextTrack.Mdia.Minf.Stbl, TextChunks);
+				IChunkOffsets.Create(Moov.TextTrack.Mdia.Minf.Stbl, TextChunks);
 			}
 
 			SetDuration((ulong)Stts.Samples.Sum(s => (decimal)s.FrameCount * s.FrameDelta));
@@ -241,7 +235,7 @@ namespace AAXClean.FrameFilters.Audio
 
 			Moov.TextTrack.Mdia.Minf.Stbl.Stts.Samples.Add(new SttsBox.SampleEntry(sampleCount: 1, entry.SamplesInFrame));
 			TextSampleSizes.Add(entry.FrameData.Length);
-			TextChunks.Add(new ChunkOffsetEntry { EntryIndex = (uint)TextChunks.Count, ChunkOffset = OutputFile.Position });
+			TextChunks.Add(OutputFile.Position);
 
 			OutputFile.Write(entry.FrameData.Span);
 		}
@@ -321,7 +315,7 @@ namespace AAXClean.FrameFilters.Audio
 
 				if (newChunk)
 				{
-					AudioChunks.Add(new ChunkOffsetEntry { EntryIndex = CurrentChunk, ChunkOffset = OutputFile.Position });
+					AudioChunks.Add(OutputFile.Position);
 
 					if (SamplesPerChunk > 0 && SamplesPerChunk != LastSamplesPerChunk)
 					{

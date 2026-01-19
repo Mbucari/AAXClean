@@ -1,5 +1,9 @@
 ﻿using Mpeg4Lib.Boxes;
 using System;
+using System.Buffers;
+using System.Buffers.Binary;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,10 +42,10 @@ namespace Mpeg4Lib.Util
 				//Unknown Track or data type. Read past it to next known chunk.
 				const int bufferSize = 8 * 1024;
 				int toRead = int.Min(bufferSize, (int)(chunkOffset - inputStream.Position));
-				var buffer = new byte[toRead];
+				using var memoryBuff = MemoryPool<byte>.Shared.Rent(toRead);
 				while (toRead > 0)
 				{
-					await inputStream.ReadExactlyAsync(buffer, 0, toRead, token);
+					await inputStream.ReadExactlyAsync(memoryBuff.Memory[..toRead], token);
 					toRead = int.Min(bufferSize, (int)(chunkOffset - inputStream.Position));
 				}
 			}
@@ -64,10 +68,11 @@ namespace Mpeg4Lib.Util
 				//Unknown Track or data type. Read past it to next known chunk.
 				const int bufferSize = 8 * 1024;
 				int toRead = int.Min(bufferSize, (int)(chunkOffset - inputStream.Position));
-				var buffer = new byte[toRead];
+				using var memoryBuff = MemoryPool<byte>.Shared.Rent(toRead);
+				var spanBuff = memoryBuff.Memory.Span;
 				while (toRead > 0)
 				{
-					inputStream.ReadExactly(buffer, 0, toRead);
+					inputStream.ReadExactly(spanBuff[..toRead]);
 					toRead = int.Min(bufferSize, (int)(chunkOffset - inputStream.Position));
 				}
 			}
@@ -96,49 +101,83 @@ namespace Mpeg4Lib.Util
 		}
 
 		public static void WriteInt16BE(this Stream stream, short value)
-			=> stream.WriteUInt16BE((ushort)value);
-		public static void WriteInt32BE(this Stream stream, int value)
-			=> stream.WriteUInt32BE((uint)value);
-		public static void WriteInt64BE(this Stream stream, long value)
-			=> stream.WriteUInt64BE((ulong)value);
-
+		{
+			Span<byte> word = stackalloc byte[2];
+			BinaryPrimitives.WriteInt16BigEndian(word, value);
+			stream.Write(word);
+		}
 		public static void WriteUInt16BE(this Stream stream, ushort value)
-			=> stream.Write([(byte)(value >> 8), (byte)value]);
+		{
+			Span<byte> word = stackalloc byte[2];
+			BinaryPrimitives.WriteUInt16BigEndian(word, value);
+			stream.Write(word);
+		}
+		public static void WriteInt32BE(this Stream stream, int value)
+		{
+			Span<byte> dword = stackalloc byte[4];
+			BinaryPrimitives.WriteInt32BigEndian(dword, value);
+			stream.Write(dword);
+		}
 		public static void WriteUInt32BE(this Stream stream, uint value)
-			=> stream.Write([(byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value]);
+		{
+			Span<byte> dword = stackalloc byte[4];
+			BinaryPrimitives.WriteUInt32BigEndian(dword, value);
+			stream.Write(dword);
+		}
+		public static void WriteInt64BE(this Stream stream, long value)
+		{
+			Span<byte> qword = stackalloc byte[8];
+			BinaryPrimitives.WriteInt64BigEndian(qword, value);
+			stream.Write(qword);
+		}
 		public static void WriteUInt64BE(this Stream stream, ulong value)
-			=> stream.Write([(byte)(value >> 56), (byte)(value >> 48), (byte)(value >> 40), (byte)(value >> 32), (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value]);
-
-		public static ushort ReadUInt16BE(this Stream stream) => (ushort)stream.ReadInt16BE();
-		public static uint ReadUInt32BE(this Stream stream) => (uint)stream.ReadInt32BE();
-		public static ulong ReadUInt64BE(this Stream stream) => (ulong)stream.ReadInt64BE();
+		{
+			Span<byte> qword = stackalloc byte[8];
+			BinaryPrimitives.WriteUInt64BigEndian(qword, value);
+			stream.Write(qword);
+		}
 
 		public static short ReadInt16BE(this Stream stream)
 		{
 			Span<byte> word = stackalloc byte[2];
-			stream.Read(word, word.Length);
-
-			return (short)(word[0] << 8 | word[1]);
+			stream.ReadExactly(word);
+			return BinaryPrimitives.ReadInt16BigEndian(word);
+		}
+		public static ushort ReadUInt16BE(this Stream stream)
+		{
+			Span<byte> word = stackalloc byte[2];
+			stream.ReadExactly(word);
+			return BinaryPrimitives.ReadUInt16BigEndian(word);
 		}
 		public static int ReadInt32BE(this Stream stream)
 		{
 			Span<byte> dword = stackalloc byte[4];
-			stream.Read(dword, dword.Length);
-
-			return dword[0] << 24 | dword[1] << 16 | dword[2] << 8 | dword[3];
+			stream.ReadExactly(dword);
+			return BinaryPrimitives.ReadInt32BigEndian(dword);
+		}
+		public static uint ReadUInt32BE(this Stream stream)
+		{
+			Span<byte> dword = stackalloc byte[4];
+			stream.ReadExactly(dword);
+			return BinaryPrimitives.ReadUInt32BigEndian(dword);
 		}
 		public static long ReadInt64BE(this Stream stream)
 		{
 			Span<byte> qword = stackalloc byte[8];
-			stream.Read(qword, qword.Length);
-
-			return ((long)(qword[0] << 24 | qword[1] << 16 | qword[2] << 8 | qword[3]) << 32) | ((qword[4] << 24 | qword[5] << 16 | qword[6] << 8 | qword[7]) & uint.MaxValue);
+			stream.ReadExactly(qword);
+			return BinaryPrimitives.ReadInt64BigEndian(qword);
 		}
+		public static ulong ReadUInt64BE(this Stream stream)
+		{
+			Span<byte> qword = stackalloc byte[8];
+			stream.ReadExactly(qword);
+			return BinaryPrimitives.ReadUInt64BigEndian(qword);
+		}
+
 		public static string ReadType(this Stream stream)
 		{
 			Span<byte> dword = stackalloc byte[4];
-			stream.Read(dword, dword.Length);
-
+			stream.ReadExactly(dword);
 			return new string([(char)dword[0], (char)dword[1], (char)dword[2], (char)dword[3]]);
 		}
 
@@ -146,25 +185,14 @@ namespace Mpeg4Lib.Util
 		{
 			if (length < 0)
 				throw new ArgumentException("Length must be non-negative", nameof(length));
-
-			if (length == 0)
-				return Array.Empty<byte>();
-
-			byte[] buffer = new byte[length];
-			stream.Read(buffer, length);
-
-			return buffer;
-		}
-
-		private static int Read(this Stream stream, Span<byte> buffer, int size)
-		{
-			if (buffer.Length < size)
-				throw new ArgumentException($"{nameof(buffer)} must be a minimum of {size} bytes");
-
-			if (stream.Read(buffer[..size]) != size)
-				throw new EndOfStreamException($"Stream ended before all {size} bytes could be read");
-
-			return size;
+			else if (length == 0)
+				return [];
+			else
+			{
+				byte[] buffer = new byte[length];
+				stream.ReadExactly(buffer);
+				return buffer;
+			}
 		}
 	}
 }

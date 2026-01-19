@@ -11,7 +11,7 @@ public class FrmaBox : Box
 	public string DataFormat { get; }
 	public FrmaBox(Stream file, BoxHeader header, IBox? parent) : base(header, parent)
 	{
-		DataFormat = Encoding.UTF8.GetString(file.ReadBlock(4));
+		DataFormat = file.ReadType();
 	}
 
 	protected override void Render(Stream file)

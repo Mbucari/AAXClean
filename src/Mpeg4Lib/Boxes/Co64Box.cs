@@ -1,60 +1,43 @@
 ﻿using Mpeg4Lib.Util;
-using System.Collections.Generic;
+using System;
 using System.IO;
-using System.Linq;
 
 namespace Mpeg4Lib.Boxes;
 
-public class Co64Box : FullBox, IChunkOffsets
+internal class Co64Box : FullBox, IChunkOffsets
 {
 	public override long RenderSize => base.RenderSize + 4 + ChunkOffsets.Count * 8;
-	public uint EntryCount { get; set; }
-	public List<ChunkOffsetEntry> ChunkOffsets { get; private init; } = new List<ChunkOffsetEntry>();
+	public uint EntryCount => (uint)ChunkOffsets.Count;
+	public ChunkOffsetList ChunkOffsets { get; }
 
-	public static Co64Box CreateBlank(IBox parent, List<ChunkOffsetEntry> chunkOffsets)
+	internal static Co64Box CreateBlank(IBox parent, ChunkOffsetList chunkOffsets)
 	{
 		int size = 4 + 12 /* empty Box size*/;
 		BoxHeader header = new BoxHeader((uint)size, "co64");
-
-		Co64Box co64Box = new Co64Box([0, 0, 0, 0], header, parent)
-		{
-			ChunkOffsets = chunkOffsets,
-			EntryCount = (uint)chunkOffsets.Count
-		};
-
+		chunkOffsets.Sort();
+		Co64Box co64Box = new Co64Box(chunkOffsets, [0, 0, 0, 0], header, parent);
 		parent.Children.Add(co64Box);
 		return co64Box;
 	}
 
-	private Co64Box(byte[] versionFlags, BoxHeader header, IBox parent)
-		: base(versionFlags, header, parent) { }
+	private Co64Box(ChunkOffsetList chunkOffsets, byte[] versionFlags, BoxHeader header, IBox parent)
+		: base(versionFlags, header, parent)
+	{
+		ChunkOffsets = chunkOffsets;
+	}
 
 	public Co64Box(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{
-		EntryCount = file.ReadUInt32BE();
-
-		for (uint i = 0; i < EntryCount; i++)
-		{
-			long chunkOffset = file.ReadInt64BE();
-			ChunkOffsets.Add(new ChunkOffsetEntry
-			{
-				EntryIndex = i,
-				ChunkOffset = chunkOffset
-			});
-		}
-		//Load ChunkOffsets sorted by the offset
-		ChunkOffsets.Sort((c1, c2) => c1.ChunkOffset.CompareTo(c2.ChunkOffset));
+		uint entryCount = file.ReadUInt32BE();
+		if (entryCount > int.MaxValue)
+			throw new NotSupportedException($"Mpeg4Lib does not support MPEG-4 files with more than {int.MaxValue} chunk offsets");
+		ChunkOffsets = ChunkOffsetList.Read64(file, entryCount);
 	}
 	protected override void Render(Stream file)
 	{
 		base.Render(file);
-		file.WriteUInt32BE((uint)ChunkOffsets.Count);
-		//Write ChunkOffsets sorted by the chunk index, leaving ChunkOffsets unsorted
-		IOrderedEnumerable<ChunkOffsetEntry> orderedChunkOffsets = ChunkOffsets.OrderBy(co => co.EntryIndex);
-		foreach (ChunkOffsetEntry chunkOffset in orderedChunkOffsets)
-		{
-			file.WriteInt64BE(chunkOffset.ChunkOffset);
-		}
+		file.WriteUInt32BE(EntryCount);
+		ChunkOffsets.Write64(file);
 	}
 
 	protected override void Dispose(bool disposing)

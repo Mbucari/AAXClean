@@ -11,7 +11,7 @@ namespace Mpeg4Lib.Chunks;
 /// </summary>
 public class ChunkEntryList : IReadOnlyCollection<ChunkEntry>
 {
-	private readonly IReadOnlyList<ChunkOffsetEntry> ChunkTable;
+	private readonly ChunkOffsetList ChunkOffsets;
 	private readonly IStszBox Stsz;
 	private readonly SttsBox Stts;
 	private readonly ChunkFrames[] ChunkFrameTable;
@@ -22,12 +22,12 @@ public class ChunkEntryList : IReadOnlyCollection<ChunkEntry>
 	{
 		TrackId = track.Tkhd.TrackID;
 		Stsz = track.Mdia.Minf.Stbl.Stsz ?? throw new ArgumentNullException(nameof(track));
-		var entryCount = track.Mdia.Minf.Stbl.COBox.EntryCount;
-		ArgumentOutOfRangeException.ThrowIfGreaterThan(entryCount, (uint)int.MaxValue, "COBox.EntryCount");
-		Count = (int)entryCount;
+		var coBox = track.Mdia.Minf.Stbl.COBox;
+		ArgumentOutOfRangeException.ThrowIfGreaterThan(coBox.EntryCount, (uint)int.MaxValue, "COBox.EntryCount");
+		ChunkOffsets = coBox.ChunkOffsets;
+		Count = (int)coBox.EntryCount;
 		Stts = track.Mdia.Minf.Stbl.Stts;
-		ChunkTable = track.Mdia.Minf.Stbl.COBox.ChunkOffsets;
-		ChunkFrameTable = track.Mdia.Minf.Stbl.Stsc.CalculateChunkFrameTable(entryCount);
+		ChunkFrameTable = track.Mdia.Minf.Stbl.Stsc.CalculateChunkFrameTable(coBox.EntryCount);
 	}
 
 	public IEnumerator<ChunkEntry> GetEnumerator()
@@ -40,9 +40,8 @@ public class ChunkEntryList : IReadOnlyCollection<ChunkEntry>
 		long startSample = 0;
 		for (int chunkIndex = 0; chunkIndex < Count; chunkIndex++)
 		{
-			ChunkOffsetEntry cEntry = ChunkTable[chunkIndex];
-
-			var chunkFrames = ChunkFrameTable[cEntry.EntryIndex];
+			long chunkOffset = ChunkOffsets.GetOffsetAtIndex(chunkIndex);
+			var chunkFrames = ChunkFrameTable[chunkIndex];
 
 			(int[] frameSizes, int totalChunkSize) = Stsz.GetFrameSizes(chunkFrames.FirstFrameIndex, chunkFrames.NumberOfFrames);
 
@@ -52,9 +51,9 @@ public class ChunkEntryList : IReadOnlyCollection<ChunkEntry>
 			{
 				TrackId = TrackId,
 				FrameSizes = frameSizes,
-				ChunkIndex = cEntry.EntryIndex,
+				ChunkIndex = (uint)chunkIndex,
 				ChunkSize = totalChunkSize,
-				ChunkOffset = cEntry.ChunkOffset,
+				ChunkOffset = chunkOffset,
 				FirstSample = startSample,
 				FrameDurations = frameDurations
 			};

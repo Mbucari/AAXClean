@@ -1,6 +1,10 @@
 ﻿using Mpeg4Lib.Util;
+using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Mpeg4Lib.Boxes;
 
@@ -14,7 +18,7 @@ public class StscBox : FullBox
 {
 	public override long RenderSize => base.RenderSize + 4 + EntryCount * 3 * 4;
 	public int EntryCount => Samples.Count;
-	public List<StscChunkEntry> Samples { get; } = new List<StscChunkEntry>();
+	public List<StscChunkEntry> Samples { get; }
 
 	public static StscBox CreateBlank(IBox parent)
 	{
@@ -28,7 +32,10 @@ public class StscBox : FullBox
 	}
 
 	private StscBox(byte[] versionFlags, BoxHeader header, IBox parent)
-		: base(versionFlags, header, parent) { }
+		: base(versionFlags, header, parent)
+	{
+		Samples = [];
+	}
 
 	/// <summary>
 	/// 
@@ -40,10 +47,16 @@ public class StscBox : FullBox
 		: base(file, header, parent)
 	{
 		var entryCount = file.ReadUInt32BE();
+		Debug.Assert(entryCount <= int.MaxValue);
+		Samples = new List<StscChunkEntry>((int)entryCount);
+		CollectionsMarshal.SetCount(Samples, (int)entryCount);
+		Span<StscChunkEntry> samples = CollectionsMarshal.AsSpan(Samples);
 
-		for (int i = 0; i < entryCount; i++)
+		file.ReadExactly(MemoryMarshal.AsBytes(samples));
+		if (BitConverter.IsLittleEndian)
 		{
-			Samples.Add(new StscChunkEntry(file));
+			Span<uint> uints = MemoryMarshal.Cast<StscChunkEntry, uint>(samples);
+			BinaryPrimitives.ReverseEndianness(uints, uints);	
 		}
 	}
 
@@ -90,14 +103,9 @@ public class StscBox : FullBox
 		base.Dispose(disposing);
 	}
 
-	public class StscChunkEntry
+	[StructLayout(LayoutKind.Sequential)]
+	public readonly record struct StscChunkEntry
 	{
-		public StscChunkEntry(Stream file)
-		{
-			FirstChunk = file.ReadUInt32BE();
-			SamplesPerChunk = file.ReadUInt32BE();
-			SampleDescriptionIndex = file.ReadUInt32BE();
-		}
 		public StscChunkEntry(uint firstChunk, uint samplesPerChunk, uint sampleDesIndex)
 		{
 			FirstChunk = firstChunk;
