@@ -9,6 +9,7 @@ public interface IChunkOffsets : IBox
 	{
 		if (offsets.Count == 0)
 			return StcoBox.CreateBlank(stbl, offsets);
+		offsets.Sort();
 		long maxOffset = offsets.GetOffsetAtIndex(offsets.Count - 1);
 		return maxOffset > uint.MaxValue ? Co64Box.CreateBlank(stbl, offsets) : StcoBox.CreateBlank(stbl, offsets);
 	}
