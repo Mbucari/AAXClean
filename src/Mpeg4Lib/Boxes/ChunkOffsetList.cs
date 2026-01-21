@@ -225,6 +225,10 @@ public class ChunkOffsetList : ICollection<long>
 			BinaryPrimitives.ReverseEndianness(span, span);
 		}
 		file.Write(MemoryMarshal.AsBytes(span));
+		if (BitConverter.IsLittleEndian)
+		{
+			BinaryPrimitives.ReverseEndianness(span, span);
+		}
 	}
 
 	public void Write64(Stream file)
@@ -240,6 +244,10 @@ public class ChunkOffsetList : ICollection<long>
 			BinaryPrimitives.ReverseEndianness(span64, span64);
 		}
 		file.Write(MemoryMarshal.AsBytes(span64));
+		if (BitConverter.IsLittleEndian)
+		{
+			BinaryPrimitives.ReverseEndianness(span64, span64);
+		}
 	}
 
 	public int IndexOf(long item)

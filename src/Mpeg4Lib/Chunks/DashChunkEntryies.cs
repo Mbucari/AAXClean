@@ -96,7 +96,7 @@ public class DashChunkEntryies : IEnumerable<ChunkEntry>
 
 		if (moofBox.Traf.Senc is { } senc)
 		{
-			extraData = frameSizes.Length != senc.IVs.Length ? senc.IVs
+			extraData = frameSizes.Length == senc.IVs.Length ? senc.IVs
 				: throw new InvalidDataException($"The number of IVs ({senc.IVs.Length}) does not match the number of samples ({frameSizes.Length}) in fragment {moofBox.Mfhd.SequenceNumber}");
 		}
 

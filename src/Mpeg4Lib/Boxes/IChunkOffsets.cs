@@ -7,7 +7,9 @@ public interface IChunkOffsets : IBox
 
 	public static IChunkOffsets Create(StblBox stbl, ChunkOffsetList offsets)
 	{
-		var maxOffset = offsets.GetOffsetAtIndex(offsets.Count - 1);
+		if (offsets.Count == 0)
+			return StcoBox.CreateBlank(stbl, offsets);
+		long maxOffset = offsets.GetOffsetAtIndex(offsets.Count - 1);
 		return maxOffset > uint.MaxValue ? Co64Box.CreateBlank(stbl, offsets) : StcoBox.CreateBlank(stbl, offsets);
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -61,8 +62,18 @@ namespace AAXClean
 			_continuation = readerTask.ContinueWith(t =>
 			{
 				//Call the continuation delegate to cleanup disposables
-				_continuationAction?.Invoke(t);
-				if (t.IsFaulted)
+				try
+				{
+					_continuationAction?.Invoke(t);
+				}
+				catch (Exception ex)
+				{
+					if (t.Exception is null)
+						throw;
+
+					throw new AggregateException("Two or more errors occurred.", t.Exception.InnerExceptions.Append(ex));
+				}
+				if (t.IsFaulted && t.Exception is not null)
 					throw t.Exception;
 			},
 			TaskContinuationOptions.ExecuteSynchronously);
