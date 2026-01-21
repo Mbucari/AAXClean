@@ -27,11 +27,27 @@ namespace Mpeg4Lib.Boxes
 		{
 			foreach (var track in Tracks)
 			{
-				var coBox = track.Mdia.Minf.Stbl.COBox.ChunkOffsets;
-				for (int i = 0; i < coBox.Count; i++)
+				IChunkOffsets coBox = track.Mdia.Minf.Stbl.COBox;
+				ChunkOffsetList offsets = coBox.ChunkOffsets;
+				bool requires64Bit = false;
+				for (int i = 0; i < offsets.Count; i++)
 				{
-					var offset = coBox.GetOffsetAtIndex(i);
-					coBox.SetOffsetAtIndex(i, offset + shiftVector);
+					long offset = offsets.GetOffsetAtIndex(i);
+					long newOffset = offset + shiftVector;
+					offsets.SetOffsetAtIndex(i, newOffset);
+
+					requires64Bit |= newOffset > uint.MaxValue;
+					if (requires64Bit && coBox is StcoBox)
+					{
+						track.Mdia.Minf.Stbl.Children.Remove(coBox);
+						coBox = Co64Box.CreateBlank(track.Mdia.Minf.Stbl, offsets);
+					}
+				}
+
+				if (!requires64Bit && coBox is Co64Box)
+				{
+					track.Mdia.Minf.Stbl.Children.Remove(coBox);
+					coBox = StcoBox.CreateBlank(track.Mdia.Minf.Stbl, offsets);
 				}
 			}
 		}
