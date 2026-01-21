@@ -43,7 +43,7 @@ namespace AAXClean
 	{
 		public ChapterInfo? Chapters { get; set; }
 		public AppleTags AppleTags { get; }
-		public Stream InputStream => inputStream;
+		public Stream InputStream { get; }
 		public FileType FileType { get; }
 		public virtual TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.AudioTrack.Mdia.Mdhd.Duration / TimeScale);
 		public int MaxBitrate => (int)(AudioSampleEntry.Esds?.ES_Descriptor.DecoderConfig.MaxBitrate ?? 0);
@@ -84,15 +84,14 @@ namespace AAXClean
 		public MoovBox Moov { get; }
 		public MdatBox Mdat { get; }
 
-		private readonly TrackedReadStream inputStream;
 		public List<IBox> TopLevelBoxes { get; }
 		public AudioSampleEntry AudioSampleEntry { get; }
 
 		public Mp4File(Stream file, long fileSize)
 		{
-			inputStream = new TrackedReadStream(file, fileSize);
+			InputStream = file.CanSeek ? file : new TrackedReadStream(file, fileSize);
 
-			TopLevelBoxes = Mpeg4Util.LoadTopLevelBoxes(inputStream);
+			TopLevelBoxes = Mpeg4Util.LoadTopLevelBoxes(InputStream);
 			Ftyp = TopLevelBoxes.OfType<FtypBox>().Single();
 			Moov = TopLevelBoxes.OfType<MoovBox>().Single();
 			Mdat = TopLevelBoxes.OfType<MdatBox>().Single();
@@ -171,14 +170,10 @@ namespace AAXClean
 
 		public static Mp4Operation RelocateMoovAsync(string mp4FilePath)
 		{
-			Mp4Operation? moovMover = null;
-			moovMover = new Mp4Operation(t => Mpeg4Util.RelocateMoovToBeginningAsync(mp4FilePath, t.Token, progressAction), null, t => { });
+			ProgressTracker tracker = new();
+			Mp4Operation? moovMover = new(t => Mpeg4Util.RelocateMoovToBeginningAsync(mp4FilePath, t.Token, tracker), null, t => { });
+			tracker.ProgressUpdated += (_, _) => moovMover.OnProgressUpdate(new ConversionProgressEventArgs(TimeSpan.Zero, tracker.TotalDuration, tracker.Position, tracker.Speed));
 			return moovMover;
-
-			void progressAction(TimeSpan totalDuration, TimeSpan processPosition, double processSpeed)
-			{
-				moovMover?.OnProgressUpdate(new ConversionProgressEventArgs(TimeSpan.Zero, totalDuration, processPosition, processSpeed));
-			}
 		}
 
 		public Mp4Operation ConvertToMp4aAsync(Stream outputStream, ChapterInfo? userChapters = null)
@@ -355,7 +350,7 @@ namespace AAXClean
 		{
 			if (disposing && !Disposed)
 			{
-				inputStream.Dispose();
+				InputStream.Dispose();
 				foreach (var box in TopLevelBoxes)
 					box.Dispose();
 			}

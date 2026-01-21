@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,6 +11,28 @@ namespace Mpeg4Lib.Util
 {
 	public static class Mpeg4Util
 	{
+		public static async Task<byte[]> HashBoxAsync(this IBox mpeg, Stream inputStream, CancellationToken cancellationToken = default)
+		{
+			using var sha1 = SHA1.Create();
+			return await mpeg.HashBoxAsync(inputStream, sha1, cancellationToken);
+		}
+
+		public static async Task<byte[]> HashBoxAsync(this IBox mpeg, Stream inputStream, HashAlgorithm hashAlgorithm, CancellationToken cancellationToken = default)
+		{
+			await inputStream.SeekToOffsetAsync(mpeg.Header.FilePosition, cancellationToken);
+
+			long readEndPosition = mpeg.Header.FilePosition + mpeg.Header.TotalBoxSize;
+			byte[] buffer = new byte[512 * 1024];
+			int read;
+			do
+			{
+				int toRead = (int)Math.Min(buffer.Length, readEndPosition - inputStream.Position);
+				read = await inputStream.ReadAsync(buffer, 0, toRead, cancellationToken);
+				hashAlgorithm.TransformBlock(buffer, 0, read, null, 0);
+			} while (read == buffer.Length);
+			return hashAlgorithm.TransformFinalBlock(buffer, 0, read);
+		}
+
 		public static List<IBox> LoadTopLevelBoxes(Stream file)
 		{
 			List<IBox> boxes = new();
@@ -33,8 +56,9 @@ namespace Mpeg4Lib.Util
 			return boxes;
 		}
 
-		public static async Task RelocateMoovToBeginningAsync(string mp4FilePath, CancellationToken cancellationToken, Action<TimeSpan, TimeSpan, double> progress)
+		public static async Task RelocateMoovToBeginningAsync(string mp4FilePath, CancellationToken cancellationToken, ProgressTracker progressTracker)
 		{
+			const int MoveBufferSize = 8 * 1024 * 1024;
 			List<IBox> boxes;
 
 			using (FileStream fileStream = File.OpenRead(mp4FilePath))
@@ -42,67 +66,76 @@ namespace Mpeg4Lib.Util
 
 			try
 			{
-				long ftypeSize = boxes.OfType<FtypBox>().Single().RenderSize;
-				var Moov = boxes.OfType<MoovBox>().Single();
+				long mdatSize, moovSize = 0, ftypeSize = boxes.OfType<FtypBox>().Single().RenderSize;
+				MoovBox moov = boxes.OfType<MoovBox>().Single();
 
-				if (Moov.Header.FilePosition == ftypeSize) return;
-
-				long moovSize = Moov.RenderSize;
-				double duration = (double)Moov.AudioTrack.Mdia.Mdhd.Duration / Moov.AudioTrack.Mdia.Mdhd.Timescale;
-				long mdatSize = boxes.OfType<MdatBox>().Single().Header.TotalBoxSize;
-				TimeSpan totalDuration = TimeSpan.FromSeconds(duration);
-
-				double secondsPerMb = duration / mdatSize;
-				long movedMB = -moovSize;
-
-				Moov.ShiftChunkOffsets(moovSize);
-
-				byte[] buffer1 = new byte[moovSize];
-
-				using (var ms = new MemoryStream(buffer1))
-					Moov.Save(ms);
-
-				byte[] buffer2 = new byte[moovSize];
-
-				using var fileStream = new FileStream(mp4FilePath, FileMode.Open, FileAccess.ReadWrite)
+				progressTracker.TotalDuration = TimeSpan.FromSeconds(moov.Mvhd.Duration / (double)moov.Mvhd.Timescale);
+				if (moov.Header.FilePosition == ftypeSize)
 				{
-					Position = ftypeSize,
-				};
+					progressTracker.MovedBytes = progressTracker.TotalSize = 1;
+					return;
+				}
+
+				progressTracker.TotalSize = mdatSize = boxes.OfType<MdatBox>().Single().Header.TotalBoxSize;
+				do
+				{
+					//The moov size may change as we shift chunk offsets, so we have to loop until it stabilizes.
+					long toShift = moov.RenderSize - moovSize;
+					moovSize = moov.RenderSize;
+					moov.ShiftChunkOffsets(toShift);
+				}
+				while (moov.RenderSize != moovSize);
+
+				using FileStream mpegFile = new(mp4FilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite) { Position = ftypeSize + mdatSize };
 
 				int read;
-				DateTime startTime = DateTime.UtcNow;
-				DateTime nextUpdate = startTime;
+				Memory<byte> buffer = new byte[MoveBufferSize];
 
 				do
 				{
-					if (cancellationToken.IsCancellationRequested) return;
+					int toRead = (int)Math.Min(MoveBufferSize, mpegFile.Position - ftypeSize);
 
-					read = await fileStream.ReadAsync(buffer2, cancellationToken);
-					fileStream.Position -= read;
-					await fileStream.WriteAsync(buffer1, 0, read, cancellationToken);
+					mpegFile.Position -= toRead;
+					read = await mpegFile.ReadAsync(buffer[..toRead], cancellationToken);
+					mpegFile.Position -= read - moovSize;
+					await mpegFile.WriteAsync(buffer[..read], cancellationToken);
+					mpegFile.Position -= read + moovSize;
 
-					movedMB += read;
-					if (DateTime.UtcNow > nextUpdate)
-					{
-						var position = TimeSpan.FromSeconds(secondsPerMb * movedMB);
-						double speed = position / (DateTime.UtcNow - startTime);
-
-						progress(totalDuration, position, speed);
-
-						nextUpdate = DateTime.UtcNow.AddMilliseconds(200);
-					}
-
-					(buffer1, buffer2) = (buffer2, buffer1);
+					progressTracker.MovedBytes += read;
+					cancellationToken.ThrowIfCancellationRequested();
 				}
-				while (read == moovSize);
+				while (read == MoveBufferSize);
 
-				var finalPosition = TimeSpan.FromSeconds(secondsPerMb * movedMB);
-				progress(totalDuration, finalPosition, finalPosition / (DateTime.UtcNow - startTime));
+				moov.Save(mpegFile);
+				progressTracker.ReportProgress(forceReport: true);
 			}
 			finally
 			{
 				foreach (IBox box in boxes)
 					box.Dispose();
+			}
+		}
+	}
+
+	public class ProgressTracker
+	{
+		public event EventHandler? ProgressUpdated;
+		private readonly DateTime StartTime = DateTime.UtcNow;
+		private DateTime NextUpdate = default;
+		private long movedBytes;
+		public long MovedBytes { get => movedBytes; set { movedBytes = value; ReportProgress(); } }
+		public TimeSpan TotalDuration { get; set; }
+		public long TotalSize { get; set; }
+		public double Speed { get; private set; }
+		public TimeSpan Position { get; private set; }
+		public void ReportProgress(bool forceReport = false)
+		{
+			if (DateTime.UtcNow > NextUpdate || forceReport)
+			{
+				Position = TimeSpan.FromSeconds(TotalDuration.TotalSeconds / TotalSize * MovedBytes);
+				Speed = Position / (DateTime.UtcNow - StartTime);
+				ProgressUpdated?.Invoke(this, EventArgs.Empty);
+				NextUpdate = DateTime.UtcNow.AddMilliseconds(200);
 			}
 		}
 	}

@@ -91,7 +91,7 @@ namespace AAXClean
 			ConversionProgressUpdate?.Invoke(this, args);
 		}
 
-		public static Mp4Operation FromCompleted(Mp4File mp4File)
+		public static Mp4Operation FromCompleted(Mp4File? mp4File)
 			=> new Mp4Operation(c => Task.CompletedTask, mp4File, _ => { });
 	}
 }
