@@ -12,17 +12,17 @@ namespace Mpeg4Lib.Util
 {
 	public static class StreamExtensions
 	{
-		public static void WriteHeader(this Stream stream, BoxHeader header, long renderSize)
+		public static void WriteHeader(this Stream stream, BoxHeader header)
 		{
-			if (header.Version == 1 || renderSize > uint.MaxValue)
+			if (header.Version == 1 || header.TotalBoxSize > uint.MaxValue)
 			{
 				stream.WriteUInt32BE(1);
 				stream.WriteType(header.Type);
-				stream.WriteInt64BE(renderSize);
+				stream.WriteInt64BE(header.TotalBoxSize);
 			}
 			else
 			{
-				stream.WriteUInt32BE((uint)renderSize);
+				stream.WriteUInt32BE((uint)header.TotalBoxSize);
 				stream.WriteType(header.Type);
 			}
 		}
