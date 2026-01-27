@@ -34,17 +34,16 @@ namespace Mpeg4Lib.Boxes
 				{
 					long offset = offsets.GetOffsetAtIndex(i);
 					long newOffset = offset + shiftVector;
-					offsets.SetOffsetAtIndex(i, newOffset);
-
 					requires64Bit |= newOffset > uint.MaxValue;
+					offsets.SetOffsetAtIndex(i, newOffset);
+				}
+
 					if (requires64Bit && coBox is StcoBox)
 					{
 						track.Mdia.Minf.Stbl.Children.Remove(coBox);
 						coBox = Co64Box.CreateBlank(track.Mdia.Minf.Stbl, offsets);
 					}
-				}
-
-				if (!requires64Bit && coBox is Co64Box)
+				else if (!requires64Bit && coBox is Co64Box)
 				{
 					track.Mdia.Minf.Stbl.Children.Remove(coBox);
 					coBox = StcoBox.CreateBlank(track.Mdia.Minf.Stbl, offsets);
