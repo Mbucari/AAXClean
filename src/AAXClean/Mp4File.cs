@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AAXClean
@@ -119,61 +120,143 @@ namespace AAXClean
 		public virtual FrameTransformBase<FrameEntry, FrameEntry> GetAudioFrameFilter()
 			=> new AacValidateFilter();
 
-		/// <summary>
-		/// Save all metadata changes to the input stream. Stream must be readable, writable, and seekable.
-		/// </summary>
-		public async Task SaveAsync()
-		{
-			if (!InputStream.CanRead || !InputStream.CanWrite || !InputStream.CanSeek)
-				throw new InvalidOperationException($"{nameof(InputStream)} must be readable, writable and seekable to save");
-
-			InputStream.Position = Moov.Header.FilePosition;
-
-			//Remove Free boxes and work with net size change
-			foreach (var box in Moov.GetFreeBoxes())
-				box.Parent?.Children.Remove(box);
-
-			var sizeChange = Moov.RenderSize - Moov.Header.TotalBoxSize;
-
-			if (sizeChange == 0)
-			{
-				Moov.Save(InputStream);
-			}
-			else if (Moov.Header.FilePosition > Mdat.Header.FilePosition)
-			{
-				//Moov is at the end, so just write it
-				Moov.Save(InputStream);
-				InputStream.SetLength(InputStream.Position);
-			}
-			else if (FreeBox.MinSize + sizeChange <= 0)
-			{
-				//Moov is at the beginning and srank more than the minimum Free box size
-				//We can accomodate the change with a Free box
-				FreeBox.Create((int)-sizeChange, Moov);
-				Moov.Save(InputStream);
-			}
-			else
-			{
-				//Moov is at the beginning and it either grew or it shrank less than FreeBox.MinSize
-				//Shift Mdat by sizeChange to fit the new Moov exactly.
-
-				await Mdat.ShiftMdatAsync(InputStream, sizeChange);
-				InputStream.SetLength(InputStream.Position);
-
-				InputStream.Position = Moov.Header.FilePosition;
-				Moov.ShiftChunkOffsets(sizeChange);
-				Moov.Save(InputStream);
-			}
-
-			InputStream.Close();
-		}
-
 		public static Mp4Operation RelocateMoovAsync(string mp4FilePath)
 		{
 			ProgressTracker tracker = new();
 			Mp4Operation? moovMover = new(t => Mpeg4Util.RelocateMoovToBeginningAsync(mp4FilePath, t.Token, tracker), null, t => { });
 			tracker.ProgressUpdated += (_, _) => moovMover.OnProgressUpdate(new ConversionProgressEventArgs(TimeSpan.Zero, tracker.TotalDuration, tracker.Position, tracker.Speed));
 			return moovMover;
+		}
+
+		/// <summary>
+		/// Save all metadata changes to the input stream. Stream must be readable, writable, and seekable.
+		/// </summary>
+		/// <param name="keepMoovInFront">Controls where the <see cref="MoovBox"/> is saved when the  <see cref="MoovBox"/> is in the beginning of the file but there is not enough space to save it in the same position.
+		/// <para/>if <see cref="true"/>, the <see cref="MdatBox"/> is shifted to make room for the <see cref="MoovBox"/>.
+		/// <para/>if <see cref="false"/>, the original <see cref="MoovBox"/> is replaced with a <see cref="FreeBox"/> and the new <see cref="MoovBox"/> is written at the end of the file.
+		/// </param>
+		/// 
+		public Mp4Operation SaveAsync(bool keepMoovInFront = true)
+		{
+			ProgressTracker tracker = new() { TotalDuration = Duration };
+			Mp4Operation operation = new(t => SaveAsyncInternal(keepMoovInFront, tracker, t.Token), this, t => { });
+			tracker.ProgressUpdated += (_, _) => operation.OnProgressUpdate(new ConversionProgressEventArgs(TimeSpan.Zero, tracker.TotalDuration, tracker.Position, tracker.Speed));
+			return operation;
+		}
+
+		private async Task SaveAsyncInternal(bool keepMoovInFront, ProgressTracker? progressTracker, CancellationToken cancellationToken)
+		{
+			if (!InputStream.CanRead || !InputStream.CanWrite || !InputStream.CanSeek)
+				throw new InvalidOperationException($"{nameof(InputStream)} must be readable, writable and seekable to save");
+
+			//Remove Free boxes and work with net size change
+			foreach (var box in Moov.GetFreeBoxes())
+				box.Parent?.Children.Remove(box);
+
+			InputStream.Position = 0;
+			bool moovInFront = Moov.Header.FilePosition < Mdat.Header.FilePosition;
+			if (moovInFront)
+			{
+				var totalSizeChange = Ftyp.RenderSize + Moov.RenderSize - Mdat.Header.FilePosition;
+				if (totalSizeChange == 0)
+				{
+					Ftyp.Save(InputStream);
+					Moov.Save(InputStream);
+				}
+				else if (FreeBox.MinSize + totalSizeChange <= 0)
+				{
+					//Ftyp + Moov shrank more than FreeBox.MinSize
+					//We can accomodate the change with a Free box
+					Ftyp.Save(InputStream);
+					Moov.Save(InputStream);
+					FreeBox.Create(-totalSizeChange, null).Save(InputStream);
+				}
+				else
+				{
+					//Ftyp + Moov either grew, or they shrank less than FreeBox.MinSize
+					if (keepMoovInFront)
+					{
+						//Shift Mdat by totalSizeChange to fit the new Moov exactly.
+						totalSizeChange = Moov.ShiftChunkOffsetsWithMoovInFront(totalSizeChange);
+						await Mdat.ShiftMdatAsync(InputStream, totalSizeChange, progressTracker, cancellationToken);
+						InputStream.Position = 0;
+						Ftyp.Save(InputStream);
+						Moov.Save(InputStream);
+						InputStream.SetLength(Mdat.Header.FilePosition + Mdat.Header.TotalBoxSize);
+					}
+					else
+					{
+						//Replace the moov with a free box and write the moov at the end
+						var freeBoxSize = Mdat.Header.FilePosition - Ftyp.RenderSize;
+						if (freeBoxSize < 8)
+						{
+							//The only way this can happen is if the ftyp grew so much that it now exceeds the
+							//original ftyp + moov box sizes, which should never happen since ftyp is supposed
+							//to be on the order of a few dozen kilobytes in size.
+							throw new InvalidOperationException("Not enough space to write ftyp box before mdat box");
+						}
+
+						Ftyp.Save(InputStream);
+						FreeBox.Create(freeBoxSize, null).Save(InputStream);
+						InputStream.Position = Mdat.Header.FilePosition + Mdat.Header.TotalBoxSize;
+						Moov.Save(InputStream);
+					}
+				}
+			}
+			else
+			{
+				//Moov is at the end of the file
+				bool rewriteMoovAtEnd = true;
+				long ftypSizeChange = Ftyp.RenderSize - Ftyp.Header.TotalBoxSize;
+				if (ftypSizeChange == 0)
+				{
+					Ftyp.Save(InputStream);
+				}
+				else if (FreeBox.MinSize + ftypSizeChange <= 0)
+				{
+					//Ftyp shrank more than FreeBox.MinSize
+					//We can accomodate the change with a Free box
+					Ftyp.Save(InputStream);
+					FreeBox.Create(-ftypSizeChange, null).Save(InputStream);
+				}
+				else
+				{
+					//Ftyp either grew or it shrank less than FreeBox.MinSize. We have to shift the mdat.
+					if (keepMoovInFront)
+					{
+						//The Moov is at the end, but since we're shifting the entire mdat anway,
+						//we might as well rewrite the moov at the beginning place
+						long shiftVector = ftypSizeChange + Moov.RenderSize;
+						shiftVector = Moov.ShiftChunkOffsetsWithMoovInFront(shiftVector);
+						await Mdat.ShiftMdatAsync(InputStream, shiftVector, progressTracker, cancellationToken);
+						InputStream.Position = 0;
+						Ftyp.Save(InputStream);
+						Moov.Save(InputStream);
+						InputStream.SetLength(Mdat.Header.FilePosition + Mdat.Header.TotalBoxSize);
+						rewriteMoovAtEnd = false;
+					}
+					else
+					{
+						//Shift mdat to accomodate ftyp size change
+						//Since Moov is being re-written at the end, we don't need to worry about the stco/co64 
+						//conversion changing the size of the moov box. Moov gets rewritten at the end anyway.
+						Moov.ShiftChunkOffsets(ftypSizeChange);
+						await Mdat.ShiftMdatAsync(InputStream, ftypSizeChange, progressTracker, cancellationToken);
+						InputStream.Position = 0;
+						Ftyp.Save(InputStream);
+					}
+				}
+
+				if (rewriteMoovAtEnd)
+				{
+					//Go to the end of the mdat and re-write the moov.
+					InputStream.Position = Mdat.Header.FilePosition + Mdat.Header.TotalBoxSize;
+					Moov.Save(InputStream);
+					InputStream.SetLength(InputStream.Position);
+				}
+			}
+
+			await InputStream.FlushAsync(cancellationToken);
 		}
 
 		public Mp4Operation ConvertToMp4aAsync(Stream outputStream, ChapterInfo? userChapters = null)

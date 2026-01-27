@@ -38,17 +38,38 @@ namespace Mpeg4Lib.Boxes
 					offsets.SetOffsetAtIndex(i, newOffset);
 				}
 
-					if (requires64Bit && coBox is StcoBox)
-					{
-						track.Mdia.Minf.Stbl.Children.Remove(coBox);
-						coBox = Co64Box.CreateBlank(track.Mdia.Minf.Stbl, offsets);
-					}
+				if (requires64Bit && coBox is StcoBox)
+				{
+					track.Mdia.Minf.Stbl.Children.Remove(coBox);
+					coBox = Co64Box.CreateBlank(track.Mdia.Minf.Stbl, offsets);
+				}
 				else if (!requires64Bit && coBox is Co64Box)
 				{
 					track.Mdia.Minf.Stbl.Children.Remove(coBox);
 					coBox = StcoBox.CreateBlank(track.Mdia.Minf.Stbl, offsets);
 				}
 			}
+		}
+
+		/// <summary>
+		/// Adjust the chunk offsets in all tracks, assuming that the Moov is going to be written in front of the Mdat and that if the Moov changes size due to an stco/co64 change, the Mdat will be shifted accordingly.
+		/// </summary>
+		/// <param name="shiftVector">The size and direction of the shift</param>
+		/// <returns>The actual offset shift vector</returns>
+		public long ShiftChunkOffsetsWithMoovInFront(long shiftVector)
+		{
+			//Shift Mdat by totalSizeChange to fit the new Moov exactly.
+			long shifted = 0;
+			do
+			{
+				//The moov size may change as we shift chunk offsets, so we have to loop until it stabilizes.
+				var moovSize = RenderSize;
+				ShiftChunkOffsets(shiftVector);
+				shifted += shiftVector;
+				shiftVector = RenderSize - moovSize;
+			}
+			while (shiftVector != 0);
+			return shifted;
 		}
 
 		public AppleListBox CreateEmptyMetadata()
