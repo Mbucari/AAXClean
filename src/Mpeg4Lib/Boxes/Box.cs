@@ -9,7 +9,7 @@ namespace Mpeg4Lib.Boxes
 	public abstract class Box : IBox
 	{
 		public IBox? Parent { get; }
-		public BoxHeader Header { get; private set; }
+		public BoxHeader Header { get; }
 		public List<IBox> Children { get; } = new List<IBox>();
 		public virtual long RenderSize => 8 + Children.Sum(b => b.RenderSize);
 
@@ -69,7 +69,7 @@ namespace Mpeg4Lib.Boxes
 
 		public void Save(Stream file)
 		{
-			Header = new BoxHeader(RenderSize, Header.Type) { FilePosition = file.Position };
+			Header.FilePosition = file.Position;
 			file.WriteHeader(Header);
 
 			Render(file);
