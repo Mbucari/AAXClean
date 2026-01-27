@@ -86,7 +86,8 @@ public class ChunkOffsetList : ICollection<long>
 				//into the 64-bit offset list.
 				int toMove = chunkOffsets32.Count - index;
 				long[] longs = new long[toMove];
-				for (int i = 0; i < toMove; i++)
+				longs[0] = value;
+				for (int i = 1; i < toMove; i++)
 				{
 					longs[i] = chunkOffsets32[index + i];
 				}
