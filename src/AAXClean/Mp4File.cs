@@ -89,7 +89,7 @@ namespace AAXClean
 
 		public Mp4File(Stream file, long fileSize)
 		{
-			InputStream = file.CanSeek ? file : new TrackedReadStream(file, fileSize);
+			InputStream = file.CanSeek ? file : new Mpeg4Lib.TrackedReadStream(file, fileSize);
 
 			TopLevelBoxes = Mpeg4Util.LoadTopLevelBoxes(InputStream);
 			Ftyp = TopLevelBoxes.OfType<FtypBox>().Single();

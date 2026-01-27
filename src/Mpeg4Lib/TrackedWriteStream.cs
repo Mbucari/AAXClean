@@ -1,61 +1,59 @@
 ﻿using System;
 using System.IO;
 
-namespace AAXClean
+namespace Mpeg4Lib
 {
 	/// <summary>
-	/// A read-only stream that tracks the stream position based on the number of bytes read. 
+	/// A write-only stream that tracks the stream position based on the number of bytes written. 
 	/// </summary>
-	internal class TrackedReadStream : Stream
+	public class TrackedWriteStream : Stream
 	{
-		private long ReadPosition = 0;
 		private readonly Stream BaseStream;
-		private readonly long BaseStreamLength;
+		private long WritePosition;
 
-		public TrackedReadStream(Stream baseStream, long streamLength)
+		public TrackedWriteStream(Stream baseStream, long initialPosition = 0)
 		{
 			BaseStream = baseStream;
-			BaseStreamLength = streamLength;
+			WritePosition = initialPosition;
 		}
 
-		public override bool CanRead => BaseStream.CanRead;
+		public override bool CanRead => false;
 		public override bool CanSeek => BaseStream.CanSeek;
-		public override long Length => BaseStreamLength;
+		public override long Length => WritePosition;
 		public override bool CanWrite => BaseStream.CanWrite;
 		public override long Position
 		{
-			get => CanSeek ? BaseStream.Position : ReadPosition;
+			get => CanSeek ? BaseStream.Position : WritePosition;
 			set
 			{
 				if (!CanSeek)
 					throw new NotSupportedException();
-				BaseStream.Position = ReadPosition = value;
+				BaseStream.Position = value;
 			}
 		}
 
 		public override void Flush()
-			=> throw new NotSupportedException();
+			=> BaseStream.Flush();
 
 		public override int Read(byte[] buffer, int offset, int count)
-		{
-			BaseStream.ReadExactly(buffer, offset, count);
-			ReadPosition += count;
-			return count;
-		}
+			=> throw new NotSupportedException();
 
 		public override long Seek(long offset, SeekOrigin origin)
 		{
 			if (!CanSeek)
 				throw new NotSupportedException();
 
-			return ReadPosition = BaseStream.Seek(offset, origin);
+			return BaseStream.Seek(offset, origin);
 		}
 
 		public override void SetLength(long value)
-			=> BaseStream.SetLength(value);
+			=> throw new NotSupportedException();
 
 		public override void Write(byte[] buffer, int offset, int count)
-			=> BaseStream.Write(buffer, offset, count);
+		{
+			BaseStream.Write(buffer, offset, count);
+			WritePosition += count;
+		}
 
 		protected override void Dispose(bool disposing)
 		{
