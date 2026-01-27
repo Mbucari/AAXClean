@@ -44,7 +44,7 @@ namespace AAXClean
 		public Task CancelAsync()
 		{
 			_cancellationSource.Cancel();
-			return Continuation is null ? Task.CompletedTask : Continuation;
+			return Continuation is null ? Task.FromCanceled(_cancellationSource.Token) : Continuation;
 		}
 
 		/// <summary>Start the Mp4 operation</summary>
@@ -79,10 +79,10 @@ namespace AAXClean
 			TaskContinuationOptions.ExecuteSynchronously);
 		}
 
-		public TaskAwaiter GetAwaiter()
+		public ConfiguredTaskAwaitable.ConfiguredTaskAwaiter GetAwaiter()
 		{
 			Start();
-			return Continuation.GetAwaiter();
+			return Continuation.ConfigureAwait(false).GetAwaiter();
 		}
 
 		internal void OnProgressUpdate(ConversionProgressEventArgs args)
