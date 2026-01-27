@@ -11,17 +11,35 @@ namespace Mpeg4Lib.Util
 {
 	public static class Mpeg4Util
 	{
-		public static async Task<byte[]> HashBoxAsync(this IBox mpeg, Stream inputStream, CancellationToken cancellationToken = default)
+		public static async Task<byte[]> HashBoxAsync(this IBox mpeg, CancellationToken cancellationToken = default)
 		{
 			using var sha1 = SHA1.Create();
-			return await mpeg.HashBoxAsync(inputStream, sha1, cancellationToken);
+			return await mpeg.HashBoxAsync(sha1, cancellationToken);
 		}
 
-		public static async Task<byte[]> HashBoxAsync(this IBox mpeg, Stream inputStream, HashAlgorithm hashAlgorithm, CancellationToken cancellationToken = default)
+		public static async Task<byte[]> HashBoxAsync(this IBox mpeg, HashAlgorithm hashAlgorithm, CancellationToken cancellationToken = default)
 		{
-			await inputStream.SeekToOffsetAsync(mpeg.Header.FilePosition, cancellationToken);
+			using MemoryStream outputStream = new MemoryStream();
+			using (CryptoStream cryptoStream = new CryptoStream(outputStream, hashAlgorithm, CryptoStreamMode.Write))
+			{
+				var trackedWrite = new TrackedWriteStream(cryptoStream, mpeg.Header.FilePosition);
+				// Copy the input stream to the CryptoStream. The data is hashed as it is written.
+				mpeg.Save(trackedWrite);
+			}
+			return hashAlgorithm.Hash!;
+		}
 
-			long readEndPosition = mpeg.Header.FilePosition + mpeg.Header.TotalBoxSize;
+		public static async Task<byte[]> HashBoxAsync(this MdatBox mdat, Stream inputStream, CancellationToken cancellationToken = default)
+		{
+			using var sha1 = SHA1.Create();
+			return await mdat.HashBoxAsync(inputStream, sha1, cancellationToken);
+		}
+
+		public static async Task<byte[]> HashBoxAsync(this MdatBox mdat, Stream inputStream, HashAlgorithm hashAlgorithm, CancellationToken cancellationToken = default)
+		{
+			await inputStream.SeekToOffsetAsync(mdat.Header.FilePosition, cancellationToken);
+
+			long readEndPosition = mdat.Header.FilePosition + mdat.Header.TotalBoxSize;
 			byte[] buffer = new byte[512 * 1024];
 			int read;
 			do
@@ -30,7 +48,8 @@ namespace Mpeg4Lib.Util
 				read = await inputStream.ReadAsync(buffer, 0, toRead, cancellationToken);
 				hashAlgorithm.TransformBlock(buffer, 0, read, null, 0);
 			} while (read == buffer.Length);
-			return hashAlgorithm.TransformFinalBlock(buffer, 0, read);
+			_ = hashAlgorithm.TransformFinalBlock(buffer, 0, read);
+			return  hashAlgorithm.Hash!;
 		}
 
 		public static List<IBox> LoadTopLevelBoxes(Stream file)
@@ -58,7 +77,6 @@ namespace Mpeg4Lib.Util
 
 		public static async Task RelocateMoovToBeginningAsync(string mp4FilePath, CancellationToken cancellationToken, ProgressTracker progressTracker)
 		{
-			const int MoveBufferSize = 8 * 1024 * 1024;
 			List<IBox> boxes;
 
 			using (FileStream fileStream = File.OpenRead(mp4FilePath))
@@ -66,54 +84,76 @@ namespace Mpeg4Lib.Util
 
 			try
 			{
-				long mdatSize, moovSize = 0, ftypeSize = boxes.OfType<FtypBox>().Single().RenderSize;
+				long ftypeSize = boxes.OfType<FtypBox>().Single().RenderSize;
 				MoovBox moov = boxes.OfType<MoovBox>().Single();
 
 				progressTracker.TotalDuration = TimeSpan.FromSeconds(moov.Mvhd.Duration / (double)moov.Mvhd.Timescale);
 				if (moov.Header.FilePosition == ftypeSize)
 				{
+					//Moov is already at the beginning, immidately following ftyp.
 					progressTracker.MovedBytes = progressTracker.TotalSize = 1;
 					return;
 				}
 
-				progressTracker.TotalSize = mdatSize = boxes.OfType<MdatBox>().Single().Header.TotalBoxSize;
-				do
-				{
-					//The moov size may change as we shift chunk offsets, so we have to loop until it stabilizes.
-					long toShift = moov.RenderSize - moovSize;
-					moovSize = moov.RenderSize;
-					moov.ShiftChunkOffsets(toShift);
-				}
-				while (moov.RenderSize != moovSize);
+				var mdat = boxes.OfType<MdatBox>().Single();
 
-				using FileStream mpegFile = new(mp4FilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite) { Position = ftypeSize + mdatSize };
+				//Figure out how much mdat must be shifted to make room for moov at the beginning.
+				long toShift = ftypeSize + moov.RenderSize - mdat.Header.FilePosition;
+				long shifted = moov.ShiftChunkOffsetsWithMoovInFront(toShift);
 
-				int read;
-				Memory<byte> buffer = new byte[MoveBufferSize];
-
-				do
-				{
-					int toRead = (int)Math.Min(MoveBufferSize, mpegFile.Position - ftypeSize);
-
-					mpegFile.Position -= toRead;
-					read = await mpegFile.ReadAsync(buffer[..toRead], cancellationToken);
-					mpegFile.Position -= read - moovSize;
-					await mpegFile.WriteAsync(buffer[..read], cancellationToken);
-					mpegFile.Position -= read + moovSize;
-
-					progressTracker.MovedBytes += read;
-					cancellationToken.ThrowIfCancellationRequested();
-				}
-				while (read == MoveBufferSize);
-
+				using FileStream mpegFile = new(mp4FilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+				await mdat.ShiftMdatAsync(mpegFile, shifted, progressTracker, cancellationToken);
+				mpegFile.Position = ftypeSize;
 				moov.Save(mpegFile);
-				progressTracker.ReportProgress(forceReport: true);
+				mpegFile.SetLength(mpegFile.Position + mdat.Header.TotalBoxSize);
 			}
 			finally
 			{
 				foreach (IBox box in boxes)
 					box.Dispose();
 			}
+		}
+
+		public static async Task ShiftDataBlock(Stream file, long start, long length, long shiftVector, ProgressTracker? progressTracker = null, CancellationToken cancellationToken = default)
+		{
+			const int MoveBufferSize = 8 * 1024 * 1024;
+			if (start + shiftVector < 0)
+				throw new ArgumentOutOfRangeException(nameof(shiftVector), "Data cannot be shifted to a negative file position.");
+			if (!file.CanRead || !file.CanWrite || !file.CanSeek)
+				throw new ArgumentException("Stream must support reading, writing, and seeking.", nameof(file));
+			if (start > file.Length)
+				throw new ArgumentOutOfRangeException(nameof(start), "Start index exceeds the file length.");
+			if (start + length > file.Length)
+				throw new ArgumentOutOfRangeException(nameof(length), "End of data block is beyond the end of the file.");
+
+			bool backToFront = shiftVector > 0;
+			file.Position = backToFront ? start + length : start;
+			if (progressTracker is not null)
+			{
+				progressTracker.TotalSize = length;
+				progressTracker.MovedBytes = 0;
+			}
+			Memory<byte> buffer = new byte[MoveBufferSize];
+			int read;
+			do
+			{
+				int toRead = (int)Math.Min(MoveBufferSize, length);
+				if (backToFront)
+					file.Position -= toRead;
+
+				read = await file.ReadAsync(buffer[..toRead], cancellationToken);
+				file.Position += shiftVector - read;
+				await file.WriteAsync(buffer[..read], cancellationToken);
+				file.Position -= backToFront ? shiftVector + read : shiftVector;
+
+
+				if (progressTracker is not null)
+					progressTracker.MovedBytes += read;
+				cancellationToken.ThrowIfCancellationRequested();
+				length -= read;
+			}
+			while (length > 0);
+			progressTracker?.ReportProgress(forceReport: true);
 		}
 	}
 
