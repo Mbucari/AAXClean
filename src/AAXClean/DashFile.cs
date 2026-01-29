@@ -49,7 +49,7 @@ public class DashFile : Mp4File
 		{
 			if (sinf.SchemeType?.Type != SchmBox.SchemeType.Cenc)
 				throw new NotSupportedException($"Only {nameof(SchmBox.SchemeType.Cenc)} dash files are currently supported.");
-			Tenc = sinf?.SchemeInformation?.TrackEncryption;
+			Tenc = sinf.SchemeInformation?.TrackEncryption;
 			audioSampleEntry.Children.Remove(sinf);
 			audioSampleEntry.Header.ChangeAtomName(sinf.OriginalFormat.DataFormat);
 		}

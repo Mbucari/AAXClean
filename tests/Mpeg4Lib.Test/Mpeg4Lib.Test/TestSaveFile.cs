@@ -1,21 +1,29 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Mpeg4Lib.Util;
-using System;
-using System.IO;
-using System.Threading.Tasks;
+﻿using Mpeg4Lib.Util;
 
-namespace AAXClean.Test;
+namespace Mpeg4Lib.Test;
 
 [TestClass]
 public class TestSaveFile
 {
-	private Mp4File OpenFile(string filename)
+	private Mpeg4File OpenFile(string filename)
 	{
-		var filePath = TestFiles.GetTestFilePath(filename);
+		var baseDir = Path.GetDirectoryName(Environment.ProcessPath)
+			?? throw new InvalidOperationException("Cannot determine base directory for test files.");
+
+		var testFile = Path.Combine("TestFiles", filename);
+		string fullPath;
+		do
+		{
+			baseDir = Path.GetFullPath(Path.Combine(baseDir, ".."));
+			fullPath = Path.Combine(baseDir, testFile);
+		}
+		while (!File.Exists(fullPath));
+
 		var tempFile = nameof(TestSaveFile) + ".m4a";
-		File.Copy(filePath, tempFile, true);
-		return new Mp4File(new FileStream(tempFile, FileMode.Open, FileAccess.ReadWrite));
+		File.Copy(fullPath, tempFile, true);
+		return new Mpeg4File(new FileStream(tempFile, FileMode.Open, FileAccess.ReadWrite));
 	}
+
 	const string SAMPLE_MOOV_IN_BACK = "sampleMoovInBack.m4a";
 	const string SAMPLE_MOOV_IN_FRONT = "sampleMoovInFront.m4a";
 
@@ -38,7 +46,7 @@ public class TestSaveFile
 			mp4.Ftyp.CompatibleBrands.Add("test");
 			await mp4.SaveAsync(keepMoovInFront);
 		}
-		using (var mp4 = new Mp4File(originalFile))
+		using (var mp4 = new Mpeg4File(originalFile))
 		{
 			var newFtypHash = await HashFtyp(mp4);
 			var newMdatHash = await HashMdat(mp4);
@@ -65,10 +73,10 @@ public class TestSaveFile
 			originalMdatHash = await HashMdat(mp4);
 			originalMoovHash = await HashMoov(mp4);
 
-			mp4.AppleTags.Comment += "1";
+			mp4.MetadataItems.Comment += "1";
 			await mp4.SaveAsync(keepMoovInFront);
 		}
-		using (var mp4 = new Mp4File(originalFile))
+		using (var mp4 = new Mpeg4File(originalFile))
 		{
 			var newFtypHash = await HashFtyp(mp4);
 			var newMdatHash = await HashMdat(mp4);
@@ -96,10 +104,10 @@ public class TestSaveFile
 			originalMdatHash = await HashMdat(mp4);
 			originalMoovHash = await HashMoov(mp4);
 
-			mp4.AppleTags.Comment = mp4.AppleTags.Comment[..^4];
+			mp4.MetadataItems.Comment = mp4.MetadataItems.Comment?[..^4];
 			await mp4.SaveAsync(keepMoovInFront);
 		}
-		using (var mp4 = new Mp4File(originalFile))
+		using (var mp4 = new Mpeg4File(originalFile))
 		{
 			var newFtypHash = await HashFtyp(mp4);
 			var newMdatHash = await HashMdat(mp4);
@@ -130,7 +138,7 @@ public class TestSaveFile
 			mp4.Ftyp.CompatibleBrands.RemoveAt(0);
 			await mp4.SaveAsync(keepMoovInFront);
 		}
-		using (var mp4 = new Mp4File(originalFile))
+		using (var mp4 = new Mpeg4File(originalFile))
 		{
 			var newFtypHash = await HashFtyp(mp4);
 			var newMdatHash = await HashMdat(mp4);
@@ -155,10 +163,10 @@ public class TestSaveFile
 			originalMdatHash = await HashMdat(mp4);
 			originalMoovHash = await HashMoov(mp4);
 
-			mp4.AppleTags.Comment = mp4.AppleTags.Comment[..^4];
+			mp4.MetadataItems.Comment = mp4.MetadataItems.Comment?[..^4];
 			await mp4.SaveAsync();
 		}
-		using (var mp4 = new Mp4File(originalFile))
+		using (var mp4 = new Mpeg4File(originalFile))
 		{
 			var newFtypHash = await HashFtyp(mp4);
 			var newMdatHash = await HashMdat(mp4);
@@ -188,7 +196,7 @@ public class TestSaveFile
 			mp4.Ftyp.CompatibleBrands.RemoveAt(0);
 			await mp4.SaveAsync();
 		}
-		using (var mp4 = new Mp4File(originalFile))
+		using (var mp4 = new Mpeg4File(originalFile))
 		{
 			var newFtypHash = await HashFtyp(mp4);
 			var newMdatHash = await HashMdat(mp4);
@@ -214,10 +222,10 @@ public class TestSaveFile
 			originalMoovHash = await HashMoov(mp4);
 
 			mp4.Ftyp.CompatibleBrands.RemoveAt(mp4.Ftyp.CompatibleBrands.Count - 1);
-			mp4.AppleTags.Comment += "1111";
+			mp4.MetadataItems.Comment += "1111";
 			await mp4.SaveAsync();
 		}
-		using (var mp4 = new Mp4File(originalFile))
+		using (var mp4 = new Mpeg4File(originalFile))
 		{
 			var newFtypHash = await HashFtyp(mp4);
 			var newMdatHash = await HashMdat(mp4);
@@ -228,20 +236,19 @@ public class TestSaveFile
 		}
 	}
 
-
-	static async Task<string> HashFtyp(Mp4File mp4)
+	static async Task<string> HashFtyp(Mpeg4File mp4)
 	{
 		var mdat = await mp4.Ftyp.HashBoxAsync();
 		return Convert.ToHexString(mdat);
 	}
 
-	static async Task<string> HashMdat(Mp4File mp4)
+	static async Task<string> HashMdat(Mpeg4File mp4)
 	{
 		var mdat = await mp4.Mdat.HashBoxAsync(mp4.InputStream);
 		return Convert.ToHexString(mdat);
 	}
 
-	static async Task<string> HashMoov(Mp4File mp4)
+	static async Task<string> HashMoov(Mpeg4File mp4)
 	{
 		//Chunk offsets change, so remove cobox for hashing
 		var cobox = mp4.Moov.AudioTrack.Mdia.Minf.Stbl.COBox;

@@ -75,45 +75,6 @@ namespace Mpeg4Lib.Util
 			return boxes;
 		}
 
-		public static async Task RelocateMoovToBeginningAsync(string mp4FilePath, CancellationToken cancellationToken, ProgressTracker progressTracker)
-		{
-			List<IBox> boxes;
-
-			using (FileStream fileStream = File.OpenRead(mp4FilePath))
-				boxes = LoadTopLevelBoxes(fileStream);
-
-			try
-			{
-				long ftypeSize = boxes.OfType<FtypBox>().Single().RenderSize;
-				MoovBox moov = boxes.OfType<MoovBox>().Single();
-
-				progressTracker.TotalDuration = TimeSpan.FromSeconds(moov.Mvhd.Duration / (double)moov.Mvhd.Timescale);
-				if (moov.Header.FilePosition == ftypeSize)
-				{
-					//Moov is already at the beginning, immidately following ftyp.
-					progressTracker.MovedBytes = progressTracker.TotalSize = 1;
-					return;
-				}
-
-				var mdat = boxes.OfType<MdatBox>().Single();
-
-				//Figure out how much mdat must be shifted to make room for moov at the beginning.
-				long toShift = ftypeSize + moov.RenderSize - mdat.Header.FilePosition;
-				long shifted = moov.ShiftChunkOffsetsWithMoovInFront(toShift);
-
-				using FileStream mpegFile = new(mp4FilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
-				await mdat.ShiftMdatAsync(mpegFile, shifted, progressTracker, cancellationToken);
-				mpegFile.Position = ftypeSize;
-				moov.Save(mpegFile);
-				mpegFile.SetLength(mpegFile.Position + mdat.Header.TotalBoxSize);
-			}
-			finally
-			{
-				foreach (IBox box in boxes)
-					box.Dispose();
-			}
-		}
-
 		public static async Task ShiftDataBlock(Stream file, long start, long length, long shiftVector, ProgressTracker? progressTracker = null, CancellationToken cancellationToken = default)
 		{
 			const int MoveBufferSize = 8 * 1024 * 1024;

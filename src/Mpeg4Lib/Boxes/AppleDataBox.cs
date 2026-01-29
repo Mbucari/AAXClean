@@ -1,14 +1,23 @@
 ﻿using Mpeg4Lib.Util;
+using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace Mpeg4Lib.Boxes;
 
+[DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class AppleDataBox : Box
 {
 	public override long RenderSize => base.RenderSize + 8 + Data.Length;
 	public AppleDataType DataType { get; }
 	public uint Flags { get; }
 	public byte[] Data { get; set; }
+
+	[DebuggerHidden]
+	private string DebuggerDisplay
+		=> DataType is AppleDataType.Utf_8 ? $"[UTF-8]: '{Encoding.UTF8.GetString(Data)}'"
+		: DataType is AppleDataType.Utf_16 ? $"[UTF-16]: '{Encoding.Unicode.GetString(Data)}'"
+		: $"[{DataType}]: {Data.Length} bytes";
 
 	public static void Create(IBox parent, byte[] data, AppleDataType type)
 	{

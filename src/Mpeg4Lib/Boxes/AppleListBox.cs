@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -51,44 +52,69 @@ public class AppleListBox : Box
 	}
 
 	public bool RemoveTag(string name)
+		=> GetTagBox(name) is { } tag && RemoveTag(tag);
+
+	public bool RemoveFreeformTag(string domain, string name)
+		=> GetFreeformTagBox(domain, name) is { } tag && RemoveTag(tag);
+
+	public bool RemoveTag(AppleTagBox tag)
 	{
-		if (Tags.Where(t => t.Header.Type == name).FirstOrDefault() is AppleTagBox tag)
+		if (Children.Remove(tag))
 		{
 			tag.Dispose();
-			return Children.Remove(tag);
+			return true;
+		}
+		else if (tag is FreeformTagBox ffTag)
+		{
+			if (ffTag.Mean?.ReverseDnsDomain is { } domain && ffTag.Name?.Name is { } name && GetFreeformTagBox(domain, name) is { } f && Children.Remove(f))
+			{
+				f.Dispose();
+				return true;
+			}
+		}
+		else if (GetTagBox(tag.Header.Type) is { } t && Children.Remove(t))
+		{
+			t.Dispose();
+			return true;
 		}
 		return false;
 	}
 
 	public void EditOrAddTag(string name, string? data)
 	{
-		if (data is null)
-			RemoveTag(name);
-		else
-			EditOrAddTag(name, Encoding.UTF8.GetBytes(data), AppleDataType.Utf_8);
+		EditOrAddTag(name, data is null ? null : Encoding.UTF8.GetBytes(data), AppleDataType.Utf_8);
 	}
 
 	public void EditOrAddTag(string name, byte[]? data)
 	{
 		EditOrAddTag(name, data, AppleDataType.ContainsData);
+	}	
+
+	public void EditOrAddTag<TData>(string name, TData? data) where TData : IAppleData<TData>
+	{
+		byte[]? bytes;
+		if (data is not null)
+		{
+			bytes = new byte[TData.SizeInBytes];
+			data.Write(bytes);
+		}
+		else
+		{
+			bytes = null;
+		}
+
+		EditOrAddTag(name, bytes, AppleDataType.ContainsData);
 	}
 
 	public void EditOrAddTag(string name, byte[]? data, AppleDataType type)
 	{
-		if (data is null)
-			RemoveTag(name);
-		else
+		if (GetTagBox(name) is { } tagBox)
 		{
-			AppleTagBox? tag = Tags.Where(t => t.Header.Type == name).FirstOrDefault();
-
-			if (tag is null)
-			{
-				AddTag(name, data, type);
-			}
-			else if (tag?.Data.DataType == type)
-			{
-				tag.Data.Data = data;
-			}
+			EditExistingTag(tagBox, data, type);
+		}
+		else if (data is not null)
+		{
+			AddTag(name, data, type);
 		}
 	}
 
@@ -102,62 +128,73 @@ public class AppleListBox : Box
 		FreeformTagBox.Create(this, domain, name, data, type);
 	}
 
-	public void EditOrAddFreeformTag(string domain, string name, string data)
+	public void EditOrAddFreeformTag(string domain, string name, string? data)
 	{
-		EditOrAddFreeformTag(domain, name, Encoding.UTF8.GetBytes(data), AppleDataType.Utf_8);
+		EditOrAddFreeformTag(domain, name, data is null ? null : Encoding.UTF8.GetBytes(data), AppleDataType.Utf_8);
 	}
 
-	public void EditOrAddFreeformTag(string domain, string name, byte[] data)
+	public void EditOrAddFreeformTag(string domain, string name, byte[]? data)
 	{
 		EditOrAddFreeformTag(domain, name, data, AppleDataType.ContainsData);
 	}
 
-	public void EditOrAddFreeformTag(string domain, string name, byte[] data, AppleDataType type)
+	public void EditOrAddFreeformTag(string domain, string name, byte[]? data, AppleDataType type)
 	{
-		FreeformTagBox? tag
-			= Tags
-			.OfType<FreeformTagBox>()
-			.Where(t => t.Mean?.ReverseDnsDomain == domain && t.Name?.Name == name)
-			.FirstOrDefault();
-
-		if (tag is null)
+		if (GetFreeformTagBox(domain, name) is { } tagBox)
+		{
+			EditExistingTag(tagBox, data, type);
+		}
+		else if (data is not null)
 		{
 			AddFreeformTag(domain, name, data, type);
 		}
-		else if (tag?.Data.DataType == type)
+	}
+
+	private void EditExistingTag(AppleTagBox tagBox, byte[]? data, AppleDataType type)
+	{
+		if (data is null)
 		{
-			tag.Data.Data = data;
+			RemoveTag(tagBox);
+		}
+		else
+		{
+			AppleDataBox dataBox = tagBox.GetChildOrThrow<AppleDataBox>();
+			dataBox.Data = dataBox.DataType == type ? data
+				: throw new InvalidDataException($"Existing tag data type {dataBox.DataType} differs from new edited type {type}");
 		}
 	}
 
 	public string? GetTagString(string name)
-	{
-		byte[]? tag = GetTagBytes(name);
-		if (tag is null) return null;
-
-		return Encoding.UTF8.GetString(tag);
-	}
-
-	public byte[]? GetTagBytes(string name)
-		=> Tags
-		.Where(t => t.Header.Type == name)
-		.FirstOrDefault()
-		?.GetChild<AppleDataBox>()
-		?.Data;
+		=> GetTagString(GetTagBox(name));
 
 	public string? GetFreeformTagString(string domain, string name)
-	{
-		byte[]? tag = GetFreeformTagBytes(domain, name);
-		if (tag is null) return null;
+		=> GetTagString(GetFreeformTagBox(domain, name));
 
-		return Encoding.UTF8.GetString(tag);
-	}
+	private static string? GetTagString(AppleTagBox? tagBox)
+		=> tagBox?.Data is not { } dataBox ? null
+		: dataBox.DataType switch
+		{
+			AppleDataType.Utf_8 => Encoding.UTF8.GetString(dataBox.Data),
+			AppleDataType.Utf_16 => Encoding.Unicode.GetString(dataBox.Data),
+			_ => throw new InvalidDataException($"Apple data type {dataBox.DataType} is not a string type"),
+		};
 
-	public byte[]? GetFreeformTagBytes(string domain, string name)
-		=> Tags
-		.OfType<FreeformTagBox>()
-		.Where(t => t.Mean?.ReverseDnsDomain == domain && t.Name?.Name == name)
-		.FirstOrDefault()
-		?.GetChild<AppleDataBox>()
-		?.Data;
+	public TData? GetTagData<TData>(string name) where TData : IAppleData<TData>
+		=> GetTagBox(name)?.Data is not { } dataBox ? default
+		: dataBox.DataType is not AppleDataType.ContainsData ? throw new InvalidDataException($"Apple data type {dataBox.DataType} is not compatible with {nameof(IAppleData<TData>)}")
+		: dataBox.Data.Length != TData.SizeInBytes ? throw new InvalidDataException($"Tag data size ({dataBox.Data.Length}) differs from {nameof(IAppleData<TData>)} size ({TData.SizeInBytes})")
+		: TData.Create(dataBox.Data);
+
+	public AppleTagBox? GetTagBox(string name)
+		=> Tags.FirstOrDefault(t => t.Header.Type == name);
+
+	public AppleTagBox? GetFreeformTagBox(string domain, string name)
+		=> Tags.OfType<FreeformTagBox>().FirstOrDefault(t => t.Mean?.ReverseDnsDomain == domain && t.Name?.Name == name);
+
+
+	[Obsolete("Use GetTagBox().Data.Data instead")]
+	public byte[]? GetTagBytes(string name) => GetTagBox(name)?.Data.Data;
+
+	[Obsolete("Use GetFreeformTagBox().Data.Data instead")]
+	public byte[]? GetFreeformTagBytes(string domain, string name) => GetFreeformTagBox(domain, name)?.Data.Data;
 }

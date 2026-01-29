@@ -1,11 +1,15 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 
 namespace Mpeg4Lib.Boxes;
 
+[DebuggerDisplay("{DebuggerDisplay,nq}")]
 public class AppleTagBox : Box
 {
+	[DebuggerHidden]
+	private string DebuggerDisplay => $"[AppleTag]: {Header.Type}";
 	public static AppleTagBox Create(AppleListBox parent, string name, byte[] data, AppleDataType dataType)
 	{
 		if (Encoding.ASCII.GetByteCount(name) != 4)

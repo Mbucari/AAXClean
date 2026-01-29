@@ -70,7 +70,7 @@ namespace Mpeg4Lib.Boxes
 		public void Save(Stream file)
 		{
 			Header.FilePosition = file.Position;
-			file.WriteHeader(Header);
+			file.WriteHeader(Header, RenderSize);
 
 			Render(file);
 

@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace AAXClean
@@ -40,76 +39,34 @@ namespace AAXClean
 		Hz_7350 = 7350
 	}
 
-	public class Mp4File : IDisposable
+	public class Mp4File : Mpeg4Lib.Mpeg4File
 	{
 		public ChapterInfo? Chapters { get; set; }
-		public AppleTags AppleTags { get; }
-		public Stream InputStream { get; }
-		public FileType FileType { get; }
-		public virtual TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.AudioTrack.Mdia.Mdhd.Duration / TimeScale);
-		public int MaxBitrate => (int)(AudioSampleEntry.Esds?.ES_Descriptor.DecoderConfig.MaxBitrate ?? 0);
+		[Obsolete("Use MetadataItems property instead.")]
+		public AppleTags AppleTags  => lazyAppleTags.Value;
 
-		private int? m_timescale = null;
-		private int? m_audioChannels = null;
-		private int? m_averageBitrate = null;
+#pragma warning disable CS0618 // Type or member is obsolete
+		private readonly Lazy<AppleTags> lazyAppleTags;
+#pragma warning restore CS0618
 
-		public int TimeScale => m_timescale ??=
-			AudioSampleEntry.Esds?.ES_Descriptor.DecoderConfig.AudioSpecificConfig.SamplingFrequency ??
-			AudioSampleEntry.Dec3?.SampleRate ??
-			AudioSampleEntry.Dac4?.SampleRate ??
-			(int)Moov.AudioTrack.Mdia.Mdhd.Timescale;
-
-		public int AudioChannels => m_audioChannels ??=
-			AudioSampleEntry.Esds?.ES_Descriptor.DecoderConfig.AudioSpecificConfig.ChannelConfiguration ??
-			AudioSampleEntry.Dec3?.NumberOfChannels ??
-			AudioSampleEntry.Dac4?.NumberOfChannels ??
-			AudioSampleEntry.ChannelCount;
-
-		public int AverageBitrate => m_averageBitrate ??=
-			(int)(AudioSampleEntry.Esds?.ES_Descriptor.DecoderConfig.AverageBitrate ??
-			AudioSampleEntry.Dec3?.AverageBitrate ??
-			AudioSampleEntry?.Dac4?.AverageBitrate ??
-			CalculateBitrate());
-
-		protected virtual uint CalculateBitrate()
-		{
-			var totalSize = Moov.AudioTrack.Mdia.Minf.Stbl.Stsz?.TotalSize;
-			if (!totalSize.HasValue || totalSize.Value == 0)
-				return 0;
-			return (uint)Math.Round(totalSize.Value * 8 / Duration.TotalSeconds, 0);
-		}
+		public FileType FileType { get; }	
 
 		public SampleRate SampleRate => (SampleRate)TimeScale;
 
-		public FtypBox Ftyp { get; set; }
-		public MoovBox Moov { get; }
-		public MdatBox Mdat { get; }
-
-		public List<IBox> TopLevelBoxes { get; }
-		public AudioSampleEntry AudioSampleEntry { get; }
-
-		public Mp4File(Stream file, long fileSize)
+		public Mp4File(Stream file, long fileSize) : base(file, fileSize)
 		{
-			InputStream = file.CanSeek ? file : new Mpeg4Lib.TrackedReadStream(file, fileSize);
+#pragma warning disable CS0618 // Type or member is obsolete
+			lazyAppleTags = new(() => new AppleTags(Moov.ILst ?? Moov.CreateEmptyMetadata()));
+#pragma warning restore CS0618
 
-			TopLevelBoxes = Mpeg4Util.LoadTopLevelBoxes(InputStream);
-			Ftyp = TopLevelBoxes.OfType<FtypBox>().Single();
-			Moov = TopLevelBoxes.OfType<MoovBox>().Single();
-			Mdat = TopLevelBoxes.OfType<MdatBox>().Single();
-
-			if (Ftyp.CompatibleBrands.Any(b => b == "dash"))
-				FileType = FileType.Dash;
-			else
-				FileType = Ftyp.MajorBrand switch
+			FileType = Ftyp.CompatibleBrands.Any(b => b == "dash")
+				? FileType.Dash
+				: Ftyp.MajorBrand switch
 				{
 					"aax " => FileType.Aax,
 					"aaxc" => FileType.Aaxc,
 					_ => FileType.Mpeg4
 				};
-
-			AppleTags = new AppleTags(Moov.ILst ?? Moov.CreateEmptyMetadata());
-			AudioSampleEntry = Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry
-				?? throw new InvalidOperationException("The audio track's AudioSampleEntry is null");
 		}
 
 		public Mp4File(Stream file) : this(file, file.Length) { }
@@ -123,7 +80,7 @@ namespace AAXClean
 		public static Mp4Operation RelocateMoovAsync(string mp4FilePath)
 		{
 			ProgressTracker tracker = new();
-			Mp4Operation? moovMover = new(t => Mpeg4Util.RelocateMoovToBeginningAsync(mp4FilePath, t.Token, tracker), null, t => { });
+			Mp4Operation? moovMover = new(t => RelocateMoovToBeginningAsync(mp4FilePath, tracker, t.Token), null, t => { });
 			tracker.ProgressUpdated += (_, _) => moovMover.OnProgressUpdate(new ConversionProgressEventArgs(TimeSpan.Zero, tracker.TotalDuration, tracker.Position, tracker.Speed));
 			return moovMover;
 		}
@@ -139,124 +96,9 @@ namespace AAXClean
 		public Mp4Operation SaveAsync(bool keepMoovInFront = true)
 		{
 			ProgressTracker tracker = new() { TotalDuration = Duration };
-			Mp4Operation operation = new(t => SaveAsyncInternal(keepMoovInFront, tracker, t.Token), this, t => { });
+			Mp4Operation operation = new(t => SaveAsync(keepMoovInFront, tracker, t.Token), this, t => { });
 			tracker.ProgressUpdated += (_, _) => operation.OnProgressUpdate(new ConversionProgressEventArgs(TimeSpan.Zero, tracker.TotalDuration, tracker.Position, tracker.Speed));
 			return operation;
-		}
-
-		private async Task SaveAsyncInternal(bool keepMoovInFront, ProgressTracker? progressTracker, CancellationToken cancellationToken)
-		{
-			if (!InputStream.CanRead || !InputStream.CanWrite || !InputStream.CanSeek)
-				throw new InvalidOperationException($"{nameof(InputStream)} must be readable, writable and seekable to save");
-
-			//Remove Free boxes and work with net size change
-			foreach (var box in Moov.GetFreeBoxes())
-				box.Parent?.Children.Remove(box);
-
-			InputStream.Position = 0;
-			bool moovInFront = Moov.Header.FilePosition < Mdat.Header.FilePosition;
-			if (moovInFront)
-			{
-				var totalSizeChange = Ftyp.RenderSize + Moov.RenderSize - Mdat.Header.FilePosition;
-				if (totalSizeChange == 0)
-				{
-					Ftyp.Save(InputStream);
-					Moov.Save(InputStream);
-				}
-				else if (FreeBox.MinSize + totalSizeChange <= 0)
-				{
-					//Ftyp + Moov shrank more than FreeBox.MinSize
-					//We can accomodate the change with a Free box
-					Ftyp.Save(InputStream);
-					Moov.Save(InputStream);
-					FreeBox.Create(-totalSizeChange, null).Save(InputStream);
-				}
-				else
-				{
-					//Ftyp + Moov either grew, or they shrank less than FreeBox.MinSize
-					if (keepMoovInFront)
-					{
-						//Shift Mdat by totalSizeChange to fit the new Moov exactly.
-						totalSizeChange = Moov.ShiftChunkOffsetsWithMoovInFront(totalSizeChange);
-						await Mdat.ShiftMdatAsync(InputStream, totalSizeChange, progressTracker, cancellationToken);
-						InputStream.Position = 0;
-						Ftyp.Save(InputStream);
-						Moov.Save(InputStream);
-						InputStream.SetLength(Mdat.Header.FilePosition + Mdat.Header.TotalBoxSize);
-					}
-					else
-					{
-						//Replace the moov with a free box and write the moov at the end
-						var freeBoxSize = Mdat.Header.FilePosition - Ftyp.RenderSize;
-						if (freeBoxSize < 8)
-						{
-							//The only way this can happen is if the ftyp grew so much that it now exceeds the
-							//original ftyp + moov box sizes, which should never happen since ftyp is supposed
-							//to be on the order of a few dozen kilobytes in size.
-							throw new InvalidOperationException("Not enough space to write ftyp box before mdat box");
-						}
-
-						Ftyp.Save(InputStream);
-						FreeBox.Create(freeBoxSize, null).Save(InputStream);
-						InputStream.Position = Mdat.Header.FilePosition + Mdat.Header.TotalBoxSize;
-						Moov.Save(InputStream);
-					}
-				}
-			}
-			else
-			{
-				//Moov is at the end of the file
-				bool rewriteMoovAtEnd = true;
-				long ftypSizeChange = Ftyp.RenderSize - Ftyp.Header.TotalBoxSize;
-				if (ftypSizeChange == 0)
-				{
-					Ftyp.Save(InputStream);
-				}
-				else if (FreeBox.MinSize + ftypSizeChange <= 0)
-				{
-					//Ftyp shrank more than FreeBox.MinSize
-					//We can accomodate the change with a Free box
-					Ftyp.Save(InputStream);
-					FreeBox.Create(-ftypSizeChange, null).Save(InputStream);
-				}
-				else
-				{
-					//Ftyp either grew or it shrank less than FreeBox.MinSize. We have to shift the mdat.
-					if (keepMoovInFront)
-					{
-						//The Moov is at the end, but since we're shifting the entire mdat anway,
-						//we might as well rewrite the moov at the beginning place
-						long shiftVector = ftypSizeChange + Moov.RenderSize;
-						shiftVector = Moov.ShiftChunkOffsetsWithMoovInFront(shiftVector);
-						await Mdat.ShiftMdatAsync(InputStream, shiftVector, progressTracker, cancellationToken);
-						InputStream.Position = 0;
-						Ftyp.Save(InputStream);
-						Moov.Save(InputStream);
-						InputStream.SetLength(Mdat.Header.FilePosition + Mdat.Header.TotalBoxSize);
-						rewriteMoovAtEnd = false;
-					}
-					else
-					{
-						//Shift mdat to accomodate ftyp size change
-						//Since Moov is being re-written at the end, we don't need to worry about the stco/co64 
-						//conversion changing the size of the moov box. Moov gets rewritten at the end anyway.
-						Moov.ShiftChunkOffsets(ftypSizeChange);
-						await Mdat.ShiftMdatAsync(InputStream, ftypSizeChange, progressTracker, cancellationToken);
-						InputStream.Position = 0;
-						Ftyp.Save(InputStream);
-					}
-				}
-
-				if (rewriteMoovAtEnd)
-				{
-					//Go to the end of the mdat and re-write the moov.
-					InputStream.Position = Mdat.Header.FilePosition + Mdat.Header.TotalBoxSize;
-					Moov.Save(InputStream);
-					InputStream.SetLength(InputStream.Position);
-				}
-			}
-
-			await InputStream.FlushAsync(cancellationToken);
 		}
 
 		public Mp4Operation ConvertToMp4aAsync(Stream outputStream, ChapterInfo? userChapters = null)
@@ -415,29 +257,6 @@ namespace AAXClean
 			var operation = new Mp4Operation<TResult>(reader.RunAsync, this, continuation);
 			reader.OnProgressUpdateDelegate = operation.OnProgressUpdate;
 			return operation;
-		}
-
-		protected bool Disposed { get; private set; }
-		public void Dispose()
-		{
-			Dispose(disposing: true);
-			GC.SuppressFinalize(this);
-		}
-
-		~Mp4File()
-		{
-			Dispose(disposing: false);
-		}
-
-		protected virtual void Dispose(bool disposing)
-		{
-			if (disposing && !Disposed)
-			{
-				InputStream.Dispose();
-				foreach (var box in TopLevelBoxes)
-					box.Dispose();
-			}
-			Disposed = true;
 		}
 	}
 }

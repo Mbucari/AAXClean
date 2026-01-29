@@ -23,6 +23,7 @@ public abstract class SampleEntry : Box
 		file.WriteUInt16BE(DataReferenceIndex);
 	}
 
+	[DebuggerHidden]
 	private string DebuggerDisplay => $"[{Header.Type}] - " + Header.Type switch
 	{
 		"text" => "Text SampleEntry",
