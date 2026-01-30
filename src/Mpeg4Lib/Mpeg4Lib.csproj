@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>net10.0;net8.0</TargetFrameworks>
-	  <Version>2.1.0.1</Version>
+	  <Version>3.0.0</Version>
 	  <Authors>MrGneissGuy</Authors>
 	  <Company>Just Me, Inc.</Company>
 	  <Description>Parsees mpeg-4 files</Description>
@@ -32,7 +32,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
+	  <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.102">
 	    <PrivateAssets>all</PrivateAssets>
 	    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 	  </PackageReference>
