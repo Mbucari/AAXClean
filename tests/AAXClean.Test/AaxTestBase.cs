@@ -219,7 +219,7 @@ namespace AAXClean.Test
 				var convertTask = aaxFile.ConvertToMp4aAsync(tempfile);
 				convertTask.Start();
 
-				await Task.Delay(500);
+				await Task.Delay(100);
 				await convertTask.CancelAsync();
 
 				await convertTask;
@@ -250,7 +250,7 @@ namespace AAXClean.Test
 
 				var convertTask = aaxFile.ConvertToMultiMp4aAsync(Chapters, NewSplit);
 				convertTask.Start();
-				await Task.Delay(500);
+				await Task.Delay(100);
 				await convertTask.CancelAsync();
 
 				await convertTask;
