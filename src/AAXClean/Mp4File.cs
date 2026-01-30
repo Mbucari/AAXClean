@@ -2,14 +2,12 @@
 using AAXClean.FrameFilters;
 using AAXClean.FrameFilters.Audio;
 using AAXClean.FrameFilters.Text;
+using Mpeg4Lib;
 using Mpeg4Lib.Boxes;
-using Mpeg4Lib.Chunks;
 using Mpeg4Lib.Util;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace AAXClean
@@ -41,11 +39,10 @@ namespace AAXClean
 
 	public class Mp4File : Mpeg4Lib.Mpeg4File
 	{
-		public ChapterInfo? Chapters { get; set; }
+#pragma warning disable CS0618 // Type or member is obsolete
 		[Obsolete("Use MetadataItems property instead.")]
 		public AppleTags AppleTags  => lazyAppleTags.Value;
 
-#pragma warning disable CS0618 // Type or member is obsolete
 		private readonly Lazy<AppleTags> lazyAppleTags;
 #pragma warning restore CS0618
 
@@ -185,50 +182,6 @@ namespace AAXClean
 			}
 
 			return ProcessAudio(TimeSpan.Zero, TimeSpan.MaxValue, continuation, (Moov.TextTrack, chapterFilter));
-		}
-
-		public ChapterInfo? GetChaptersFromMetadata()
-		{
-			TrakBox? textTrak = Moov.TextTrack;
-
-			//Get chapter names from metadata box in chapter track
-			List<string>? chapterNames =
-				textTrak
-				?.GetChild<UdtaBox>()
-				?.GetChild<MetaBox>()
-				?.GetChild<AppleListBox>()
-				?.Children
-				?.OfType<AppleTagBox>()
-				?.Where(b => b.Header.Type == "©nam")
-				?.Select(b => b.Data.ReadAsString())
-				?.ToList();
-
-			if (chapterNames is null) return null;
-
-			List<SttsBox.SampleEntry> sampleTimes = textTrak!.Mdia.Minf.Stbl.Stts.Samples;
-
-			if (sampleTimes.Count != chapterNames.Count) return null;
-
-			var cEntryList = new ChunkEntryList(textTrak).OrderBy(s => s.ChunkOffset).ToList();
-
-			if (cEntryList.Count != chapterNames.Count) return null;
-
-			ChapterInfo chapterInfo = new();
-
-			int subtractNext = 0;
-
-			for (int i = 0; i < chapterNames.Count; i++)
-			{
-				var sif = (int)sampleTimes[i].FrameDelta;
-
-				TimeSpan duration = TimeSpan.FromSeconds(Math.Max(0d, sif + subtractNext) / TimeScale);
-				chapterInfo.AddChapter(chapterNames[(int)cEntryList[i].ChunkIndex], duration);
-				subtractNext = sif < 0 ? sif : 0;
-			}
-
-			Chapters ??= chapterInfo;
-
-			return chapterInfo;
 		}
 
 		protected virtual IChunkReader CreateChunkReader(Stream inputStream, TimeSpan startTime, TimeSpan endTime)

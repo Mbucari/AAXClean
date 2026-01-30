@@ -7,7 +7,7 @@ namespace AAXClean.Test
 	[TestClass]
 	public class AC_AaxTest : AaxTestBase
 	{
-		private ChapterInfo _chapters;
+		private Mpeg4Lib.ChapterInfo _chapters;
 		private TestBookTags _tags;
 
 		public override string AaxFile => TestFiles.AC_BookPath;
@@ -19,13 +19,13 @@ namespace AAXClean.Test
 		public override long RenderSize => 5872527L;
 		public override TimeSpan Duration => TimeSpan.FromTicks(618328816326);
 
-		public override ChapterInfo Chapters
+		public override Mpeg4Lib.ChapterInfo Chapters
 		{
 			get
 			{
 				if (_chapters is null)
 				{
-					_chapters = new ChapterInfo
+					_chapters = new Mpeg4Lib.ChapterInfo
 					{
 						{ "PROLOGUE", TimeSpan.FromTicks(7327059863) },
 						{ "PART ONE: ARRIVAL - (Needlecast Download)", TimeSpan.FromTicks(32380045) },

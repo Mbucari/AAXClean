@@ -45,7 +45,7 @@ namespace AAXClean.Test
 		public abstract int MaxBitrate { get; }
 		public abstract long RenderSize { get; }
 		public abstract TimeSpan Duration { get; }
-		public abstract ChapterInfo Chapters { get; }
+		public abstract Mpeg4Lib.ChapterInfo Chapters { get; }
 		public abstract TestBookTags Tags { get; }
 
 		[TestMethod]
@@ -102,7 +102,7 @@ namespace AAXClean.Test
 			try
 			{
 				Assert.IsNull(Aax.Chapters);
-				ChapterInfo chapters = await Aax.GetChapterInfoAsync();
+				var chapters = await Aax.GetChapterInfoAsync();
 
 #if DEBUG
 				var chs = new System.Text.StringBuilder();
@@ -130,7 +130,7 @@ namespace AAXClean.Test
 			try
 			{
 				Assert.IsNull(Aax.Chapters);
-				ChapterInfo chapters = Aax.GetChaptersFromMetadata();
+				var chapters = Aax.GetChaptersFromMetadata();
 #if DEBUG
 				var chs = new System.Text.StringBuilder();
 
@@ -147,12 +147,12 @@ namespace AAXClean.Test
 			}
 		}
 
-		private void VerifyChapters(ChapterInfo chapters)
+		private void VerifyChapters(Mpeg4Lib.ChapterInfo chapters)
 		{
 			Assert.IsNotNull(Aax.Chapters);
 			Assert.AreEqual(Chapters.Count, chapters.Count);
-			List<Chapter> ch_1 = Chapters.Chapters.ToList();
-			List<Chapter> ch_2 = chapters.Chapters.ToList();
+			List<Mpeg4Lib.Chapter> ch_1 = Chapters.Chapters.ToList();
+			List<Mpeg4Lib.Chapter> ch_2 = chapters.Chapters.ToList();
 
 			for (int i = 0; i < chapters.Count; i++)
 			{
@@ -169,7 +169,7 @@ namespace AAXClean.Test
 			try
 			{
 				FileStream tempfile = TestFiles.NewTempFile();
-				ChapterInfo newChapters = new();
+				Mpeg4Lib.ChapterInfo newChapters = new();
 				newChapters.AddChapter("Ch1", TimeSpan.FromTicks(15000000000));
 				newChapters.AddChapter("Ch2", TimeSpan.FromTicks(30000000000));
 				newChapters.AddChapter("Ch3", TimeSpan.FromTicks(45000000000));

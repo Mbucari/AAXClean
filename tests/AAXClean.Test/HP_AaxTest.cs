@@ -11,7 +11,7 @@ namespace AAXClean.Test
 	[TestClass]
 	public class HP_AaxTest : AaxTestBase
 	{
-		private ChapterInfo _chapters;
+		private Mpeg4Lib.ChapterInfo _chapters;
 		private TestBookTags _tags;
 
 		public override string AaxFile => TestFiles.HP_BookPath;
@@ -22,13 +22,13 @@ namespace AAXClean.Test
 		public override int MaxBitrate => 64004;
 		public override long RenderSize => 2876633L;
 		public override TimeSpan Duration => TimeSpan.FromTicks(299221159183);
-		public override ChapterInfo Chapters
+		public override Mpeg4Lib.ChapterInfo Chapters
 		{
 			get
 			{
 				if (_chapters is null)
 				{
-					_chapters = new ChapterInfo();
+					_chapters = new Mpeg4Lib.ChapterInfo();
 					_chapters.AddChapter("Opening Credits", TimeSpan.FromTicks(236039909));
 					_chapters.AddChapter("Chapter 1: The Boy Who Lived", TimeSpan.FromTicks(17323809977));
 					_chapters.AddChapter("Chapter 2: The Vanishing Glass", TimeSpan.FromTicks(13085829931));

@@ -7,7 +7,7 @@ namespace AAXClean.Test
 	[TestClass]
 	public class SH_AaxTest : AaxTestBase
 	{
-		private ChapterInfo _chapters;
+		private Mpeg4Lib.ChapterInfo _chapters;
 		private TestBookTags _tags;
 
 		public override string AaxFile => TestFiles.SH_BookPath;
@@ -19,13 +19,13 @@ namespace AAXClean.Test
 		public override long RenderSize => 64416191;
 		public override TimeSpan Duration => TimeSpan.FromTicks(3421559002267);
 
-		public override ChapterInfo Chapters
+		public override Mpeg4Lib.ChapterInfo Chapters
 		{
 			get
 			{
 				if (_chapters is null)
 				{
-					_chapters = new ChapterInfo();
+					_chapters = new Mpeg4Lib.ChapterInfo();
 					_chapters.AddChapter("Chapter 1", TimeSpan.FromTicks(8654989795));
 					_chapters.AddChapter("Chapter 2", TimeSpan.FromTicks(20531310204));
 					_chapters.AddChapter("Chapter 3", TimeSpan.FromTicks(29224859863));
