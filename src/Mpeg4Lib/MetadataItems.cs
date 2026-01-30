@@ -1,9 +1,7 @@
 ﻿using Mpeg4Lib.Boxes;
 using System;
-using System.Collections.Generic;
+using System.Buffers.Binary;
 using System.IO;
-using System.Linq;
-using System.Xml.Linq;
 
 namespace Mpeg4Lib;
 
@@ -32,7 +30,6 @@ public class MetadataItems
 	public const string TAG_NAME_DISK_NUMBER = "disk";
 
 	public AppleListBox AppleListBox { get; }
-	public IEnumerable<string> TagNames => AppleListBox.Tags.Select(t => t.Header.Type);
 	public MetadataItems(AppleListBox appleListBox)
 	{
 		AppleListBox = appleListBox;
@@ -40,15 +37,15 @@ public class MetadataItems
 	public string? FirstAuthor => Artist?.Split(';')?[0];
 	public string? TitleSansUnabridged => Title?.Replace(" (Unabridged)", "");
 
-	public string? BookCopyright => _copyright is not null && _copyright.Length > 0 ? _copyright[0] : default;
-	public string? RecordingCopyright => _copyright is not null && _copyright.Length > 1 ? _copyright[1] : default;
-	private string[]? _copyright => Copyright?.Replace("&#169;", "©")?.Split(';');
+	public string? BookCopyright => GetCopyrights() is { } copyrights && copyrights.Length > 0 ? copyrights[0] : default;
+	public string? RecordingCopyright => GetCopyrights() is { } copyrights && copyrights.Length > 1 ? copyrights[1] : default;
+	private string[]? GetCopyrights() => Copyright?.Replace("&#169;", "©")?.Split(';');
 	public string? Title { get => AppleListBox.GetTagString(TAG_NAME_TITLE); set => AppleListBox.EditOrAddTag(TAG_NAME_TITLE, value); }
 	public string? Producer { get => AppleListBox.GetTagString(TAG_NAME_PRODUCER); set => AppleListBox.EditOrAddTag(TAG_NAME_PRODUCER, value); }
 	public string? Artist { get => AppleListBox.GetTagString(TAG_NAME_ARTIST); set => AppleListBox.EditOrAddTag(TAG_NAME_ARTIST, value); }
 	public string? AlbumArtists { get => AppleListBox.GetTagString(TAG_NAME_ALBUMARTIST); set => AppleListBox.EditOrAddTag(TAG_NAME_ALBUMARTIST, value); }
 	public string? Album { get => AppleListBox.GetTagString(TAG_NAME_ALBUM); set => AppleListBox.EditOrAddTag(TAG_NAME_ALBUM, value); }
-	public string? Generes { get => AppleListBox.GetTagString(TAG_NAME_GENRES); set => AppleListBox.EditOrAddTag(TAG_NAME_GENRES, value); }
+	public string? Genres { get => AppleListBox.GetTagString(TAG_NAME_GENRES); set => AppleListBox.EditOrAddTag(TAG_NAME_GENRES, value); }
 	public string? ProductID { get => AppleListBox.GetTagString(TAG_NAME_PRODUCTID); set => AppleListBox.EditOrAddTag(TAG_NAME_PRODUCTID, value); }
 	public string? Comment { get => AppleListBox.GetTagString(TAG_NAME_COMMENT); set => AppleListBox.EditOrAddTag(TAG_NAME_COMMENT, value); }
 	public string? LongDescription { get => AppleListBox.GetTagString(TAG_NAME_LONGDESCRIPTION); set => AppleListBox.EditOrAddTag(TAG_NAME_LONGDESCRIPTION, value); }
@@ -65,19 +62,17 @@ public class MetadataItems
 	public AppleDataType? CoverFormat => AppleListBox.GetTagBox(TAG_NAME_COVER)?.Data.DataType;
 	public TrackNumber? TrackNumber { get => AppleListBox.GetTagData<TrackNumber>(TAG_NAME_TRACK_NUMBER); set => AppleListBox.EditOrAddTag(TAG_NAME_TRACK_NUMBER, value); }
 	public DiskNumber? DiskNumber { get => AppleListBox.GetTagData<DiskNumber>(TAG_NAME_DISK_NUMBER); set => AppleListBox.EditOrAddTag(TAG_NAME_DISK_NUMBER, value); }
-
-	public IEnumerable<FreeformTagBox> GetFreeformTagBoxes()
-		=> AppleListBox.Tags.OfType<FreeformTagBox>();
+	[Obsolete("Use Genres property instead")] public string? Generes { get => Genres; set => Genres = value; }
 
 	private void SetCoverArt(byte[]? coverArtBytes)
 	{
 		if (coverArtBytes is null)
 			AppleListBox.RemoveTag(TAG_NAME_COVER);
-		else if (coverArtBytes.Length >= 2 && coverArtBytes[0] == 0x42 && coverArtBytes[1] == 0x4D)
+		else if (coverArtBytes.Length >= 2 && BinaryPrimitives.ReadInt16LittleEndian(coverArtBytes) == 0x4D42)
 			editOrAdd(AppleDataType.BMP);
-		else if (coverArtBytes.Length >= 3 && coverArtBytes[0] == 0xFF && coverArtBytes[1] == 0xD8 && coverArtBytes[2] == 0xFF)
+		else if (coverArtBytes.Length >= 3 && (BinaryPrimitives.ReadInt32LittleEndian(coverArtBytes) & 0xFFFFFF) == 0xFFD8FF)
 			editOrAdd(AppleDataType.JPEG);
-		else if (coverArtBytes.Length >= 8 && coverArtBytes.SequenceEqual(new byte[] { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a }))
+		else if (coverArtBytes.Length >= 8 && BinaryPrimitives.ReadInt64LittleEndian(coverArtBytes) == 0xA1A0A0D474e5089)
 			editOrAdd(AppleDataType.PNG);
 		else
 			throw new InvalidDataException("Image data is not a jpeg, PNG, or windows bitmap.");
@@ -88,6 +83,7 @@ public class MetadataItems
 			{
 				//Allow changing data type by removing and re-adding
 				AppleListBox.RemoveTag(tagBox);
+				tagBox.Dispose();
 			}
 			AppleListBox.EditOrAddTag(TAG_NAME_COVER, coverArtBytes, dataType);
 		}
@@ -95,7 +91,7 @@ public class MetadataItems
 
 	public static MetadataItems? FromFile(string mp4File)
 	{
-		using var file = System.IO.File.Open(mp4File, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.Read);
+		using var file = File.Open(mp4File, FileMode.Open, FileAccess.Read, FileShare.Read);
 
 		BoxHeader header;
 		do
@@ -111,10 +107,7 @@ public class MetadataItems
 
 		} while (file.Position < file.Length);
 
-		if (header?.Type is not "udta") return null;
-
-		var ilst = new UdtaBox(file, header, null)?.GetChild<MetaBox>()?.GetChild<AppleListBox>();
-
-		return ilst is null ? null : new MetadataItems(ilst);
+		return header?.Type is "udta" && new UdtaBox(file, header, null)?.GetChild<MetaBox>()?.GetChild<AppleListBox>() is { } ilst ? new MetadataItems(ilst)
+			: null;
 	}
 }

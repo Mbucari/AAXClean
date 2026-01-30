@@ -27,8 +27,8 @@ namespace AAXClean.Test
 					_chapters = new ChapterInfo()
 					{
 						{ "Opening Credits", TimeSpan.FromTicks(1789039909) },
-						{ "Chapter Four", TimeSpan.FromTicks(0) },
-						{ "Part One - Injured Parties", TimeSpan.FromTicks(30000000) },
+						{ "Part One - Injured Parties", TimeSpan.FromTicks(0) },
+						{ "Chapter Four", TimeSpan.FromTicks(30000000) },
 						{ "Chapter One", TimeSpan.FromTicks(8928000000) },
 						{ "Chapter Two", TimeSpan.FromTicks(13649000000) },
 						{ "Chapter Three", TimeSpan.FromTicks(21807489795) },

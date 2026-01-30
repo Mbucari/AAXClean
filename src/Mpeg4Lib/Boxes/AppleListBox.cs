@@ -37,7 +37,10 @@ public class AppleListBox : Box
 		return ilist;
 	}
 
+	public IEnumerable<string> TagNames => Tags.Select(t => t.Header.Type);
+	public IEnumerable<string> FreeformTagNames => FreeformTags.Select(t => t.TagName);
 	public IEnumerable<AppleTagBox> Tags => GetChildren<AppleTagBox>();
+	public IEnumerable<FreeformTagBox> FreeformTags => GetChildren<FreeformTagBox>();
 
 	protected override void Render(Stream file) { }
 

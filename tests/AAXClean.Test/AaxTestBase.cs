@@ -70,23 +70,23 @@ namespace AAXClean.Test
 		{
 			try
 			{
-				Assert.AreEqual(Tags.Album, Aax.AppleTags.Album);
-				Assert.AreEqual(Tags.AlbumArtists, Aax.AppleTags.AlbumArtists);
-				Assert.AreEqual(Tags.Asin, Aax.AppleTags.Asin);
-				Assert.AreEqual(Tags.Comment, Aax.AppleTags.Comment);
-				Assert.AreEqual(Tags.Copyright, Aax.AppleTags.Copyright);
-				Assert.AreEqual(Tags.Generes, Aax.AppleTags.Generes);
-				Assert.AreEqual(Tags.LongDescription, Aax.AppleTags.LongDescription);
-				Assert.AreEqual(Tags.Narrator, Aax.AppleTags.Narrator);
-				Assert.AreEqual(Tags.Performers, Aax.AppleTags.Artist);
-				Assert.AreEqual(Tags.ProductID, Aax.AppleTags.ProductID);
-				Assert.AreEqual(Tags.Publisher, Aax.AppleTags.Publisher);
-				Assert.AreEqual(Tags.ReleaseDate, Aax.AppleTags.ReleaseDate);
-				Assert.AreEqual(Tags.Title, Aax.AppleTags.Title);
-				Assert.AreEqual(Tags.Year, Aax.AppleTags.Year);
+				Assert.AreEqual(Tags.Album, Aax.MetadataItems.Album);
+				Assert.AreEqual(Tags.AlbumArtists, Aax.MetadataItems.AlbumArtists);
+				Assert.AreEqual(Tags.Asin, Aax.MetadataItems.Asin);
+				Assert.AreEqual(Tags.Comment, Aax.MetadataItems.Comment);
+				Assert.AreEqual(Tags.Copyright, Aax.MetadataItems.Copyright);
+				Assert.AreEqual(Tags.Generes, Aax.MetadataItems.Genres);
+				Assert.AreEqual(Tags.LongDescription, Aax.MetadataItems.LongDescription);
+				Assert.AreEqual(Tags.Narrator, Aax.MetadataItems.Narrator);
+				Assert.AreEqual(Tags.Performers, Aax.MetadataItems.Artist);
+				Assert.AreEqual(Tags.ProductID, Aax.MetadataItems.ProductID);
+				Assert.AreEqual(Tags.Publisher, Aax.MetadataItems.Publisher);
+				Assert.AreEqual(Tags.ReleaseDate, Aax.MetadataItems.ReleaseDate);
+				Assert.AreEqual(Tags.Title, Aax.MetadataItems.Title);
+				Assert.AreEqual(Tags.Year, Aax.MetadataItems.Year);
 
 				using SHA1 sha = SHA1.Create();
-				sha.ComputeHash(Aax.AppleTags.Cover);
+				sha.ComputeHash(Aax.MetadataItems.Cover);
 				string hash = string.Join("", sha.Hash.Select(b => b.ToString("x2")));
 				Assert.AreEqual(Tags.CoverHash, hash);
 			}

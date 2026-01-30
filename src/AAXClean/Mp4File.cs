@@ -200,12 +200,12 @@ namespace AAXClean
 				?.Children
 				?.OfType<AppleTagBox>()
 				?.Where(b => b.Header.Type == "©nam")
-				?.Select(b => Encoding.UTF8.GetString(b.Data.Data))
+				?.Select(b => b.Data.ReadAsString())
 				?.ToList();
 
 			if (chapterNames is null) return null;
 
-			IReadOnlyList<SttsBox.SampleEntry> sampleTimes = textTrak!.Mdia.Minf.Stbl.Stts.Samples;
+			List<SttsBox.SampleEntry> sampleTimes = textTrak!.Mdia.Minf.Stbl.Stts.Samples;
 
 			if (sampleTimes.Count != chapterNames.Count) return null;
 

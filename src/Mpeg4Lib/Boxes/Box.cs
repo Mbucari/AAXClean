@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 
 namespace Mpeg4Lib.Boxes
 {
@@ -69,6 +70,7 @@ namespace Mpeg4Lib.Boxes
 
 		public void Save(Stream file)
 		{
+			ObjectDisposedException.ThrowIf(Disposed, this);
 			Header.FilePosition = file.Position;
 			file.WriteHeader(Header, RenderSize);
 
@@ -81,7 +83,8 @@ namespace Mpeg4Lib.Boxes
 		}
 
 		#region IDisposable
-		protected bool Disposed = false;
+		private int m_Disposed = 0;
+		protected bool Disposed => m_Disposed != 0;
 		public void Dispose()
 		{
 			Dispose(disposing: true);
@@ -95,15 +98,13 @@ namespace Mpeg4Lib.Boxes
 
 		protected virtual void Dispose(bool disposing)
 		{
-			if (disposing && !Disposed)
+			if (disposing && Interlocked.CompareExchange(ref m_Disposed, 1, 0) == 0)
 			{
 				foreach (IBox child in Children)
 					child?.Dispose();
 
 				Children.Clear();
 			}
-
-			Disposed = true;
 		}
 		#endregion
 	}

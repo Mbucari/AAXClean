@@ -14,10 +14,9 @@ namespace Mpeg4Lib.Boxes
 		public static FtypBox Create(string majorBrand, int majorVersion)
 		{
 			ArgumentException.ThrowIfNullOrWhiteSpace(majorBrand, nameof(majorBrand));
-			if (majorBrand.Length != 4)
-				throw new ArgumentException("Major brand must be 4 chars long.", nameof(majorBrand));
-
-			return new FtypBox(new BoxHeader(16, "ftyp"), majorBrand, majorVersion);
+			return majorBrand.Length == 4
+				? new FtypBox(new BoxHeader(16, "ftyp"), majorBrand, majorVersion)
+				: throw new ArgumentException("Major brand must be 4 chars long.", nameof(majorBrand));
 		}
 
 		private FtypBox(BoxHeader header, string majorBrand, int majorVersion) : base(header, null)

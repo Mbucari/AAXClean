@@ -88,26 +88,28 @@ namespace AAXClean.Test
 			Mp4File mp4File = null;
 			try
 			{
-				Aax.AppleTags.Album = tagstring;
-				Aax.AppleTags.AlbumArtists = tagstring;
-				Aax.AppleTags.Asin = tagstring;
-				Aax.AppleTags.Comment = tagstring;
-				Aax.AppleTags.Copyright = tagstring;
-				Aax.AppleTags.Generes = tagstring;
-				Aax.AppleTags.LongDescription = tagstring;
-				Aax.AppleTags.Narrator = tagstring;
-				Aax.AppleTags.Artist = tagstring;
-				Aax.AppleTags.ProductID = tagstring;
-				Aax.AppleTags.Publisher = tagstring;
-				Aax.AppleTags.ReleaseDate = tagstring;
-				Aax.AppleTags.Title = tagstring;
-				Aax.AppleTags.Year = tagstring;
+				Aax.MetadataItems.Album = tagstring;
+				Aax.MetadataItems.AlbumArtists = tagstring;
+				Aax.MetadataItems.Asin = tagstring;
+				Aax.MetadataItems.Comment = tagstring;
+				Aax.MetadataItems.Copyright = tagstring;
+				Aax.MetadataItems.Genres = tagstring;
+				Aax.MetadataItems.LongDescription = tagstring;
+				Aax.MetadataItems.Narrator = tagstring;
+				Aax.MetadataItems.Artist = tagstring;
+				Aax.MetadataItems.ProductID = tagstring;
+				Aax.MetadataItems.Publisher = tagstring;
+				Aax.MetadataItems.ReleaseDate = tagstring;
+				Aax.MetadataItems.Title = tagstring;
+				Aax.MetadataItems.Year = tagstring;
 
 				byte[] newPic = new byte[500];
+				newPic[0] = (byte)'B';
+				newPic[1] = (byte)'M';
 				using SHA1 sha = SHA1.Create();
 				sha.ComputeHash(newPic);
 				string newPicHash = string.Join("", sha.Hash.Select(b => b.ToString("x2")));
-				Aax.AppleTags.Cover = newPic;
+				Aax.MetadataItems.Cover = newPic;
 
 				FileStream tempfile = TestFiles.NewTempFile();
 				await Aax.ConvertToMp4aAsync(tempfile);
@@ -115,22 +117,22 @@ namespace AAXClean.Test
 
 				mp4File = new Mp4File(tempfile.Name);
 
-				Assert.AreEqual(tagstring, mp4File.AppleTags.Album);
-				Assert.AreEqual(tagstring, mp4File.AppleTags.AlbumArtists);
-				Assert.AreEqual(tagstring, mp4File.AppleTags.Asin);
-				Assert.AreEqual(tagstring, mp4File.AppleTags.Comment);
-				Assert.AreEqual(tagstring, mp4File.AppleTags.Copyright);
-				Assert.AreEqual(tagstring, mp4File.AppleTags.Generes);
-				Assert.AreEqual(tagstring, mp4File.AppleTags.LongDescription);
-				Assert.AreEqual(tagstring, mp4File.AppleTags.Narrator);
-				Assert.AreEqual(tagstring, mp4File.AppleTags.Artist);
-				Assert.AreEqual(tagstring, mp4File.AppleTags.ProductID);
-				Assert.AreEqual(tagstring, mp4File.AppleTags.Publisher);
-				Assert.AreEqual(tagstring, mp4File.AppleTags.ReleaseDate);
-				Assert.AreEqual(tagstring, mp4File.AppleTags.Title);
-				Assert.AreEqual(tagstring, mp4File.AppleTags.Year);
+				Assert.AreEqual(tagstring, mp4File.MetadataItems.Album);
+				Assert.AreEqual(tagstring, mp4File.MetadataItems.AlbumArtists);
+				Assert.AreEqual(tagstring, mp4File.MetadataItems.Asin);
+				Assert.AreEqual(tagstring, mp4File.MetadataItems.Comment);
+				Assert.AreEqual(tagstring, mp4File.MetadataItems.Copyright);
+				Assert.AreEqual(tagstring, mp4File.MetadataItems.Genres);
+				Assert.AreEqual(tagstring, mp4File.MetadataItems.LongDescription);
+				Assert.AreEqual(tagstring, mp4File.MetadataItems.Narrator);
+				Assert.AreEqual(tagstring, mp4File.MetadataItems.Artist);
+				Assert.AreEqual(tagstring, mp4File.MetadataItems.ProductID);
+				Assert.AreEqual(tagstring, mp4File.MetadataItems.Publisher);
+				Assert.AreEqual(tagstring, mp4File.MetadataItems.ReleaseDate);
+				Assert.AreEqual(tagstring, mp4File.MetadataItems.Title);
+				Assert.AreEqual(tagstring, mp4File.MetadataItems.Year);
 
-				sha.ComputeHash(mp4File.AppleTags.Cover);
+				sha.ComputeHash(mp4File.MetadataItems.Cover);
 
 				string coverHash = string.Join("", sha.Hash.Select(b => b.ToString("x2")));
 				Assert.AreEqual(newPicHash, coverHash);

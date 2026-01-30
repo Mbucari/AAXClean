@@ -16,7 +16,7 @@ public class StszBox : FullBox, IStszBox
 {
 	public override long RenderSize => base.RenderSize + 8 + SampleCount * sizeof(int);
 	public int SampleSize { get; }
-	private int origSampleCount;
+	private readonly int origSampleCount;
 	public int SampleCount => sampleSizes_32?.Count ?? sampleSizes_16?.Count ?? origSampleCount;
 	public int MaxSize => sampleSizes_32?.Max() ?? sampleSizes_16?.Max() ?? SampleSize;
 	public long TotalSize => sampleSizes_32?.Sum(s => (long)s) ?? sampleSizes_16?.Sum(s => (long)s) ?? SampleSize * origSampleCount;
@@ -41,7 +41,6 @@ public class StszBox : FullBox, IStszBox
 		if (SampleSize > 0)
 			return;
 
-		var buffSize = origSampleCount * sizeof(int);
 		sampleSizes_32 = new(origSampleCount);
 		CollectionsMarshal.SetCount(sampleSizes_32, origSampleCount);
 		Span<int> intListSpan = CollectionsMarshal.AsSpan(sampleSizes_32);

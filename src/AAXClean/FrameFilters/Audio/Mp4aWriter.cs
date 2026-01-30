@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace AAXClean.FrameFilters.Audio
 {
-	public class Mp4aWriter
+	public class Mp4aWriter : IDisposable
 	{
 		public Stream OutputFile { get; }
 

@@ -79,10 +79,9 @@ public class AudioSpecificConfig : BaseDescriptor, IASC
 			throw new NotSupportedException($"{nameof(AudioObjectType)} of {asc.AudioObjectType} is unsupported");
 
 		var samplingFrequencyIndex = bitReader.Read(4);
-		if (samplingFrequencyIndex <= 12)
-			asc.SamplingFrequency = ASC_SampleRates[samplingFrequencyIndex];
-		else
-			throw new NotSupportedException($"Sampling frequency index of {samplingFrequencyIndex} is not supported.");
+		asc.SamplingFrequency = samplingFrequencyIndex <= 12
+			? ASC_SampleRates[samplingFrequencyIndex]
+			: throw new NotSupportedException($"Sampling frequency index of {samplingFrequencyIndex} is not supported.");
 
 		asc.ChannelConfiguration = (int)bitReader.Read(4);
 		asc.FrameLengthFlag = bitReader.Read(1) != 0;

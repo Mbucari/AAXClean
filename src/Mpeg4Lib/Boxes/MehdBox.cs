@@ -9,10 +9,7 @@ public class MehdBox : FullBox
 	public ulong FragmentDuration { get; }
 	public MehdBox(Stream file, BoxHeader header, IBox? parent) : base(file, header, parent)
 	{
-		if (Version == 1)
-			FragmentDuration = file.ReadUInt64BE();
-		else
-			FragmentDuration = file.ReadUInt32BE();
+		FragmentDuration = Version == 1 ? file.ReadUInt64BE() : file.ReadUInt32BE();
 	}
 
 	protected override void Render(Stream file)

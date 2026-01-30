@@ -45,10 +45,8 @@ namespace Mpeg4Lib
 
 		public override long Seek(long offset, SeekOrigin origin)
 		{
-			if (!CanSeek)
-				throw new NotSupportedException();
-
-			return ReadPosition = BaseStream.Seek(offset, origin);
+			return ReadPosition = CanSeek ? BaseStream.Seek(offset, origin)
+				: throw new NotSupportedException();
 		}
 
 		public override void SetLength(long value)

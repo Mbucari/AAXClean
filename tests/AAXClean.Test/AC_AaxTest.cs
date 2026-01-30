@@ -74,8 +74,8 @@ namespace AAXClean.Test
 						{ "CHAPTER THIRTY-NINE", TimeSpan.FromTicks(18333000000) },
 						{ "CHAPTER FORTY", TimeSpan.FromTicks(19029299773) },
 						{ "CHAPTER FORTY-ONE", TimeSpan.FromTicks(27074000000) },
-						{ "EPILOGUE", TimeSpan.FromTicks(0) },
-						{ "CHAPTER FORTY-TWO", TimeSpan.FromTicks(23459116553) }
+						{ "CHAPTER FORTY-TWO", TimeSpan.FromTicks(0) },
+						{ "EPILOGUE", TimeSpan.FromTicks(23459116553) },
 					};
 				}
 				return _chapters;

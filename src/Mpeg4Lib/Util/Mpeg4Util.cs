@@ -45,7 +45,7 @@ namespace Mpeg4Lib.Util
 			do
 			{
 				int toRead = (int)Math.Min(buffer.Length, readEndPosition - inputStream.Position);
-				read = await inputStream.ReadAsync(buffer, 0, toRead, cancellationToken);
+				read = await inputStream.ReadAsync(buffer.AsMemory(0, toRead), cancellationToken);
 				hashAlgorithm.TransformBlock(buffer, 0, read, null, 0);
 			} while (read == buffer.Length);
 			_ = hashAlgorithm.TransformFinalBlock(buffer, 0, read);

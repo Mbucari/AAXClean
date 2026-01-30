@@ -37,6 +37,6 @@ namespace AAXClean
 
 		//This is constant folr UTF-8 text
 		//https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/movenc.c
-		private static readonly byte[] encd = { 0, 0, 0, 0xc, (byte)'e', (byte)'n', (byte)'c', (byte)'d', 0, 0, 1, 0 };
+		private static readonly byte[] encd = [0, 0, 0, 0xc, (byte)'e', (byte)'n', (byte)'c', (byte)'d', 0, 0, 1, 0];
 	}
 }

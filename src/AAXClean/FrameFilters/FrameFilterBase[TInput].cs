@@ -5,19 +5,20 @@ using System.Threading.Tasks;
 
 namespace AAXClean.FrameFilters
 {
-	public abstract class FrameFilterBase<TInput>
+	public abstract class FrameFilterBase<TInput> : IDisposable
 	{
+		private record BufferEntry(int NumEntries, TInput[] Entries);
 		protected abstract int InputBufferSize { get; }
 
 		private CancellationToken CancellationToken;
 		private Task? filterLoop;
 		private TInput[] buffer;
 		private int bufferPosition = 0;
-		private readonly Channel<(int numEntries, TInput[] entries)> filterChannel;
+		private readonly Channel<BufferEntry> filterChannel;
 
 		public FrameFilterBase()
 		{
-			filterChannel = Channel.CreateBounded<(int, TInput[])>(new BoundedChannelOptions(2) { SingleReader = true, SingleWriter = true });
+			filterChannel = Channel.CreateBounded<BufferEntry>(new BoundedChannelOptions(2) { SingleReader = true, SingleWriter = true });
 			buffer = new TInput[InputBufferSize];
 		}
 
@@ -38,7 +39,7 @@ namespace AAXClean.FrameFilters
 			{
 				if (await filterChannel.Writer.WaitToWriteAsync(CancellationToken))
 				{
-					await filterChannel.Writer.WriteAsync((bufferPosition, buffer), CancellationToken);
+					await filterChannel.Writer.WriteAsync(new BufferEntry(bufferPosition, buffer), CancellationToken);
 					bufferPosition = 0;
 					buffer = new TInput[InputBufferSize];
 				}
@@ -53,8 +54,8 @@ namespace AAXClean.FrameFilters
 				{
 					await foreach (var messages in filterChannel.Reader.ReadAllAsync(CancellationToken))
 					{
-						for (int i = 0; i < messages.numEntries; i++)
-							await HandleInputDataAsync(messages.entries[i]);
+						for (int i = 0; i < messages.NumEntries; i++)
+							await HandleInputDataAsync(messages.Entries[i]);
 					}
 				}
 				await FlushAsync();
@@ -70,7 +71,7 @@ namespace AAXClean.FrameFilters
 		{
 			try
 			{
-				await filterChannel.Writer.WriteAsync((bufferPosition, buffer), CancellationToken);
+				await filterChannel.Writer.WriteAsync(new BufferEntry(bufferPosition, buffer), CancellationToken);
 				filterChannel.Writer.Complete();
 			}
 			catch (OperationCanceledException) { }

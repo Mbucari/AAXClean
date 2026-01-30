@@ -9,11 +9,12 @@ namespace Mpeg4Lib.Boxes;
 public class AppleTagBox : Box
 {
 	[DebuggerHidden]
-	private string DebuggerDisplay => $"[AppleTag]: {Header.Type}";
+	public virtual string TagName => Header.Type;
+	private string DebuggerDisplay => $"[AppleTag]: {TagName}";
 	public static AppleTagBox Create(AppleListBox parent, string name, byte[] data, AppleDataType dataType)
 	{
 		if (Encoding.ASCII.GetByteCount(name) != 4)
-			throw new ArgumentOutOfRangeException($"{nameof(name)} must be exactly 4 bytes long");
+			throw new ArgumentOutOfRangeException(nameof(name), $"{nameof(name)} must be exactly 4 bytes long");
 
 		int size = data.Length + 2 + 8 /* empty Box size*/ ;
 		BoxHeader header = new BoxHeader((uint)size, name);

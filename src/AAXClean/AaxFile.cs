@@ -50,9 +50,8 @@ namespace AAXClean
 
 		public override FrameTransformBase<FrameEntry, FrameEntry> GetAudioFrameFilter()
 		{
-			if (Key is null || IV is null)
-				throw new InvalidOperationException($"This instance of {nameof(AaxFile)} does not have a decryption key set.");
-			return new AavdFilter(Key, IV);
+			return Key is not null && IV is not null ? new AavdFilter(Key, IV)
+				: throw new InvalidOperationException($"This instance of {nameof(AaxFile)} does not have a decryption key set.");
 		}
 
 		#region Aax(c) Keys
@@ -123,7 +122,7 @@ namespace AAXClean
 
 		//Constant key
 		//https://github.com/FFmpeg/FFmpeg/blob/master/libavformat/mov.c
-		private static readonly byte[] audible_fixed_key = { 0x77, 0x21, 0x4d, 0x4b, 0x19, 0x6a, 0x87, 0xcd, 0x52, 0x00, 0x45, 0xfd, 0x20, 0xa5, 0x1d, 0x67 };
+		private static readonly byte[] audible_fixed_key = [0x77, 0x21, 0x4d, 0x4b, 0x19, 0x6a, 0x87, 0xcd, 0x52, 0x00, 0x45, 0xfd, 0x20, 0xa5, 0x1d, 0x67];
 
 		public void SetDecryptionKey(string audible_key, string audible_iv)
 		{

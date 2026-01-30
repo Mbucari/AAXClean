@@ -11,7 +11,8 @@ public class FreeformTagBox : AppleTagBox
 	public MeanBox? Mean => GetChild<MeanBox>();
 	public NameBox? Name => GetChild<NameBox>();
 	[DebuggerHidden]
-	private string DebuggerDisplay => $"----:{Mean?.ReverseDnsDomain}:{Name?.Name}'";
+	private string DebuggerDisplay => $"----:{TagName}";
+	public override string TagName => $"{Mean?.ReverseDnsDomain}:{Name?.Name}'";
 
 	public static FreeformTagBox Create(AppleListBox? parent, string domain, string tagName, byte[] data, AppleDataType dataType)
 	{

@@ -7,10 +7,8 @@ namespace AAXClean.FrameFilters.Audio
 		protected override int InputBufferSize => 1000;
 		public override FrameEntry PerformFiltering(FrameEntry input)
 		{
-			if (!ValidateFrame(input.FrameData.Span))
-				throw new Exception("Aac error!");
-
-			return input;
+			return ValidateFrame(input.FrameData.Span) ? input
+				: throw new Exception("Aac error!");
 		}
 
 		private static bool ValidateFrame(ReadOnlySpan<byte> frame) => (AV_RB16(frame) & 0xfff0) != 0xfff0;

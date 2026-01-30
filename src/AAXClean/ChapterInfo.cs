@@ -19,9 +19,9 @@ namespace AAXClean
 
 		public void AddChapter(string title, TimeSpan duration)
 		{
-			TimeSpan starttime = Count == 0 ? StartOffset : _chapterList[^1].EndOffset;
+			TimeSpan startTime = Count == 0 ? StartOffset : _chapterList[^1].EndOffset;
 
-			_chapterList.Add(new Chapter(title, starttime, duration));
+			_chapterList.Add(new Chapter(title, startTime, duration));
 		}
 		public void Add(string title, TimeSpan duration) => AddChapter(title, duration);
 

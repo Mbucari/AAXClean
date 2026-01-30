@@ -95,9 +95,9 @@ public class DashFile : Mp4File
 
 	public override FrameTransformBase<FrameEntry, FrameEntry> GetAudioFrameFilter()
 	{
-		if (Key is null && Tenc is not null)
-			throw new InvalidOperationException($"This instance of {nameof(DashFile)} does not have a decryption key set.");
-		return new DashFilter(Key);
+		return Key is null && Tenc is not null
+			? throw new InvalidOperationException($"This instance of {nameof(DashFile)} does not have a decryption key set.")
+			: new DashFilter(Key);
 	}
 
 	public void SetDecryptionKey(byte[] keyId, byte[] decryptionKey)

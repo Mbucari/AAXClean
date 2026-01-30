@@ -19,7 +19,17 @@ public class AppleDataBox : Box
 		: DataType is AppleDataType.Utf_16 ? $"[UTF-16]: '{Encoding.Unicode.GetString(Data)}'"
 		: $"[{DataType}]: {Data.Length} bytes";
 
-	public static void Create(IBox parent, byte[] data, AppleDataType type)
+	public string ReadAsString()
+	{
+		return DataType switch
+		{
+			AppleDataType.Utf_8 => Encoding.UTF8.GetString(Data),
+			AppleDataType.Utf_16 => Encoding.Unicode.GetString(Data),
+			_ => throw new InvalidDataException($"Cannot read AppleDataBox of type {DataType} as string."),
+		};
+	}
+
+	public static AppleDataBox Create(IBox parent, byte[] data, AppleDataType type)
 	{
 		int size = data.Length + 8 /* empty Box size*/;
 		BoxHeader header = new BoxHeader((uint)size, "data");
@@ -27,6 +37,7 @@ public class AppleDataBox : Box
 		AppleDataBox dataBox = new AppleDataBox(header, parent, data, type);
 
 		parent.Children.Add(dataBox);
+		return dataBox;
 	}
 	private AppleDataBox(BoxHeader header, IBox parent, byte[] data, AppleDataType type)
 		: base(header, parent)
