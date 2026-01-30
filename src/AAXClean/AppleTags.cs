@@ -4,7 +4,7 @@ using System;
 
 namespace AAXClean
 {
-	[Obsolete("Use Mpeg4Lib.AppleTags instead.")]
+	[Obsolete("Use Mpeg4Lib.MetadataItems instead.")]
 	public sealed class AppleTags(AppleListBox appleListBox) : MetadataItems(appleListBox)
 	{
 		[Obsolete("Use TrackNumber property instead.")]
@@ -22,7 +22,7 @@ namespace AAXClean
 		}
 
 
-		[Obsolete("Use Mpeg4Lib.AppleTags.FromFile() instead.")]
+		[Obsolete("Use Mpeg4Lib.MetadataItems.FromFile() instead.")]
 		public static new AppleTags? FromFile(string mp4File)
 			=> MetadataItems.FromFile(mp4File) is { } tags ? new AppleTags(tags.AppleListBox) : null;
 	}

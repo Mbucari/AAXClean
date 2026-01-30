@@ -184,8 +184,8 @@ namespace AAXClean.Test
 				mp4.InputStream.Close();
 
 				var ch_1 = newChapters.ToList();
-				Assert.AreEqual(ch_1.Count, ch_2.Count, 0, "Compare to GetChaptersFromMetadata()");
-				Assert.AreEqual(ch_1.Count, ch_3.Count, 0, "Compare to GetChapterInfo()");
+				Assert.HasCount(ch_1.Count, ch_2, "Compare to GetChaptersFromMetadata()");
+				Assert.HasCount(ch_1.Count, ch_3, "Compare to GetChapterInfo()");
 
 				for (int i = 0; i < ch_1.Count; i++)
 				{
