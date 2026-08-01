@@ -16,7 +16,9 @@ namespace AAXClean.FrameFilters.Audio
 		private readonly Action<NewSplitCallback> newFileCallback;
 
 		public LosslessMultipartFilter(ChapterInfo splitChapters, FtypBox ftyp, MoovBox moov, Action<NewSplitCallback> newFileCallback)
-			: base(splitChapters, (SampleRate)moov.AudioTrack.Mdia.Mdhd.Timescale, moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry?.ChannelCount == 2)
+			: base(splitChapters, (SampleRate)moov.AudioTrack.Mdia.Mdhd.Timescale,
+				  moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry?.ChannelCount == 2,
+				  moov.AudioTrack.Edts?.Elst?.SingleEdit?.MediaTime ?? 0)
 		{
 			this.ftyp = ftyp;
 			this.moov = moov;

@@ -79,6 +79,11 @@ namespace AAXClean
 			=> Moov.AudioTrack.Mdia.Minf.Stbl.Stsd.AudioSampleEntry?
 				.Esds?.ES_Descriptor.DecoderConfig.AudioSpecificConfig.AudioObjectType == 42;
 
+		//Audible USAC flags ~2 sync frames per 40 (~0.93 s apart), so 2 s of lookback always
+		//contains at least one decode entry point. All-sync codecs need none. Applied to the
+		//audio track by ProcessAudio; harmless at presentation start 0 (AddTrack clamps).
+		internal TimeSpan AudioLookback => AudioTrackIsUsac ? TimeSpan.FromSeconds(2) : TimeSpan.Zero;
+
 		public static Mp4Operation RelocateMoovAsync(string mp4FilePath)
 		{
 			ProgressTracker tracker = new();
@@ -116,8 +121,19 @@ namespace AAXClean
 				chapterQueue.AddRange(userChapters);
 			}
 
+			//The requested window in media samples: presentation times mapped through the
+			//input's edit list (same rounding as the multipart path). For an untrimmed
+			//elst-free source this is exactly (0, media duration) and no trimming occurs;
+			//for an elst input with no user chapters it is the input's own window, so a
+			//re-remux round-trips the presentation.
+			uint mdhdTimescale = Moov.AudioTrack.Mdia.Mdhd.Timescale;
+			long windowStart = PresentationStartSample + (long)Math.Round(start.TotalSeconds * mdhdTimescale);
+			long windowEnd = end == TimeSpan.MaxValue
+				? PresentationStartSample + PresentedDurationSamples
+				: PresentationStartSample + (long)Math.Round(end.TotalSeconds * mdhdTimescale);
+
 			FrameTransformBase<FrameEntry, FrameEntry> filter1 = GetAudioFrameFilter();
-			LosslessFilter filter2 = new(outputStream, this, chapterQueue);
+			LosslessFilter filter2 = new(outputStream, this, chapterQueue, windowStart, windowEnd);
 			filter1.LinkTo(filter2);
 
 			if (Moov.TextTrack is not null && userChapters is null)
@@ -195,10 +211,10 @@ namespace AAXClean
 		private static TimeSpan Min(TimeSpan t1, TimeSpan t2) => t1 > t2 ? t2 : t1;
 		public virtual Mp4Operation ProcessAudio(TimeSpan startTime, TimeSpan endTime, Action<Task> continuation, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
 		{
-			IChunkReader reader = CreateChunkReader(InputStream, startTime, Min(Duration, endTime));
+			IChunkReader reader = CreateChunkReader(InputStream, startTime, Min(PresentedDuration, endTime));
 
 			foreach ((TrakBox track, FrameFilterBase<FrameEntry> filter) in filters)
-				reader.AddTrack(track, filter);
+				reader.AddTrack(track, filter, track == Moov.AudioTrack ? AudioLookback : default);
 
 			var operation = new Mp4Operation(reader.RunAsync, this, continuation);
 			reader.OnProgressUpdateDelegate = operation.OnProgressUpdate;
@@ -207,10 +223,10 @@ namespace AAXClean
 
 		public Mp4Operation<TResult> ProcessAudio<TResult>(TimeSpan startTime, TimeSpan endTime, Func<Task, TResult> continuation, params (TrakBox track, FrameFilterBase<FrameEntry> filter)[] filters)
 		{
-			IChunkReader reader = CreateChunkReader(InputStream, startTime, Min(Duration, endTime));
+			IChunkReader reader = CreateChunkReader(InputStream, startTime, Min(PresentedDuration, endTime));
 
 			foreach ((TrakBox track, FrameFilterBase<FrameEntry> filter) in filters)
-				reader.AddTrack(track, filter);
+				reader.AddTrack(track, filter, track == Moov.AudioTrack ? AudioLookback : default);
 
 			var operation = new Mp4Operation<TResult>(reader.RunAsync, this, continuation);
 			reader.OnProgressUpdateDelegate = operation.OnProgressUpdate;

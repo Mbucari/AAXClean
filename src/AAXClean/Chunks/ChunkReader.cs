@@ -15,12 +15,13 @@ public interface IChunkReader
 {
 	Task RunAsync(CancellationTokenSource cancellationSource);
 	Action<ConversionProgressEventArgs>? OnProgressUpdateDelegate { get; set; }
-	void AddTrack(TrakBox track, FrameFilterBase<FrameEntry> filter);
+	void AddTrack(TrakBox track, FrameFilterBase<FrameEntry> filter, TimeSpan lookback = default);
 }
 
 internal class ChunkReader : IChunkReader
 {
-	protected record TrackEntry(uint TrackId, uint Timescale, FrameFilterBase<FrameEntry> FirstFilter, TrakBox TrakBox);
+	protected record TrackEntry(uint TrackId, uint Timescale, FrameFilterBase<FrameEntry> FirstFilter, TrakBox TrakBox,
+		long DispatchStartSample, long DispatchEndSample);
 
 	public Action<ConversionProgressEventArgs>? OnProgressUpdateDelegate { get; set; }
 	protected Dictionary<uint, TrackEntry> TrackEntries { get; } = new();
@@ -47,10 +48,9 @@ internal class ChunkReader : IChunkReader
 
 		bool ChunkHasFrameInRange(ChunkEntry value)
 		{
-			uint timeScale = GetTrackEntryFromId(value.TrackId).Timescale;
-			var minimumSample = StartTime.TotalSeconds * timeScale;
-			var maximumSample = EndTime.TotalSeconds * timeScale;
-			return value.FirstSample <= maximumSample && (value.FirstSample + value.FrameDurations.Sum(d => d)) >= minimumSample;
+			var trackEntry = GetTrackEntryFromId(value.TrackId);
+			return value.FirstSample <= trackEntry.DispatchEndSample
+				&& (value.FirstSample + value.FrameDurations.Sum(d => d)) >= trackEntry.DispatchStartSample;
 		}
 	}
 
@@ -58,9 +58,22 @@ internal class ChunkReader : IChunkReader
 		=> TrackEntries.TryGetValue(trackId, out var trackEntry) ? trackEntry
 		: throw new ArgumentOutOfRangeException(nameof(trackId), $"Track ID {trackId} is not present in this {nameof(ChunkReader)} instance.");
 
-	public virtual void AddTrack(TrakBox track, FrameFilterBase<FrameEntry> filter)
+	public virtual void AddTrack(TrakBox track, FrameFilterBase<FrameEntry> filter, TimeSpan lookback = default)
 	{
-		var trackEntry = new TrackEntry(track.Tkhd.TrackID, track.Mdia.Mdhd.Timescale, filter, track);
+		uint timescale = track.Mdia.Mdhd.Timescale;
+
+		//StartTime/EndTime are presentation times. A track with an edit list presents
+		//media starting at the edit's media_time; map the bounds into this track's media
+		//timeline so preroll before the presentation window isn't mistaken for content.
+		//The optional lookback starts dispatch early so downstream filters can begin
+		//output at the sync frame preceding the window (its exact position is only
+		//knowable post-decrypt, so the reader over-dispatches and the filter trims).
+		long mediaOffset = track.Edts?.Elst?.SingleEdit?.MediaTime ?? 0;
+		long start = Math.Max(0, (long)(StartTime.TotalSeconds * timescale) + mediaOffset - (long)(lookback.TotalSeconds * timescale));
+		long end = EndTime == TimeSpan.MaxValue ? long.MaxValue
+			: (long)(EndTime.TotalSeconds * timescale) + mediaOffset;
+
+		var trackEntry = new TrackEntry(track.Tkhd.TrackID, timescale, filter, track, start, end);
 		TrackEntries.Add(track.Tkhd.TrackID, trackEntry);
 	}
 
@@ -114,8 +127,8 @@ internal class ChunkReader : IChunkReader
 
 		var trackEntry = GetTrackEntryFromId(chunk.TrackId);
 
-		long startSample = (long)(StartTime.TotalSeconds * trackEntry.Timescale);
-		long endSample = (long)(EndTime.TotalSeconds * trackEntry.Timescale);
+		long startSample = trackEntry.DispatchStartSample;
+		long endSample = trackEntry.DispatchEndSample;
 		uint frameDelta;
 
 		for (int start = 0, f = 0; f < chunk.FrameSizes.Length; start += chunk.FrameSizes[f], f++, sampleIndex += frameDelta)

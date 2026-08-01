@@ -21,6 +21,29 @@ public class Mpeg4File : IDisposable
 
 	private readonly Lazy<MetadataItems> lazyMetadataItems;
 	public virtual TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.AudioTrack.Mdia.Mdhd.Duration / TimeScale);
+
+	/// <summary>
+	/// Start of the presentation window within the audio media, in media (mdhd) timescale
+	/// units. Non-zero only for inputs carrying the single-edit elst form this library
+	/// writes (e.g. its own chapter-split parts), whose media begins with sync-frame
+	/// preroll before the presented window.
+	/// </summary>
+	public long PresentationStartSample
+		=> Moov.AudioTrack.Edts?.Elst?.SingleEdit?.MediaTime ?? 0;
+
+	/// <summary>
+	/// Presented duration of the audio track in media (mdhd) timescale units: the elst
+	/// segment_duration converted from movie (mvhd) timescale, or the full media duration
+	/// when there is no edit list.
+	/// </summary>
+	public long PresentedDurationSamples
+		=> Moov.AudioTrack.Edts?.Elst?.SingleEdit is ElstBox.EditEntry edit
+			? (long)Math.Round((decimal)edit.SegmentDuration * Moov.AudioTrack.Mdia.Mdhd.Timescale / Moov.Mvhd.Timescale)
+			: (long)Moov.AudioTrack.Mdia.Mdhd.Duration;
+
+	/// <summary>Presented duration of the audio track (<see cref="PresentedDurationSamples"/> as time).</summary>
+	public virtual TimeSpan PresentedDuration
+		=> TimeSpan.FromSeconds((double)PresentedDurationSamples / Moov.AudioTrack.Mdia.Mdhd.Timescale);
 	public int MaxBitrate => (int)(AudioSampleEntry.Esds?.ES_Descriptor.DecoderConfig.MaxBitrate ?? 0);
 	public AudioSampleEntry AudioSampleEntry { get; }
 	public List<IBox> TopLevelBoxes { get; }

@@ -17,13 +17,9 @@ namespace AAXClean.FrameFilters.Audio
 		private long endSample = -1;
 		private long lastChunkIndex = -1;
 		private long currentSample;
+		private bool writerOpen;
 
-		//Frames since (and including) the most recent sync frame, oldest first, with each
-		//frame's exact media start position. Bounded: sync frames occur about once per second
-		//in every supported codec, and for codecs where every frame is sync the queue holds
-		//exactly one frame.
-		private readonly Queue<(TInput frame, long start)> prerollQueue = new();
-		private const int MaxPrerollFrames = 4096;
+		private readonly SyncPrerollQueue prerollQueue = new();
 
 		/// <summary>
 		/// When true, each new part begins at the most recent sync frame at or before the
@@ -45,13 +41,14 @@ namespace AAXClean.FrameFilters.Audio
 		/// </summary>
 		protected virtual void OnPartOpened(long editMediaTime, long presentedSamples) { }
 
-		public MultipartFilterBase(ChapterInfo splitChapters, SampleRate inputSampleRate, bool inputStereo)
+		public MultipartFilterBase(ChapterInfo splitChapters, SampleRate inputSampleRate, bool inputStereo, long mediaTimeOffset = 0)
 		{
 			if (splitChapters is null || splitChapters.Count == 0)
 				throw new ArgumentException($"{nameof(splitChapters)} must contain at least one chapter.");
 
 			InputSampleRate = inputSampleRate;
 			InputStereo = inputStereo;
+			this.mediaTimeOffset = mediaTimeOffset;
 			startSample = currentSample = timeToSample(splitChapters.StartOffset);
 			this.splitChapters = splitChapters.GetEnumerator();
 		}
@@ -81,10 +78,28 @@ namespace AAXClean.FrameFilters.Audio
 			if (currentSample > endSample)
 			{
 				CloseCurrentWriter();
+				writerOpen = false;
 
-				if (GetNextChapter())
+				if (!GetNextChapter())
+				{
+					//No more chapters: nothing past this point is written, and the sentinels
+					//keep both the re-fire and the deferred open below permanently false.
+					startSample = endSample = long.MaxValue;
+				}
+			}
+
+			if (!writerOpen)
+			{
+				//The chapter window may begin after the current frame (the reader dispatches
+				//early: sync-frame lookback, or an edit-list input whose window starts
+				//mid-media). Open the part only at the first frame that overlaps the window,
+				//so its media is the contiguous run from the preroll's sync frame — opening
+				//eagerly would write the sync frame, then drop the pre-window frames after
+				//it, leaving a hole in the part's bitstream.
+				if (currentSample + input.SamplesInFrame > startSample)
 				{
 					CreateNewWriter(TCallback.Create(splitChapters.Current));
+					writerOpen = true;
 
 					//The preroll queue holds the frames since (and including) the most
 					//recent sync frame, all of which start at or before the chapter
@@ -92,7 +107,8 @@ namespace AAXClean.FrameFilters.Audio
 					//point; the current frame follows them.
 					var partFrames = new List<(TInput frame, long start)>();
 					if (StartPartAtSyncFrame)
-						partFrames.AddRange(prerollQueue);
+						foreach ((FrameEntry frame, long start) in prerollQueue.Frames)
+							partFrames.Add(((TInput)frame, start));
 					partFrames.Add((input, currentSample));
 
 					OnPartOpened(editMediaTime: Math.Max(0, startSample - partFrames[0].start),
@@ -118,11 +134,7 @@ namespace AAXClean.FrameFilters.Audio
 				WriteFrameToFile(input, newChunk);
 			}
 
-			if (IsSyncFrame(input))
-				prerollQueue.Clear();
-			if (prerollQueue.Count == MaxPrerollFrames)
-				prerollQueue.Dequeue();
-			prerollQueue.Enqueue((input, currentSample));
+			prerollQueue.Push(input, currentSample, IsSyncFrame(input));
 
 			currentSample += input.SamplesInFrame;
 
@@ -140,7 +152,10 @@ namespace AAXClean.FrameFilters.Audio
 			return true;
 		}
 
-		private long timeToSample(TimeSpan time) => (long)Math.Round(time.TotalSeconds * (int)InputSampleRate);
+		//Chapter offsets are presentation times; frame positions are media times. The offset
+		//is the input edit list's media_time (0 without one).
+		private readonly long mediaTimeOffset;
+		private long timeToSample(TimeSpan time) => (long)Math.Round(time.TotalSeconds * (int)InputSampleRate) + mediaTimeOffset;
 
 		protected override void Dispose(bool disposing)
 		{

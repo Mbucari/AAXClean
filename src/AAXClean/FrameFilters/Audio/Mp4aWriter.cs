@@ -210,6 +210,21 @@ namespace AAXClean.FrameFilters.Audio
 				//With an edit list, the track and movie durations are the presented duration.
 				Moov.AudioTrack.Tkhd.Duration = segmentDuration;
 				Moov.Mvhd.Duration = segmentDuration;
+
+				if (Moov.TextTrack is not null)
+				{
+					//Chapter samples are written on the presentation timeline (SetDuration assumed
+					//media == presentation, which trimming breaks): give the text track the presented
+					//durations and a matching identity edit so both tracks present the same window.
+					Moov.TextTrack.Mdia.Mdhd.Duration = (ulong)presentedSamples;
+					Moov.TextTrack.Tkhd.Duration = segmentDuration;
+
+					EdtsBox textEdts = Moov.TextTrack.Edts ?? EdtsBox.CreateBlank(Moov.TextTrack);
+					ElstBox textElst = textEdts.Elst ?? ElstBox.CreateBlank(textEdts);
+					textElst.Entries.Clear();
+					textElst.Entries.Add(new ElstBox.EditEntry(segmentDuration, 0));
+					textElst.UpdateVersion();
+				}
 			}
 
 			(uint maxBitRate, uint avgBitrate)

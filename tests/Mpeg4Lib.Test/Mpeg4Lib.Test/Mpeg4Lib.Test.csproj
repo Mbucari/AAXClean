@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Mpeg4Lib\Mpeg4Lib.csproj" />
+    <ProjectReference Include="..\..\..\src\AAXClean\AAXClean.csproj" />
   </ItemGroup>
 
   <ItemGroup>

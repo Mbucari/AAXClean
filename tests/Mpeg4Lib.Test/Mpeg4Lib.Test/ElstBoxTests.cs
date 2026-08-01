@@ -85,6 +85,34 @@ public class ElstBoxTests
 		Assert.AreEqual(12345L, entry.MediaTime);
 	}
 
+	private static ElstBox CreateElst(params ElstBox.EditEntry[] entries)
+	{
+		var elst = BoxFactory.CreateBox<ElstBox>(new MemoryStream(MakeBox("elst", UInt32sBE(0, 0))), parent: null);
+		foreach (var e in entries)
+			elst.Entries.Add(e);
+		return elst;
+	}
+
+	[TestMethod]
+	public void SingleEdit_ReturnsEntry_ForSingleNonEmptyRate1Edit()
+	{
+		var elst = CreateElst(new ElstBox.EditEntry(SegmentDuration: 1000, MediaTime: 448));
+		Assert.IsNotNull(elst.SingleEdit);
+		Assert.AreEqual(448L, elst.SingleEdit.Value.MediaTime);
+		Assert.AreEqual(1000ul, elst.SingleEdit.Value.SegmentDuration);
+	}
+
+	[TestMethod]
+	public void SingleEdit_IsNull_ForEmptyEditOrMultipleEntriesOrRate()
+	{
+		Assert.IsNull(CreateElst().SingleEdit);                                //no entries
+		Assert.IsNull(CreateElst(new ElstBox.EditEntry(1000, -1)).SingleEdit); //empty edit
+		Assert.IsNull(CreateElst(new ElstBox.EditEntry(1000, 0, MediaRateInteger: 0)).SingleEdit);
+		Assert.IsNull(CreateElst(new ElstBox.EditEntry(1000, 0, MediaRateFraction: 1)).SingleEdit);
+		Assert.IsNull(CreateElst(
+			new ElstBox.EditEntry(1000, 0), new ElstBox.EditEntry(1000, 5000)).SingleEdit); //two entries
+	}
+
 	[TestMethod]
 	public void UpdateVersion_SmallValues_StaysVersion0()
 	{
