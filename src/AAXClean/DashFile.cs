@@ -18,6 +18,10 @@ public class DashFile : Mp4File
 
 	public override TimeSpan Duration => TimeSpan.FromSeconds((double)Moov.GetChildOrThrow<MvexBox>().GetChildOrThrow<MehdBox>().FragmentDuration / TimeScale);
 
+	//Fragmented sources keep their duration in mvex/mehd and leave mdhd at zero, and they
+	//never carry an edit list, so the presented duration is simply the fragment duration.
+	public override TimeSpan PresentedDuration => Duration;
+
 	private new MdatBox Mdat => base.Mdat;
 
 	public TencBox? Tenc { get; }

@@ -31,11 +31,11 @@ internal class DashChunkReader : ChunkReader
 		return entry;
 	}
 
-	public override void AddTrack(TrakBox track, FrameFilterBase<FrameEntry> filter)
+	public override void AddTrack(TrakBox track, FrameFilterBase<FrameEntry> filter, TimeSpan lookback = default)
 	{
 		if (TrackEntries.Count > 0)
 			throw new InvalidOperationException($"The {nameof(DashChunkReader)} currently only supports a single track.");
-		base.AddTrack(track, filter);
+		base.AddTrack(track, filter, lookback);
 	}
 
 	protected override IEnumerable<ChunkEntry> EnumerateChunks()
@@ -43,8 +43,8 @@ internal class DashChunkReader : ChunkReader
 		//Currently support only a single DASH track
 		var singleTrack = TrackEntries.Values.Single();
 
-		long minimumSample = (long)(StartTime.TotalSeconds * singleTrack.Timescale);
-		long maximumSample = (long)(EndTime.TotalSeconds * singleTrack.Timescale);
+		long minimumSample = singleTrack.DispatchStartSample;
+		long maximumSample = singleTrack.DispatchEndSample;
 
 		return new DashChunkEntries(InputStream, singleTrack.TrackId, Dash.Sidx, Dash.FirstMoof, Dash.FirstMdat, minimumSample, maximumSample);
 	}

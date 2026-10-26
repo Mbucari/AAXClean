@@ -16,6 +16,20 @@ public class ElstBox : FullBox
 
 	public List<EditEntry> Entries { get; } = new List<EditEntry>();
 
+	/// <summary>
+	/// The single non-empty rate-1 edit — the only edit-list form this library writes and
+	/// honors: <see cref="EditEntry.MediaTime"/> is the presentation start within the media
+	/// (media timescale) and <see cref="EditEntry.SegmentDuration"/> the presented duration
+	/// (movie timescale). Null when the list is empty, has multiple entries, an empty edit
+	/// (media_time -1), or a non-unity rate; callers treat those as "no edit list".
+	/// </summary>
+	public EditEntry? SingleEdit
+		=> Entries.Count == 1
+		&& Entries[0].MediaTime >= 0
+		&& Entries[0].MediaRateInteger == 1
+		&& Entries[0].MediaRateFraction == 0
+			? Entries[0] : null;
+
 	public static ElstBox CreateBlank(IBox parent)
 	{
 		int size = 4 + 12 /* empty FullBox size*/;
