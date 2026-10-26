@@ -13,21 +13,21 @@
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>
 		<dependencies>
 			<group targetFramework="net10.0">
-			<dependency id="Microsoft.SourceLink.GitHub" version="10.0.301" />
+			<dependency id="Microsoft.SourceLink.GitHub" version="10.0.403" />
 			</group>
 			<group targetFramework="net8.0">
-			<dependency id="Microsoft.SourceLink.GitHub" version="10.0.301" />
+			<dependency id="Microsoft.SourceLink.GitHub" version="10.0.403" />
 			</group>
 		</dependencies>
 	</metadata>
 	<dependencies>
 		<group targetFramework="net10.0">0
-			<dependency id="Mpeg4Lib" version="3.1.0" />
-			<dependency id="Microsoft.SourceLink.GitHub" version="10.0.301" />
+			<dependency id="Mpeg4Lib" version="3.1.1" />
+			<dependency id="Microsoft.SourceLink.GitHub" version="10.0.403" />
 		</group>
 		<group targetFramework="net8.0">
-			<dependency id="Mpeg4Lib" version="3.1.0" />
-			<dependency id="Microsoft.SourceLink.GitHub" version="10.0.301" />
+			<dependency id="Mpeg4Lib" version="3.1.1" />
+			<dependency id="Microsoft.SourceLink.GitHub" version="10.0.403" />
 		</group>
 	</dependencies>
 	<files>
